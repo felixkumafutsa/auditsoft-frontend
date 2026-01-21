@@ -1,152 +1,105 @@
-// src/components/Sidebar.tsx
-import React, { useState } from 'react';
+import React from 'react';
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Typography,
+  Box,
+  Divider,
+} from '@mui/material';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
+import PeopleIcon from '@mui/icons-material/People';
+import SecurityIcon from '@mui/icons-material/Security';
+import HistoryIcon from '@mui/icons-material/History';
+import LogoutIcon from '@mui/icons-material/Logout';
 
-const styles: { [key: string]: React.CSSProperties } = {
-  sidebar: {
-    width: '250px',
-    backgroundColor: '#343a40',
-    color: 'white',
-    padding: '20px',
-    height: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  title: {
-    fontSize: '24px',
-    marginBottom: '30px',
-    textAlign: 'center',
-  },
-  navList: {
-    listStyle: 'none',
-    padding: 0,
-    margin: 0,
-  },
-  navItem: {
-    padding: '10px 15px',
-    cursor: 'pointer',
-    borderRadius: '4px',
-    display: 'flex',
-    alignItems: 'center',
-    color: 'white',
-    textDecoration: 'none',
-    marginBottom: '10px',
-  },
-  logoutButton: {
-    width: '100%',
-    padding: '10px 15px',
-    cursor: 'pointer',
-    borderRadius: '4px',
-    border: 'none',
-    backgroundColor: '#dc3545',
-    color: 'white',
-    textAlign: 'center',
-    textDecoration: 'none',
-    display: 'block',
-    marginTop: 'auto',
-  },
-  icon: {
-    marginRight: '10px',
-  },
-};
+const drawerWidth = 250;
 
-type Page = 'dashboard' | 'audits' | 'users' | 'roles';
+export type Page = 'dashboard' | 'audits' | 'users' | 'roles' | 'findings' | 'execution' | 'audit-logs';
 
 interface SidebarProps {
   onNavigate: (page: Page) => void;
   onLogout: () => void;
 }
 
-interface NavItemProps {
-  page: Page;
-  label: string;
-  onNavigate: (page: Page) => void;
-  icon: React.ReactNode;
-}
-
-const NavItem: React.FC<NavItemProps> = ({ page, label, onNavigate, icon }) => {
-  const [hover, setHover] = useState(false);
-
-  return (
-    <a
-      href="#"
-      style={{
-        ...styles.navItem,
-        backgroundColor: hover ? '#495057' : 'transparent',
-      }}
-      onClick={(e) => {
-        e.preventDefault();
-        onNavigate(page);
-      }}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      <span style={styles.icon}>{icon}</span>
-      <span>{label}</span>
-    </a>
-  );
-};
-
 const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onLogout }) => {
-  const [logoutHover, setLogoutHover] = useState(false);
+  const userRole = localStorage.getItem('userRole') || 'Auditor';
 
-  const icons = {
-    dashboard: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-      </svg>
-    ),
-    audits: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-        <polyline points="14 2 14 8 20 8"></polyline>
-        <line x1="16" y1="13" x2="8" y2="13"></line>
-        <line x1="16" y1="17" x2="8" y2="17"></line>
-        <polyline points="10 9 9 9 8 9"></polyline>
-      </svg>
-    ),
-    users: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-        <circle cx="9" cy="7" r="4"></circle>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-      </svg>
-    ),
-    roles: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-      </svg>
-    ),
-  };
+  const allMenuItems = [
+    { text: 'Dashboard', icon: <DashboardIcon />, page: 'dashboard' as Page, roles: ['Admin', 'Executive', 'Manager', 'Auditor', 'ProcessOwner'] },
+    { text: 'My Audits', icon: <AssignmentIcon />, page: 'execution' as Page, roles: ['Auditor'] },
+    { text: 'Findings', icon: <ReportProblemIcon />, page: 'findings' as Page, roles: ['Manager', 'Auditor', 'ProcessOwner'] },
+    { text: 'Audits', icon: <FactCheckIcon />, page: 'audits' as Page, roles: ['Admin', 'Manager', 'Executive'] },
+    { text: 'Users', icon: <PeopleIcon />, page: 'users' as Page, roles: ['Admin'] },
+    { text: 'Roles', icon: <SecurityIcon />, page: 'roles' as Page, roles: ['Admin'] },
+    { text: 'Audit Logs', icon: <HistoryIcon />, page: 'audit-logs' as Page, roles: ['Admin'] },
+  ];
+
+  const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
 
   return (
-    <div style={styles.sidebar}>
-      <h1 style={styles.title}>AuditSoft</h1>
-      <nav style={styles.navList}>
-        <NavItem page="dashboard" label="Dashboard" onNavigate={onNavigate} icon={icons.dashboard} />
-        <NavItem page="audits" label="Audits" onNavigate={onNavigate} icon={icons.audits} />
-        <NavItem page="users" label="Users" onNavigate={onNavigate} icon={icons.users} />
-        <NavItem page="roles" label="Roles" onNavigate={onNavigate} icon={icons.roles} />
-      </nav>
-      <a
-        href="#"
-        style={{
-          ...styles.logoutButton,
-          backgroundColor: logoutHover ? '#c82333' : '#dc3545',
-        }}
-        onClick={(e) => {
-          e.preventDefault();
-          onLogout();
-        }}
-        onMouseEnter={() => setLogoutHover(true)}
-        onMouseLeave={() => setLogoutHover(false)}
-      >
-        Logout
-      </a>
-    </div>
+    <Drawer
+      variant="permanent"
+      sx={{
+        width: drawerWidth,
+        flexShrink: 0,
+        '& .MuiDrawer-paper': {
+          width: drawerWidth,
+          boxSizing: 'border-box',
+          backgroundColor: '#0F1A2B',
+          color: 'white',
+          position: 'relative',
+          borderRight: 'none',
+        },
+      }}
+    >
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h5" fontWeight="bold" color="inherit">
+          AuditSoft
+        </Typography>
+      </Box>
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+      <List>
+        {menuItems.map((item) => (
+          <ListItem key={item.page} disablePadding>
+            <ListItemButton
+              onClick={() => onNavigate(item.page)}
+              sx={{
+                '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' },
+              }}
+            >
+              <ListItemIcon sx={{ color: 'white' }}>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+      <Box sx={{ flexGrow: 1 }} />
+      <Box sx={{ p: 2 }}>
+        <ListItemButton
+          onClick={onLogout}
+          sx={{
+            backgroundColor: '#dc3545',
+            color: 'white',
+            borderRadius: 1,
+            justifyContent: 'center',
+            '&:hover': { backgroundColor: '#c82333' },
+          }}
+        >
+          <ListItemIcon sx={{ color: 'white', minWidth: 'auto', mr: 1 }}>
+            <LogoutIcon />
+          </ListItemIcon>
+          <ListItemText primary="Logout" sx={{ flex: 'none' }} />
+        </ListItemButton>
+      </Box>
+    </Drawer>
   );
 };
 
 export default Sidebar;
-

@@ -1,11 +1,14 @@
 // --- src/services/api.ts ---
 
-const BASE_URL = process.env.REACT_APP_API_URL || '';
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 class ApiClient {
   private token: string | null = null;
 
   constructor() {
+    // Debugging: Log API URL to help troubleshoot cloud connection issues
+    console.log('AuditSoft API Client Initialized. Base URL:', BASE_URL);
+
     // You could load the token from localStorage here if persisting
     const storedToken = localStorage.getItem('authToken');
     if (storedToken) {
@@ -66,6 +69,20 @@ class ApiClient {
     return this.handleResponse(response);
   }
 
+  private async upload(endpoint: string, formData: FormData): Promise<any> {
+    const headers: any = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+    // Content-Type header is not set manually for FormData to allow browser to set boundary
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    return this.handleResponse(response);
+  }
+
   // --- Auth ---
   async login(email: string, pass: string): Promise<any> {
     const user = await this.post('/auth/login', { email, pass });
@@ -103,6 +120,71 @@ class ApiClient {
   createAudit = (data: any) => this.post('/audits', data); // Define a proper DTO later
   updateAudit = (id: number, data: any) => this.put(`/audits/${id}`, data);
   deleteAudit = (id: number) => this.delete(`/audits/${id}`);
+
+  // --- Audit Universe ---
+  getAuditUniverse = () => this.get('/audit-universe');
+  getAuditUniverseItem = (id: number) => this.get(`/audit-universe/${id}`);
+  createAuditUniverseItem = (data: any) => this.post('/audit-universe', data);
+  updateAuditUniverseItem = (id: number, data: any) => this.put(`/audit-universe/${id}`, data);
+  deleteAuditUniverseItem = (id: number) => this.delete(`/audit-universe/${id}`);
+
+  // --- Audit Programs ---
+  getAuditPrograms = (auditId: number) => this.get(`/audits/${auditId}/programs`);
+  getAuditProgram = (id: number) => this.get(`/audit-programs/${id}`);
+  createAuditProgram = (data: any) => this.post('/audit-programs', data);
+  updateAuditProgram = (id: number, data: any) => this.put(`/audit-programs/${id}`, data);
+  deleteAuditProgram = (id: number) => this.delete(`/audit-programs/${id}`);
+
+  // --- Evidence ---
+  getEvidenceList = (programId: number) => this.get(`/audit-programs/${programId}/evidence`);
+  uploadEvidence = (programId: number, file: File, description?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('auditProgramId', programId.toString());
+    if (description) formData.append('description', description);
+    return this.upload('/evidence', formData);
+  };
+  deleteEvidence = (id: number) => this.delete(`/evidence/${id}`);
+
+  // --- Findings ---
+  getFindings = (auditId?: number) => this.get(auditId ? `/audits/${auditId}/findings` : '/findings');
+  getFinding = (id: number) => this.get(`/findings/${id}`);
+  createFinding = (data: any) => this.post('/findings', data);
+  updateFinding = (id: number, data: any) => this.put(`/findings/${id}`, data);
+  deleteFinding = (id: number) => this.delete(`/findings/${id}`);
+
+  // --- Action Plans ---
+  getActionPlans = (findingId: number) => this.get(`/findings/${findingId}/action-plans`);
+  createActionPlan = (data: any) => this.post('/action-plans', data);
+  updateActionPlan = (id: number, data: any) => this.put(`/action-plans/${id}`, data);
+  deleteActionPlan = (id: number) => this.delete(`/action-plans/${id}`);
+
+  // --- Compliance & Frameworks ---
+  getFrameworks = () => this.get('/compliance-frameworks');
+  getControlMappings = (programId: number) => this.get(`/audit-programs/${programId}/controls`);
+
+  // --- Risk Management ---
+  getRisks = () => this.get('/risks');
+  createRisk = (data: any) => this.post('/risks', data);
+  updateRisk = (id: number, data: any) => this.put(`/risks/${id}`, data);
+
+  // --- Reports & Analytics ---
+  getDashboardStats = () => this.get('/reports/dashboard');
+  getExecutiveReport = () => this.get('/reports/executive');
+  getRiskHeatmap = () => this.get('/reports/risk-heatmap');
+
+  // --- Tasks & Alerts ---
+  getMyTasks = () => this.get('/users/me/tasks');
+
+  // --- Audit Logs ---
+  getAuditLogs = (filters?: any) => this.post('/audit-logs/search', filters || {});
+
+  // --- Administration ---
+  getSystemStats = () => this.get('/admin/system-stats');
+
+  // --- Integrations ---
+  getIntegrations = () => this.get('/integrations');
+  syncIntegration = (id: number) => this.post(`/integrations/${id}/sync`, {});
 }
 
 const api = new ApiClient();

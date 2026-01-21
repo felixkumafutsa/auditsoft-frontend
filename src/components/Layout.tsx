@@ -1,6 +1,6 @@
 // src/components/Layout.tsx
 import React from 'react';
-import Sidebar from './Sidebar';
+import Sidebar, { Page } from './Sidebar';
 
 const styles: { [key: string]: React.CSSProperties } = {
   layout: {
@@ -14,11 +14,11 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 };
 
-type Page = 'dashboard' | 'audits' | 'users' | 'roles';
+export type AppPage = Page;
 
 interface LayoutProps {
   children: React.ReactNode;
-  onNavigate: (page: Page) => void;
+  onNavigate: (page: any) => void;
   onLogout: () => void;
 }
 

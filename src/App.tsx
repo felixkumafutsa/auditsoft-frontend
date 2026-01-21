@@ -1,14 +1,16 @@
 // src/App.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AuditsPage from './pages/AuditsPage';
 import UsersPage from './pages/UsersPage';
 import RolesPage from './pages/RolesPage';
+import FindingsModule from './components/FindingsModule';
+import AuditExecutionModule from './components/AuditExecutionModule';
+import AuditLogsPage from './pages/AuditLogsPage';
 import api from './services/api';
-
-type Page = 'dashboard' | 'audits' | 'users' | 'roles';
+import { Page } from './components/Sidebar';
 
 function App() {
   // Check for a token in localStorage to maintain session
@@ -32,17 +34,21 @@ function App() {
   const renderPage = () => {
     switch (page) {
       case 'dashboard':
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={handleNavigate} />;
       case 'audits':
         return <AuditsPage />;
       case 'users':
         return <UsersPage />;
-      case 'users':
-        return <UsersPage />;
       case 'roles':
         return <RolesPage />;
+      case 'findings':
+        return <FindingsModule />;
+      case 'execution':
+        return <AuditExecutionModule />;
+      case 'audit-logs':
+        return <AuditLogsPage />;
       default:
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={handleNavigate} />;
     }
   };
 

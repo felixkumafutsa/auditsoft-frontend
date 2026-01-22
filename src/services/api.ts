@@ -120,6 +120,10 @@ class ApiClient {
   createAudit = (data: any) => this.post('/audits', data); // Define a proper DTO later
   updateAudit = (id: number, data: any) => this.put(`/audits/${id}`, data);
   deleteAudit = (id: number) => this.delete(`/audits/${id}`);
+  transitionAudit = (id: number, toStatus: string, userRole?: string) => 
+    this.post(`/audits/${id}/transition`, { toStatus, userRole });
+  getAllowedTransitionsAudit = (id: number) => 
+    this.get(`/audits/${id}/allowed-transitions`);
 
   // --- Audit Universe ---
   getAuditUniverse = () => this.get('/audit-universe');
@@ -152,6 +156,14 @@ class ApiClient {
   createFinding = (data: any) => this.post('/findings', data);
   updateFinding = (id: number, data: any) => this.put(`/findings/${id}`, data);
   deleteFinding = (id: number) => this.delete(`/findings/${id}`);
+  transitionFinding = (id: number, toStatus: string, userRole?: string) => 
+    this.post(`/findings/${id}/transition`, { toStatus, userRole });
+  getAllowedTransitions = (id: number) => 
+    this.get(`/findings/${id}/allowed-transitions`);
+  escalateFinding = (id: number, reason: string, escalatedTo: string) => 
+    this.post(`/findings/${id}/escalate`, { reason, escalatedTo });
+  getCriticalFindings = () => this.get('/findings/critical');
+  getOverdueFindings = () => this.get('/findings/overdue');
 
   // --- Action Plans ---
   getActionPlans = (findingId: number) => this.get(`/findings/${findingId}/action-plans`);

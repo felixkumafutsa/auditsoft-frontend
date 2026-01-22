@@ -27,10 +27,10 @@ const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit 
 
   React.useEffect(() => {
     if (auditToEdit) {
-      setAuditName(auditToEdit.audit_name || '');
-      setAuditType(auditToEdit.audit_type || 'Operational');
-      setStartDate(auditToEdit.start_date ? dayjs(auditToEdit.start_date) : null);
-      setEndDate(auditToEdit.end_date ? dayjs(auditToEdit.end_date) : null);
+      setAuditName(auditToEdit.auditName || '');
+      setAuditType(auditToEdit.auditType || 'Operational');
+      setStartDate(auditToEdit.startDate ? dayjs(auditToEdit.startDate) : null);
+      setEndDate(auditToEdit.endDate ? dayjs(auditToEdit.endDate) : null);
     } else {
       // Reset form if we switch from edit to create
       setAuditName('');
@@ -48,11 +48,11 @@ const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit 
     }
 
     const payload = {
-      audit_name: auditName,
-      audit_type: auditType,
-      // Format dates for the backend (YYYY-MM-DD)
-      start_date: startDate ? startDate.format('YYYY-MM-DD') : null,
-      end_date: endDate ? endDate.format('YYYY-MM-DD') : null,
+      auditName: auditName,
+      auditType: auditType,
+      // Format dates for the backend (ISO-8601 DateTime)
+      startDate: startDate ? startDate.toISOString() : null,
+      endDate: endDate ? endDate.toISOString() : null,
       status: 'Planned'
     };
 

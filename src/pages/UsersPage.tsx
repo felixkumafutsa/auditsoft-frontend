@@ -1,133 +1,245 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Box, 
-  Button, 
   Typography, 
-  Alert, 
+  Button, 
+  Paper, 
+  IconButton, 
   Dialog, 
-  DialogActions, 
+  DialogTitle, 
   DialogContent, 
-  DialogContentText, 
-  DialogTitle 
+  DialogActions, 
+  TextField, 
+  MenuItem, 
+  Alert,
+  Chip
 } from '@mui/material';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 import api from '../services/api';
 
 interface User {
   id: number;
   name: string;
   email: string;
-  role: string;
+  userRoles?: { role: { id: number; roleName: string } }[];
+}
+
+interface Role {
+  id: number;
+  roleName: string;
 }
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-  const fetchUsers = async () => {
+  // Form State
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [selectedRoleId, setSelectedRoleId] = useState<number | string>('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const data = await api.getUsers(); 
-      setUsers(Array.isArray(data) ? data : []);
-      setError(null);
+      const [usersData, rolesData] = await Promise.all([
+        api.getUsers(),
+        api.getRoles()
+      ]);
+      setUsers(Array.isArray(usersData) ? usersData : []);
+      setRoles(Array.isArray(rolesData) ? rolesData : []);
     } catch (err) {
-      console.error('Failed to fetch users', err);
-      setError('Failed to load users.');
+      console.error('Failed to fetch data', err);
+      setError('Failed to load users or roles.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const handleDeleteClick = (user: User) => {
-    setUserToDelete(user);
+  const handleOpenDialog = (user?: User) => {
+    if (user) {
+      setCurrentUser(user);
+      setName(user.name);
+      setEmail(user.email);
+      setPassword(''); // Don't populate password on edit
+      // Attempt to pre-select the first role if exists
+      const roleId = user.userRoles && user.userRoles.length > 0 ? user.userRoles[0].role.id : '';
+      setSelectedRoleId(roleId);
+    } else {
+      setCurrentUser(null);
+      setName('');
+      setEmail('');
+      setPassword('');
+      setSelectedRoleId('');
+    }
+    setOpenDialog(true);
   };
 
   const handleCloseDialog = () => {
-    setUserToDelete(null);
+    setOpenDialog(false);
+    setError(null);
   };
 
-  const handleConfirmDelete = async () => {
-    if (!userToDelete) return;
-
+  const handleSave = async () => {
     try {
-      await api.deleteUser(userToDelete.id);
-      setUserToDelete(null);
-      fetchUsers(); // Refresh the list
-    } catch (err) {
-      console.error('Failed to delete user', err);
-      setError('Failed to delete user.');
-      setUserToDelete(null);
+      const userData: any = { name, email };
+      if (password) userData.password = password;
+
+      if (currentUser) {
+        // Update
+        await api.updateUser(currentUser.id, userData);
+        
+        // Handle Role Update (Simple implementation: remove old, add new if changed)
+        // Note: A robust backend would handle this in updateUser, but we can chain calls if needed.
+        const currentRoleId = currentUser.userRoles?.[0]?.role.id;
+        if (selectedRoleId && selectedRoleId !== currentRoleId) {
+            if (currentRoleId) await api.removeRoleFromUser(currentUser.id, currentRoleId);
+            await api.assignRoleToUser(currentUser.id, Number(selectedRoleId));
+        }
+      } else {
+        // Create
+        if (!password) {
+          setError('Password is required for new users.');
+          return;
+        }
+        userData.password = password;
+        // Pass roleId if backend supports it directly, otherwise create then assign
+        const newUser = await api.createUser(userData);
+        if (selectedRoleId && newUser && newUser.id) {
+            await api.assignRoleToUser(newUser.id, Number(selectedRoleId));
+        }
+      }
+      fetchData();
+      handleCloseDialog();
+    } catch (err: any) {
+      console.error('Save failed', err);
+      setError('Failed to save user. ' + (err.message || ''));
     }
   };
 
-  const columns: GridColDef<User>[] = [
-    { field: 'id', headerName: 'ID', width: 90 },
-    { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
-    { field: 'email', headerName: 'Email', flex: 1, minWidth: 200 },
-    { field: 'role', headerName: 'Role', width: 150 },
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Are you sure you want to delete this user?')) {
+      try {
+        await api.deleteUser(id);
+        fetchData();
+      } catch (err) {
+        console.error('Delete failed', err);
+        alert('Failed to delete user.');
+      }
+    }
+  };
+
+  const columns: GridColDef[] = [
+    { field: 'id', headerName: 'ID', width: 70 },
+    { field: 'name', headerName: 'Name', flex: 1 },
+    { field: 'email', headerName: 'Email', flex: 1 },
+    { 
+      field: 'role', 
+      headerName: 'Role', 
+      flex: 1,
+      renderCell: (params: GridRenderCellParams) => {
+        const roles = params.row.userRoles?.map((ur: any) => ur.role.roleName).join(', ');
+        return roles ? <Chip label={roles} size="small" /> : '-';
+      }
+    },
     {
       field: 'actions',
       headerName: 'Actions',
       width: 120,
       sortable: false,
-      renderCell: (params) => (
-        <Button
-          variant="outlined"
-          color="error"
-          size="small"
-          startIcon={<DeleteIcon />}
-          onClick={() => handleDeleteClick(params.row)}
-        >
-          Delete
-        </Button>
+      renderCell: (params: GridRenderCellParams) => (
+        <Box>
+          <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
+            <EditIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" color="error" onClick={() => handleDelete(params.row.id)}>
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
       ),
     },
   ];
 
   return (
     <Box sx={{ p: 3, height: '100%' }}>
-      <Typography variant="h4" sx={{ color: '#0F1A2B', fontWeight: 'bold', mb: 3 }}>
-        User Management
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h5" fontWeight="bold" color="#0F1A2B">
+          User Management
+        </Typography>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()} sx={{ bgcolor: '#0F1A2B' }}>
+          Add User
+        </Button>
+      </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-      <Box sx={{ height: 600, width: '100%', bgcolor: 'white', boxShadow: 1 }}>
+      <Paper sx={{ height: 600, width: '100%' }}>
         <DataGrid
           rows={users}
           columns={columns}
-          initialState={{
-            pagination: {
-              paginationModel: {
-                pageSize: 5,
-              },
-            },
-          }}
-          pageSizeOptions={[5]}
-          checkboxSelection
-          disableRowSelectionOnClick
           loading={loading}
+          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+          pageSizeOptions={[10, 25]}
+          disableRowSelectionOnClick
+          sx={{ border: 0 }}
         />
-      </Box>
+      </Paper>
 
-      <Dialog open={!!userToDelete} onClose={handleCloseDialog}>
-        <DialogTitle>Confirm Deletion</DialogTitle>
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>{currentUser ? 'Edit User' : 'Add New User'}</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete the user "{userToDelete?.name}"? This action cannot be undone.
-          </DialogContentText>
+          {error && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{error}</Alert>}
+          <TextField
+            margin="dense"
+            label="Full Name"
+            fullWidth
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            label="Email Address"
+            type="email"
+            fullWidth
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            label={currentUser ? "Password (leave blank to keep current)" : "Password"}
+            type="password"
+            fullWidth
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <TextField
+            select
+            margin="dense"
+            label="Role"
+            fullWidth
+            value={selectedRoleId}
+            onChange={(e) => setSelectedRoleId(e.target.value)}
+          >
+            {roles.map((role) => (
+              <MenuItem key={role.id} value={role.id}>
+                {role.roleName}
+              </MenuItem>
+            ))}
+          </TextField>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleConfirmDelete} color="error" autoFocus>
-            Delete
+          <Button onClick={handleSave} variant="contained" sx={{ bgcolor: '#0F1A2B' }}>
+            Save
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Drawer,
   List,
   ListItem,
   ListItemButton,
@@ -18,10 +17,9 @@ import PeopleIcon from '@mui/icons-material/People';
 import SecurityIcon from '@mui/icons-material/Security';
 import HistoryIcon from '@mui/icons-material/History';
 import LogoutIcon from '@mui/icons-material/Logout';
+import ChecklistIcon from '@mui/icons-material/Checklist';
 
-const drawerWidth = 250;
-
-export type Page = 'dashboard' | 'audits' | 'users' | 'roles' | 'findings' | 'execution' | 'audit-logs';
+export type Page = 'dashboard' | 'audits' | 'users' | 'roles' | 'findings' | 'execution' | 'audit-logs' | 'audit-universe';
 
 interface SidebarProps {
   onNavigate: (page: Page) => void;
@@ -31,11 +29,13 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onLogout }) => {
   const userRole = localStorage.getItem('userRole') || 'Auditor';
 
+  // Role-based menu configuration
   const allMenuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, page: 'dashboard' as Page, roles: ['Admin', 'Executive', 'Manager', 'Auditor', 'ProcessOwner'] },
+    { text: 'Dashboard', icon: <DashboardIcon />, page: 'dashboard' as Page, roles: ['Admin', 'Executive', 'Manager', 'Auditor', 'ProcessOwner', 'CAE'] },
+    { text: 'Audit Universe', icon: <ChecklistIcon />, page: 'audit-universe' as Page, roles: ['Admin', 'Manager', 'CAE'] },
+    { text: 'Audits', icon: <FactCheckIcon />, page: 'audits' as Page, roles: ['Admin', 'Manager', 'Executive', 'CAE'] },
     { text: 'My Audits', icon: <AssignmentIcon />, page: 'execution' as Page, roles: ['Auditor'] },
-    { text: 'Findings', icon: <ReportProblemIcon />, page: 'findings' as Page, roles: ['Manager', 'Auditor', 'ProcessOwner'] },
-    { text: 'Audits', icon: <FactCheckIcon />, page: 'audits' as Page, roles: ['Admin', 'Manager', 'Executive'] },
+    { text: 'Findings', icon: <ReportProblemIcon />, page: 'findings' as Page, roles: ['Manager', 'Auditor', 'ProcessOwner', 'CAE'] },
     { text: 'Users', icon: <PeopleIcon />, page: 'users' as Page, roles: ['Admin'] },
     { text: 'Roles', icon: <SecurityIcon />, page: 'roles' as Page, roles: ['Admin'] },
     { text: 'Audit Logs', icon: <HistoryIcon />, page: 'audit-logs' as Page, roles: ['Admin'] },
@@ -44,61 +44,72 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onLogout }) => {
   const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
 
   return (
-    <Drawer
-      variant="permanent"
+    <Box
       sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: drawerWidth,
-          boxSizing: 'border-box',
-          backgroundColor: '#0F1A2B',
-          color: 'white',
-          position: 'relative',
-          borderRight: 'none',
-        },
+        width: 250,
+        backgroundColor: '#0F1A2B',
+        color: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        position: 'relative',
       }}
     >
-      <Box sx={{ p: 3, textAlign: 'center' }}>
+      {/* Header */}
+      <Box sx={{ p: 3, textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
         <Typography variant="h5" fontWeight="bold" color="inherit">
           AuditSoft
         </Typography>
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', mt: 1, display: 'block' }}>
+          {userRole}
+        </Typography>
       </Box>
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-      <List>
+
+      {/* Menu Items */}
+      <List sx={{ flex: 1, py: 2 }}>
         {menuItems.map((item) => (
           <ListItem key={item.page} disablePadding>
             <ListItemButton
               onClick={() => onNavigate(item.page)}
               sx={{
-                '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' },
+                color: 'white',
+                '&:hover': { 
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  paddingLeft: 3,
+                },
+                transition: 'all 0.3s ease',
               }}
             >
-              <ListItemIcon sx={{ color: 'white' }}>{item.icon}</ListItemIcon>
+              <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+                {item.icon}
+              </ListItemIcon>
               <ListItemText primary={item.text} />
             </ListItemButton>
           </ListItem>
         ))}
       </List>
-      <Box sx={{ flexGrow: 1 }} />
+
+      {/* Logout Button */}
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
       <Box sx={{ p: 2 }}>
         <ListItemButton
           onClick={onLogout}
           sx={{
-            backgroundColor: '#dc3545',
+            backgroundColor: 'rgba(220, 53, 69, 0.8)',
             color: 'white',
             borderRadius: 1,
             justifyContent: 'center',
-            '&:hover': { backgroundColor: '#c82333' },
+            '&:hover': { backgroundColor: '#dc3545' },
+            transition: 'background-color 0.3s ease',
           }}
         >
           <ListItemIcon sx={{ color: 'white', minWidth: 'auto', mr: 1 }}>
             <LogoutIcon />
           </ListItemIcon>
-          <ListItemText primary="Logout" sx={{ flex: 'none' }} />
+          <ListItemText primary="Logout" />
         </ListItemButton>
       </Box>
-    </Drawer>
+    </Box>
   );
 };
 

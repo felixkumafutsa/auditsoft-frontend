@@ -6,7 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import AuditsPage from './pages/AuditsPage';
 import UsersPage from './pages/UsersPage';
 import RolesPage from './pages/RolesPage';
-import FindingsModule from './components/FindingsModule';
+import FindingsPage from './pages/FindingsPage';
 import AuditExecutionModule from './components/AuditExecutionModule';
 import AuditLogsPage from './pages/AuditLogsPage';
 import api from './services/api';
@@ -42,7 +42,7 @@ function App() {
       case 'roles':
         return <RolesPage />;
       case 'findings':
-        return <FindingsModule />;
+        return <FindingsPage />;
       case 'execution':
         return <AuditExecutionModule />;
       case 'audit-logs':

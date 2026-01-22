@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Paper, 
-  Typography, 
-  Box, 
+import {
+  Box,
   Card,
   CardContent,
+  Typography,
+  Paper,
   Button,
+  CircularProgress,
+  Chip,
   List,
   ListItem,
-  ListItemText,
   ListItemIcon,
+  ListItemText,
   Divider,
-  Chip,
-  IconButton,
-  CircularProgress,
-  Grid
+  LinearProgress,
+  Alert,
 } from '@mui/material';
 import {
   Assignment as AssignmentIcon,
@@ -25,31 +25,37 @@ import {
   Group as GroupIcon,
   Settings as SettingsIcon,
   History as HistoryIcon,
-  Refresh as RefreshIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  Error as ErrorIcon,
 } from '@mui/icons-material';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../services/api';
 import { Page } from '../components/Sidebar';
 
-// --- Types ---
-type UserRole = 'Admin' | 'Executive' | 'Manager' | 'Auditor' | 'ProcessOwner';
+type UserRole = 'Admin' | 'Executive' | 'Manager' | 'Auditor' | 'ProcessOwner' | 'CAE';
 
-// --- Shared Components ---
-const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
-  <Card elevation={2} sx={{ height: '100%', borderLeft: `5px solid ${color}` }}>
+// ========== STAT CARD COMPONENT ==========
+const StatCard: React.FC<{
+  title: string;
+  value: React.ReactNode;
+  icon: React.ReactNode;
+  color: string;
+  onClick?: () => void;
+}> = ({ title, value, icon, color, onClick }) => (
+  <Card
+    elevation={2}
+    sx={{
+      height: '100%',
+      borderLeft: `5px solid ${color}`,
+      cursor: onClick ? 'pointer' : 'default',
+      transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+      '&:hover': onClick ? {
+        transform: 'translateY(-4px)',
+        boxShadow: 4,
+      } : {},
+    }}
+    onClick={onClick}
+  >
     <CardContent>
       <Box display="flex" justifyContent="space-between" alignItems="center">
         <Box>
@@ -68,375 +74,535 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
   </Card>
 );
 
-// --- Sub-Dashboards ---
-
-interface AdminDashboardProps {
+// ========== ADMIN DASHBOARD ==========
+interface DashboardProps {
   onNavigate: (page: Page) => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
-  const [stats, setStats] = useState({ users: 0, roles: 0, logs: 0, systemHealth: 'Checking...' });
-  const [logs, setLogs] = useState<any[]>([]);
+const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const [stats, setStats] = useState({
+    users: 0,
+    audits: 0,
+    findings: 0,
+    systemHealth: 'Checking...',
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAdminData = async () => {
-      setLoading(true);
+    const fetchData = async () => {
       try {
-        // Fetch real data from the API
-        const [sysStats, auditLogs] = await Promise.all([
-          api.getSystemStats(),
-          api.getAuditLogs({ limit: 5 }) // Assuming backend supports a limit
-        ]);
-        
+        const audits = await api.getAudits();
         setStats({
-          users: sysStats.totalUsers || 0,
-          roles: sysStats.totalRoles || 0,
-          logs: sysStats.totalLogs || 0,
-          systemHealth: 'Operational' // This could be derived from an API health check
+          users: 0,
+          audits: audits?.length || 0,
+          findings: 0,
+          systemHealth: 'Operational',
         });
-        setLogs(auditLogs || []);
-      } catch (e) { 
-        console.error("Failed to fetch admin data", e);
+      } catch (e) {
+        console.error('Failed to fetch admin data', e);
         setStats(prev => ({ ...prev, systemHealth: 'Error' }));
       } finally {
         setLoading(false);
       }
     };
-    fetchAdminData();
+    fetchData();
   }, []);
 
-  return (
-    <Grid container spacing={3}>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard title="Total Users" value={loading ? <CircularProgress size={20} /> : stats.users} icon={<GroupIcon fontSize="large" />} color="#1976d2" />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard title="Active Roles" value={stats.roles} icon={<SecurityIcon fontSize="large" />} color="#9c27b0" />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard title="System Health" value={stats.systemHealth} icon={<SettingsIcon fontSize="large" />} color="#2e7d32" />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard title="Total Audit Logs" value={loading ? <CircularProgress size={20} /> : stats.logs} icon={<HistoryIcon fontSize="large" />} color="#ed6c02" />
-      </Grid>
+  const activityData = [
+    { name: 'Mon', audits: 4, findings: 2 },
+    { name: 'Tue', audits: 3, findings: 5 },
+    { name: 'Wed', audits: 7, findings: 3 },
+    { name: 'Thu', audits: 5, findings: 4 },
+    { name: 'Fri', audits: 8, findings: 6 },
+    { name: 'Sat', audits: 2, findings: 1 },
+    { name: 'Sun', audits: 3, findings: 2 },
+  ];
 
-      <Grid size={{ xs: 12, md: 6 }}>
-        <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold">System Configuration & Management</Typography>
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-            Quick access to core administrative functions.
-          </Typography>
-          
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 6 }}>
-              <Button onClick={() => onNavigate('users')} variant="outlined" fullWidth startIcon={<GroupIcon />} sx={{ py: 2, justifyContent: 'flex-start' }}>
+  return (
+    <Box>
+      <Typography variant="h4" sx={{ color: '#0F1A2B', fontWeight: 'bold', mb: 3 }}>
+        System Administration Dashboard
+      </Typography>
+
+      {/* Stats Grid */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
+        <Box>
+          <StatCard
+            title="Total Audits"
+            value={loading ? <CircularProgress size={24} /> : stats.audits}
+            icon={<AssignmentIcon fontSize="large" />}
+            color="#1976d2"
+            onClick={() => onNavigate('audits')}
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="System Health"
+            value={stats.systemHealth}
+            icon={<SettingsIcon fontSize="large" />}
+            color={stats.systemHealth === 'Operational' ? '#2e7d32' : '#d32f2f'}
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="Manage Users"
+            value="→"
+            icon={<GroupIcon fontSize="large" />}
+            color="#9c27b0"
+            onClick={() => onNavigate('users')}
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="Manage Roles"
+            value="→"
+            icon={<SecurityIcon fontSize="large" />}
+            color="#ed6c02"
+            onClick={() => onNavigate('roles')}
+          />
+        </Box>
+      </Box>
+
+      {/* Charts Grid */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 3 }}>
+        <Box>
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+              Weekly Activity
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={activityData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="audits" fill="#1976d2" name="Audits Created" />
+                <Bar dataKey="findings" fill="#d32f2f" name="Findings Logged" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Box>
+
+        <Box>
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+              Quick Actions
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Button variant="contained" fullWidth onClick={() => onNavigate('users')} startIcon={<GroupIcon />}>
                 Manage Users
               </Button>
-            </Grid>
-            <Grid size={{ xs: 6 }}>
-              <Button onClick={() => onNavigate('roles')} variant="outlined" fullWidth startIcon={<SecurityIcon />} sx={{ py: 2, justifyContent: 'flex-start' }}>
+              <Button variant="contained" fullWidth onClick={() => onNavigate('roles')} startIcon={<SecurityIcon />}>
                 Manage Roles
               </Button>
-            </Grid>
-            <Grid size={{ xs: 6 }}>
-              <Button variant="outlined" fullWidth startIcon={<SettingsIcon />} sx={{ py: 2, justifyContent: 'flex-start' }}>
-                System Settings
-              </Button>
-            </Grid>
-            <Grid size={{ xs: 6 }}>
-              <Button onClick={() => onNavigate('audit-logs')} variant="outlined" fullWidth startIcon={<HistoryIcon />} sx={{ py: 2, justifyContent: 'flex-start' }}>
+              <Button variant="outlined" fullWidth onClick={() => onNavigate('audit-logs')} startIcon={<HistoryIcon />}>
                 View Audit Logs
               </Button>
-            </Grid>
-          </Grid>
-        </Paper>
-      </Grid>
+            </Box>
+          </Paper>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
 
-      <Grid size={{ xs: 12, md: 6 }}>
-        <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="h6" fontWeight="bold">Recent System Activity</Typography>
-            <Button onClick={() => onNavigate('audit-logs')} size="small" endIcon={<HistoryIcon />}>View All</Button>
+// ========== MANAGER DASHBOARD ==========
+const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const [audits, setAudits] = useState<any[]>([]);
+  const [findings, setFindings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [auditData, findingData] = await Promise.all([
+          api.getAudits(),
+          api.getFindings?.(),
+        ]);
+        setAudits(Array.isArray(auditData) ? auditData : []);
+        setFindings(Array.isArray(findingData) ? findingData : []);
+      } catch (e) {
+        console.error('Failed to fetch manager data', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const auditsByStatus = audits.reduce((acc: any, audit: any) => {
+    const status = audit.status || 'unknown';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const findingsBySeverity = findings.reduce((acc: any, finding: any) => {
+    const severity = finding.severity || 'unknown';
+    acc[severity] = (acc[severity] || 0) + 1;
+    return acc;
+  }, {});
+
+  const statusData = Object.entries(auditsByStatus).map(([status, count]) => ({
+    name: status,
+    value: count,
+  }));
+
+  const severityData = Object.entries(findingsBySeverity).map(([severity, count]) => ({
+    name: severity,
+    value: count,
+  }));
+
+  const COLORS = ['#2e7d32', '#1976d2', '#ed6c02', '#d32f2f', '#9c27b0'];
+
+  return (
+    <Box>
+      <Typography variant="h4" sx={{ color: '#0F1A2B', fontWeight: 'bold', mb: 3 }}>
+        Audit Manager Dashboard
+      </Typography>
+
+      {/* Stats Grid */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
+        <Box>
+          <StatCard
+            title="Assigned Audits"
+            value={audits.length}
+            icon={<AssignmentIcon fontSize="large" />}
+            color="#1976d2"
+            onClick={() => onNavigate('audits')}
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="Open Findings"
+            value={findings.filter(f => f.status !== 'Closed').length}
+            icon={<WarningIcon fontSize="large" />}
+            color="#d32f2f"
+            onClick={() => onNavigate('findings')}
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="In Progress"
+            value={audits.filter(a => a.status === 'In Progress').length}
+            icon={<ScheduleIcon fontSize="large" />}
+            color="#ed6c02"
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="Completed"
+            value={audits.filter(a => a.status === 'Closed' || a.status === 'Finalized').length}
+            icon={<CheckCircleIcon fontSize="large" />}
+            color="#2e7d32"
+          />
+        </Box>
+      </Box>
+
+      {/* Charts */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+        <Box>
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+              Audit Status Overview
+            </Typography>
+            {statusData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Typography color="textSecondary">No audit data available</Typography>
+            )}
+          </Paper>
+        </Box>
+
+        <Box>
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+              Findings by Severity
+            </Typography>
+            {severityData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={severityData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#d32f2f" name="Count" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <Typography color="textSecondary">No finding data available</Typography>
+            )}
+          </Paper>
+        </Box>
+      </Box>
+
+      {/* Recent Audits */}
+      <Box sx={{ mt: 3 }}>
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Typography variant="h6" fontWeight="bold">
+              Recent Audits
+            </Typography>
+            <Button onClick={() => onNavigate('audits')} size="small">
+              View All
+            </Button>
           </Box>
-          <Divider sx={{ mb: 1 }} />
-          {loading ? <CircularProgress /> : (
-            <List dense>
-              {logs.map((log, index) => (
-                <React.Fragment key={log.id}>
-                  {index > 0 && <Divider component="li" />}
-                  <ListItem alignItems="flex-start">
-                    <ListItemIcon sx={{ minWidth: 40 }}>
-                      <HistoryIcon color="action" fontSize="small" />
+          <Divider sx={{ mb: 2 }} />
+          {loading ? (
+            <CircularProgress />
+          ) : audits.slice(0, 5).length > 0 ? (
+            <List>
+              {audits.slice(0, 5).map((audit, idx) => (
+                <React.Fragment key={audit.id}>
+                  {idx > 0 && <Divider component="li" />}
+                  <ListItem>
+                    <ListItemIcon>
+                      <AssignmentIcon color="primary" />
                     </ListItemIcon>
-                    <ListItemText 
-                      primary={log.action} 
-                      secondary={`User ID: ${log.userId} - ${new Date(log.timestamp).toLocaleString()}`}
+                    <ListItemText
+                      primary={audit.auditName}
+                      secondary={
+                        <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                          <Chip label={audit.auditType} size="small" />
+                          <Chip label={audit.status} size="small" color={audit.status === 'Closed' ? 'success' : 'default'} />
+                        </Box>
+                      }
                     />
                   </ListItem>
                 </React.Fragment>
               ))}
             </List>
+          ) : (
+            <Typography color="textSecondary">No audits assigned yet</Typography>
           )}
         </Paper>
-      </Grid>
-    </Grid>
+      </Box>
+    </Box>
   );
 };
 
-const ExecutiveDashboard: React.FC = () => {
-  const data = [
-    { name: 'Strategic', risk: 80 },
-    { name: 'Operational', risk: 45 },
-    { name: 'Financial', risk: 30 },
-    { name: 'Compliance', risk: 60 },
-  ];
-
-  return (
-    <Grid container spacing={3}>
-      <Grid size={{ xs: 12, sm: 3 }}>
-        <StatCard title="Overall Risk Score" value="High" icon={<WarningIcon fontSize="large" />} color="#d32f2f" />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 3 }}>
-        <StatCard title="Open Audits" value="4" icon={<AssignmentIcon fontSize="large" />} color="#1976d2" />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 3 }}>
-        <StatCard title="Critical Findings" value="2" icon={<WarningIcon fontSize="large" />} color="#ed6c02" />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 3 }}>
-        <StatCard title="Compliance" value="85%" icon={<CheckCircleIcon fontSize="large" />} color="#2e7d32" />
-      </Grid>
-
-      <Grid size={{ xs: 12, md: 8 }}>
-        <Paper elevation={2} sx={{ p: 3, height: 400 }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold">Risk Exposure by Category</Typography>
-          <ResponsiveContainer width="100%" height="90%">
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="risk" fill="#d32f2f" name="Risk Score" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Paper>
-      </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <Paper elevation={2} sx={{ p: 3, height: 400 }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold">Audit Plan Status</Typography>
-          <ResponsiveContainer width="100%" height="90%">
-            <PieChart>
-              <Pie
-                data={[
-                  { name: 'Completed', value: 5, color: '#2e7d32' },
-                  { name: 'In Progress', value: 3, color: '#1976d2' },
-                  { name: 'Planned', value: 4, color: '#9e9e9e' }
-                ]}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {[
-                  { name: 'Completed', value: 5, color: '#2e7d32' },
-                  { name: 'In Progress', value: 3, color: '#1976d2' },
-                  { name: 'Planned', value: 4, color: '#9e9e9e' }
-                ].map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend verticalAlign="bottom" />
-            </PieChart>
-          </ResponsiveContainer>
-        </Paper>
-      </Grid>
-    </Grid>
-  );
-};
-
-const ManagerDashboard: React.FC = () => {
-  return (
-    <Grid container spacing={3}>
-      <Grid size={{ xs: 12, sm: 4 }}>
-        <StatCard title="Audits to Plan" value="2" icon={<ScheduleIcon fontSize="large" />} color="#1976d2" />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 4 }}>
-        <StatCard title="Fieldwork Reviews" value="3" icon={<AssignmentIcon fontSize="large" />} color="#ed6c02" />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 4 }}>
-        <StatCard title="Team Utilization" value="85%" icon={<GroupIcon fontSize="large" />} color="#2e7d32" />
-      </Grid>
-
-      <Grid size={{ xs: 12 }}>
-        <Paper elevation={2} sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold">Pending Reviews</Typography>
-          <List>
-            <ListItem>
-              <ListItemIcon><AssignmentIcon color="primary" /></ListItemIcon>
-              <ListItemText 
-                primary="Q3 Financial Audit - Fieldwork" 
-                secondary="Submitted by: John Auditor | Date: Today" 
-              />
-              <Button size="small" variant="contained">Review</Button>
-            </ListItem>
-            <Divider />
-            <ListItem>
-              <ListItemIcon><AssignmentIcon color="primary" /></ListItemIcon>
-              <ListItemText 
-                primary="IT Security Access Control" 
-                secondary="Submitted by: Jane Doe | Date: Yesterday" 
-              />
-              <Button size="small" variant="contained">Review</Button>
-            </ListItem>
-          </List>
-        </Paper>
-      </Grid>
-    </Grid>
-  );
-};
-
-const AuditorDashboard: React.FC = () => {
-  return (
-    <Grid container spacing={3}>
-      <Grid size={{ xs: 12, sm: 6 }}>
-        <StatCard title="My Active Audits" value="2" icon={<AssignmentIcon fontSize="large" />} color="#1976d2" />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 6 }}>
-        <StatCard title="Pending Tasks" value="5" icon={<ScheduleIcon fontSize="large" />} color="#ed6c02" />
-      </Grid>
-
-      <Grid size={{ xs: 12 }}>
-        <Paper elevation={2} sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold">My Tasks</Typography>
-          <List>
-            <ListItem>
-              <ListItemIcon><CheckCircleIcon color="primary" /></ListItemIcon>
-              <ListItemText 
-                primary="Review IT General Controls Evidence" 
-                secondary="Due: 2023-11-15 | Priority: High" 
-              />
-              <Button size="small" variant="outlined">Start</Button>
-            </ListItem>
-            <Divider />
-            <ListItem>
-              <ListItemIcon><CheckCircleIcon color="action" /></ListItemIcon>
-              <ListItemText 
-                primary="Draft Findings for Q3 Financial Audit" 
-                secondary="Due: 2023-11-20 | Priority: Medium" 
-              />
-              <Button size="small" variant="outlined">Resume</Button>
-            </ListItem>
-          </List>
-        </Paper>
-      </Grid>
-    </Grid>
-  );
-};
-
-const ProcessOwnerDashboard: React.FC = () => {
-  return (
-    <Grid container spacing={3}>
-      <Grid size={{ xs: 12, sm: 4 }}>
-        <StatCard title="Assigned Findings" value="3" icon={<WarningIcon fontSize="large" />} color="#d32f2f" />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 4 }}>
-        <StatCard title="Action Plans Due" value="1" icon={<ScheduleIcon fontSize="large" />} color="#ed6c02" />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 4 }}>
-        <StatCard title="Closed Items" value="12" icon={<CheckCircleIcon fontSize="large" />} color="#2e7d32" />
-      </Grid>
-
-      <Grid size={{ xs: 12 }}>
-        <Paper elevation={2} sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold">Remediation Actions Required</Typography>
-          <List>
-            <ListItem>
-              <ListItemIcon><WarningIcon color="error" /></ListItemIcon>
-              <ListItemText 
-                primary="Update Password Policy Configuration" 
-                secondary="Finding #102 | Due: Tomorrow" 
-              />
-              <Button size="small" variant="contained" color="primary">Update Status</Button>
-            </ListItem>
-            <Divider />
-            <ListItem>
-              <ListItemIcon><WarningIcon color="warning" /></ListItemIcon>
-              <ListItemText 
-                primary="Provide Evidence for Backup Restoration" 
-                secondary="Finding #105 | Due: Next Week" 
-              />
-              <Button size="small" variant="outlined">Upload Evidence</Button>
-            </ListItem>
-          </List>
-        </Paper>
-      </Grid>
-    </Grid>
-  );
-};
-
-interface DashboardPageProps {
-  onNavigate: (page: Page) => void;
-}
-
-const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
-  const [role, setRole] = useState<UserRole>('Admin');
-  const [loading, setLoading] = useState(false);
+// ========== AUDITOR DASHBOARD ==========
+const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const [myAudits, setMyAudits] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedRole = localStorage.getItem('userRole') as UserRole;
-    if (storedRole) {
-      setRole(storedRole);
-    }
+    const fetchData = async () => {
+      try {
+        const data = await api.getAudits();
+        setMyAudits(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error('Failed to fetch auditor data', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 800);
-  };
-
-  const renderDashboard = () => {
-    switch (role) {
-      case 'Admin': return <AdminDashboard onNavigate={onNavigate} />;
-      case 'Executive': return <ExecutiveDashboard />;
-      case 'Manager': return <ManagerDashboard />;
-      case 'Auditor': return <AuditorDashboard />;
-      case 'ProcessOwner': return <ProcessOwnerDashboard />;
-      default: return <AdminDashboard onNavigate={function (page: Page): void {
-        throw new Error('Function not implemented.');
-      } } />;
-    }
-  };
+  const activeAudits = myAudits.filter(a => a.status === 'In Progress').length;
+  const completedAudits = myAudits.filter(a => a.status === 'Closed' || a.status === 'Finalized').length;
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, bgcolor: '#f4f6f8', minHeight: '100vh' }}>
-      {/* Header & Role Switcher */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4} flexWrap="wrap">
+    <Box>
+      <Typography variant="h4" sx={{ color: '#0F1A2B', fontWeight: 'bold', mb: 3 }}>
+        My Audits Dashboard
+      </Typography>
+
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold" color="#0F1A2B">
-            {role === 'Executive' ? 'Executive' : role} Dashboard
-          </Typography>
-          <Typography variant="subtitle1" color="textSecondary">
-            Overview & Key Metrics
-          </Typography>
+          <StatCard
+            title="My Audits"
+            value={myAudits.length}
+            icon={<AssignmentIcon fontSize="large" />}
+            color="#1976d2"
+            onClick={() => onNavigate('execution')}
+          />
         </Box>
-        
-        <Box display="flex" gap={1} alignItems="center">
-          <IconButton onClick={handleRefresh} size="small" sx={{ ml: 1 }}>
-            <RefreshIcon />
-          </IconButton>
+        <Box>
+          <StatCard
+            title="In Progress"
+            value={activeAudits}
+            icon={<ScheduleIcon fontSize="large" />}
+            color="#ed6c02"
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="Completed"
+            value={completedAudits}
+            icon={<CheckCircleIcon fontSize="large" />}
+            color="#2e7d32"
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="Pending Review"
+            value={myAudits.filter(a => a.status === 'Review').length}
+            icon={<TrendingUpIcon fontSize="large" />}
+            color="#9c27b0"
+          />
         </Box>
       </Box>
 
-      {loading ? (
-        <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
+      {/* My Tasks */}
+      <Paper elevation={2} sx={{ p: 3 }}>
+        <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+          My Current Tasks
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        {loading ? (
           <CircularProgress />
+        ) : (
+          <Alert severity="info">
+            You have <strong>{activeAudits} active audits</strong> in progress. Click "My Audits" to view execution details.
+          </Alert>
+        )}
+      </Paper>
+    </Box>
+  );
+};
+
+// ========== CAE DASHBOARD ==========
+const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const [stats, setStats] = useState({
+    totalAudits: 0,
+    criticalFindings: 0,
+    openIssues: 0,
+    overallRisk: 'Medium',
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [audits, findings] = await Promise.all([
+          api.getAudits(),
+          api.getFindings?.(),
+        ]);
+        const criticalCount = (findings || []).filter((f: any) => f.severity === 'Critical').length;
+        setStats({
+          totalAudits: audits?.length || 0,
+          criticalFindings: criticalCount,
+          openIssues: (findings || []).filter((f: any) => f.status !== 'Closed').length,
+          overallRisk: criticalCount > 5 ? 'High' : 'Medium',
+        });
+      } catch (e) {
+        console.error('Failed to fetch CAE data', e);
+      }
+    };
+    fetchData();
+  }, []);
+
+  return (
+    <Box>
+      <Typography variant="h4" sx={{ color: '#0F1A2B', fontWeight: 'bold', mb: 3 }}>
+        Chief Audit Executive Dashboard
+      </Typography>
+
+      <Alert severity="warning" sx={{ mb: 3 }}>
+        <strong>Overall Risk Level: {stats.overallRisk}</strong> - Review critical findings and escalations below.
+      </Alert>
+
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
+        <Box>
+          <StatCard
+            title="Total Audits"
+            value={stats.totalAudits}
+            icon={<AssignmentIcon fontSize="large" />}
+            color="#1976d2"
+            onClick={() => onNavigate('audits')}
+          />
         </Box>
-      ) : (
-        renderDashboard()
-      )}
+        <Box>
+          <StatCard
+            title="Critical Findings"
+            value={stats.criticalFindings}
+            icon={<WarningIcon fontSize="large" />}
+            color={stats.criticalFindings > 3 ? '#d32f2f' : '#ed6c02'}
+            onClick={() => onNavigate('findings')}
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="Open Issues"
+            value={stats.openIssues}
+            icon={<ErrorIcon fontSize="large" />}
+            color="#d32f2f"
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="Risk Assessment"
+            value={stats.overallRisk}
+            icon={<TrendingUpIcon fontSize="large" />}
+            color={stats.overallRisk === 'High' ? '#d32f2f' : '#ed6c02'}
+          />
+        </Box>
+      </Box>
+
+      <Paper elevation={2} sx={{ p: 3 }}>
+        <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+          Executive Summary
+        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography>Audit Completion Rate:</Typography>
+            <LinearProgress variant="determinate" value={60} sx={{ flex: 1, mx: 2 }} />
+            <Typography>60%</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography>Finding Remediation Rate:</Typography>
+            <LinearProgress variant="determinate" value={45} sx={{ flex: 1, mx: 2 }} />
+            <Typography>45%</Typography>
+          </Box>
+        </Box>
+      </Paper>
+    </Box>
+  );
+};
+
+// ========== MAIN DASHBOARD COMPONENT ==========
+const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const userRole = (localStorage.getItem('userRole') || 'Auditor') as UserRole;
+
+  const renderDashboard = () => {
+    switch (userRole) {
+      case 'Admin':
+        return <AdminDashboard onNavigate={onNavigate} />;
+      case 'Manager':
+        return <ManagerDashboard onNavigate={onNavigate} />;
+      case 'Auditor':
+        return <AuditorDashboard onNavigate={onNavigate} />;
+      case 'CAE':
+        return <CAEDashboard onNavigate={onNavigate} />;
+      case 'Executive':
+        return <CAEDashboard onNavigate={onNavigate} />;
+      default:
+        return <AuditorDashboard onNavigate={onNavigate} />;
+    }
+  };
+
+  return (
+    <Box sx={{ width: '100%' }}>
+      {renderDashboard()}
     </Box>
   );
 };

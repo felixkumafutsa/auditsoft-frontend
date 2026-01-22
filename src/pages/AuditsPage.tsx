@@ -7,11 +7,11 @@ import api from '../services/api';
 
 interface Audit {
   id: number;
-  audit_name: string;
-  audit_type: string;
+  auditName: string;
+  auditType: string;
   status: string;
-  start_date: string;
-  end_date: string;
+  startDate: string;
+  endDate: string;
 }
 
 const AuditsPage: React.FC = () => {
@@ -48,8 +48,8 @@ const AuditsPage: React.FC = () => {
 
   const columns: GridColDef<Audit>[] = [
     { field: 'id', headerName: 'ID', width: 70 },
-    { field: 'audit_name', headerName: 'Audit Name', flex: 1, minWidth: 200 },
-    { field: 'audit_type', headerName: 'Type', width: 150 },
+    { field: 'auditName', headerName: 'Audit Name', flex: 1, minWidth: 200 },
+    { field: 'auditType', headerName: 'Type', width: 150 },
     { 
       field: 'status', 
       headerName: 'Status', 
@@ -58,8 +58,8 @@ const AuditsPage: React.FC = () => {
         <Chip label={params.value} size="small" color={params.value === 'In Progress' ? 'primary' : 'default'} />
       )
     },
-    { field: 'start_date', headerName: 'Start Date', width: 150 },
-    { field: 'end_date', headerName: 'End Date', width: 150 },
+    { field: 'startDate', headerName: 'Start Date', width: 150 },
+    { field: 'endDate', headerName: 'End Date', width: 150 },
     {
       field: 'actions',
       headerName: 'Actions',

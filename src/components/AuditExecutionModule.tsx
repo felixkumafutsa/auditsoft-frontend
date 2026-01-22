@@ -41,6 +41,7 @@ const AuditExecutionModule: React.FC = () => {
   const [programs, setPrograms] = useState<AuditProgram[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<number | null>(null);
+  const userRole = localStorage.getItem('userRole');
 
   useEffect(() => {
     fetchActiveAudits();
@@ -50,9 +51,12 @@ const AuditExecutionModule: React.FC = () => {
     try {
       const data = await api.getAudits();
       // Filter for audits that are ready for execution
-      const active = Array.isArray(data) ? data.filter((a: Audit) => 
-        ['In Progress', 'Approved'].includes(a.status)
-      ) : [];
+      const active = Array.isArray(data) ? data.filter((a: Audit) => {
+        if (userRole === 'Manager') {
+           return ['In Progress', 'Approved', 'Review'].includes(a.status);
+        }
+        return ['In Progress', 'Approved'].includes(a.status);
+      }) : [];
       setAudits(active);
     } catch (error) {
       console.error('Failed to fetch audits', error);
@@ -103,6 +107,21 @@ const AuditExecutionModule: React.FC = () => {
     }
   };
 
+  const handleApproveAudit = async () => {
+    if (!selectedAudit) return;
+    if (window.confirm('Are you sure you want to approve the fieldwork and finalize this audit?')) {
+      try {
+        await api.updateAudit(selectedAudit.id, { status: 'Finalized' });
+        alert('Audit finalized successfully!');
+        setSelectedAudit(null);
+        fetchActiveAudits();
+      } catch (e) {
+        console.error(e);
+        alert('Failed to finalize audit.');
+      }
+    }
+  };
+
   if (!selectedAudit) {
     return (
       <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -142,9 +161,20 @@ const AuditExecutionModule: React.FC = () => {
       >
         Back to Audit List
       </Button>
-      <Typography variant="h5" gutterBottom sx={{ color: '#0F1A2B', fontWeight: 'bold' }}>
-        Executing: {selectedAudit.audit_name}
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h5" sx={{ color: '#0F1A2B', fontWeight: 'bold' }}>
+          Executing: {selectedAudit.audit_name}
+        </Typography>
+        {userRole === 'Manager' && selectedAudit.status === 'Review' && (
+          <Button 
+            variant="contained" 
+            color="success" 
+            onClick={handleApproveAudit}
+          >
+            Approve & Finalize
+          </Button>
+        )}
+      </Box>
       
       {loading ? <CircularProgress /> : (
         <Box sx={{ mt: 2 }}>

@@ -15,10 +15,14 @@ import {
   Alert,
   CircularProgress,
   Paper,
+  Stack,
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import api from '../services/api';
+import ActionPlansModule from '../components/ActionPlansModule';
 
 interface Finding {
   id: number;
@@ -30,7 +34,11 @@ interface Finding {
   createdAt: string;
 }
 
-const FindingsPage: React.FC = () => {
+interface FindingsPageProps {
+  viewMode?: 'all' | 'draft';
+}
+
+const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
@@ -38,6 +46,15 @@ const FindingsPage: React.FC = () => {
   const [newStatus, setNewStatus] = useState('');
   const [allowedTransitions, setAllowedTransitions] = useState<string[]>([]);
   const userRole = localStorage.getItem('userRole') || 'Auditor';
+
+  // Draft Form State
+  const [draftDescription, setDraftDescription] = useState('');
+  const [draftSeverity, setDraftSeverity] = useState('Low');
+  const [evidenceFile, setEvidenceFile] = useState<string | null>(null);
+
+  // Action Plan State
+  const [actionPlansOpen, setActionPlansOpen] = useState(false);
+  const [selectedFindingIdForActions, setSelectedFindingIdForActions] = useState<number | null>(null);
 
   useEffect(() => {
     fetchFindings();
@@ -78,6 +95,11 @@ const FindingsPage: React.FC = () => {
       console.error('Failed to transition finding', err);
       alert('Failed to update finding status');
     }
+  };
+
+  const handleManageActions = (id: number) => {
+    setSelectedFindingIdForActions(id);
+    setActionPlansOpen(true);
   };
 
   const getSeverityColor = (severity: string) => {
@@ -161,6 +183,62 @@ const FindingsPage: React.FC = () => {
   const criticalCount = findings.filter(f => f.severity === 'Critical' && f.status !== 'Closed').length;
   const openCount = findings.filter(f => f.status !== 'Closed').length;
   const closedCount = findings.filter(f => f.status === 'Closed').length;
+
+  if (viewMode === 'draft') {
+    return (
+      <Box sx={{ width: '100%', maxWidth: 800, mx: 'auto', p: 2 }}>
+        <Typography variant="h4" sx={{ color: '#0F1A2B', fontWeight: 'bold', mb: 3 }}>
+          Draft New Finding
+        </Typography>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Stack spacing={3}>
+            <TextField
+              label="Finding Description"
+              multiline
+              rows={4}
+              fullWidth
+              value={draftDescription}
+              onChange={(e) => setDraftDescription(e.target.value)}
+              placeholder="Describe the finding in detail..."
+            />
+            
+            <TextField
+              select
+              label="Severity"
+              fullWidth
+              value={draftSeverity}
+              onChange={(e) => setDraftSeverity(e.target.value)}
+            >
+              <MenuItem value="Critical">Critical</MenuItem>
+              <MenuItem value="High">High</MenuItem>
+              <MenuItem value="Medium">Medium</MenuItem>
+              <MenuItem value="Low">Low</MenuItem>
+            </TextField>
+
+            <Box sx={{ border: '1px dashed #ccc', p: 3, textAlign: 'center', borderRadius: 1 }}>
+              <Typography variant="body2" color="textSecondary" gutterBottom>
+                Upload Evidence (Screenshots, Logs, Documents)
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<CloudUploadIcon />}
+                component="label"
+              >
+                Select File
+                <input type="file" hidden onChange={(e) => setEvidenceFile(e.target.files?.[0]?.name || null)} />
+              </Button>
+              {evidenceFile && <Typography variant="caption" display="block" sx={{ mt: 1 }}>Selected: {evidenceFile}</Typography>}
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+              <Button variant="outlined">Cancel</Button>
+              <Button variant="contained" disabled={!draftDescription}>Save Draft</Button>
+            </Box>
+          </Stack>
+        </Paper>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -277,6 +355,27 @@ const FindingsPage: React.FC = () => {
           <Button onClick={handleTransition} variant="contained" disabled={!newStatus}>
             Update Status
           </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Action Plans Dialog */}
+      <Dialog 
+        open={actionPlansOpen} 
+        onClose={() => setActionPlansOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>Action Plans</DialogTitle>
+        <DialogContent>
+          {selectedFindingIdForActions && (
+            <ActionPlansModule 
+              findingId={selectedFindingIdForActions} 
+              open={actionPlansOpen}
+              onClose={() => setActionPlansOpen(false)}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setActionPlansOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

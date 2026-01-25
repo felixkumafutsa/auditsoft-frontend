@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   Box, 
   Typography, 
@@ -13,39 +13,73 @@ import {
   ListItemButton, 
   ListItemText,
   Divider,
-  CircularProgress
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
+  ListItem,
+  ListItemIcon,
+  IconButton
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import api from '../services/api';
 
 interface Audit {
   id: number;
-  audit_name: string;
+  auditName: string;
+  auditType?: string;
   status: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface AuditProgram {
   id: number;
-  procedure_name: string;
-  control_reference: string;
-  expected_outcome: string;
-  actual_result: string;
+  procedureName: string;
+  controlReference: string | null;
+  expectedOutcome: string | null;
+  actualResult: string | null;
   expanded?: boolean; // UI state for accordion
 }
 
-const AuditExecutionModule: React.FC = () => {
+interface AuditExecutionModuleProps {
+  initialAudit?: Audit | null;
+  onBack?: () => void;
+}
+
+const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudit, onBack }) => {
   const [audits, setAudits] = useState<Audit[]>([]);
-  const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
+  const [selectedAudit, setSelectedAudit] = useState<Audit | null>(initialAudit || null);
   const [programs, setPrograms] = useState<AuditProgram[]>([]);
+  const [evidenceMap, setEvidenceMap] = useState<{[key: number]: any[]}>({});
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<number | null>(null);
+  
+  // Finding Dialog State
+  const [findingDialogOpen, setFindingDialogOpen] = useState(false);
+  const [currentProgramId, setCurrentProgramId] = useState<number | null>(null);
+  const [newFinding, setNewFinding] = useState({ description: "", severity: "Low" });
+
   const userRole = localStorage.getItem('userRole');
 
   useEffect(() => {
-    fetchActiveAudits();
-  }, []);
+    if (initialAudit) {
+      handleSelectAudit(initialAudit);
+    } else {
+      fetchActiveAudits();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialAudit]);
 
   const fetchActiveAudits = async () => {
     try {
@@ -76,15 +110,36 @@ const AuditExecutionModule: React.FC = () => {
     }
   };
 
+  const fetchEvidence = async (programId: number) => {
+    try {
+      const data = await api.getEvidenceList(programId);
+      setEvidenceMap(prev => ({
+        ...prev,
+        [programId]: Array.isArray(data) ? data : []
+      }));
+    } catch (error) {
+      console.error(`Failed to fetch evidence for program ${programId}`, error);
+    }
+  };
+
   const toggleAccordion = (id: number) => {
-    setPrograms(programs.map(p => p.id === id ? { ...p, expanded: !p.expanded } : p));
+    setPrograms(programs.map(p => {
+      if (p.id === id) {
+        // If expanding, fetch evidence
+        if (!p.expanded) {
+          fetchEvidence(id);
+        }
+        return { ...p, expanded: !p.expanded };
+      }
+      return p;
+    }));
   };
 
   const handleResultChange = async (id: number, result: string) => {
     // Optimistic update
-    setPrograms(programs.map(p => p.id === id ? { ...p, actual_result: result } : p));
+    setPrograms(programs.map(p => p.id === id ? { ...p, actualResult: result } : p));
     try {
-      await api.updateAuditProgram(id, { actual_result: result });
+      await api.updateAuditProgram(id, { actualResult: result });
     } catch (error) {
       console.error('Failed to save result', error);
       alert('Failed to save result. Please try again.');
@@ -99,11 +154,47 @@ const AuditExecutionModule: React.FC = () => {
     try {
       await api.uploadEvidence(programId, file, `Evidence for program #${programId}`);
       alert('Evidence uploaded successfully!');
+      fetchEvidence(programId);
     } catch (error) {
       console.error('Upload failed', error);
       alert('Upload failed.');
     } finally {
       setUploading(null);
+    }
+  };
+
+  const handleDeleteEvidence = async (programId: number, evidenceId: number) => {
+    if (!window.confirm('Are you sure you want to delete this evidence?')) return;
+    try {
+      await api.deleteEvidence(evidenceId);
+      await fetchEvidence(programId);
+    } catch (error) {
+      console.error('Failed to delete evidence', error);
+      alert('Failed to delete evidence.');
+    }
+  };
+
+  const handleRaiseFinding = (programId: number) => {
+    setCurrentProgramId(programId);
+    setNewFinding({ description: "", severity: "Low" });
+    setFindingDialogOpen(true);
+  };
+
+  const handleSaveFinding = async () => {
+    if (!selectedAudit || !currentProgramId) return;
+    try {
+      await api.createFinding({
+        auditId: selectedAudit.id,
+        auditProgramId: currentProgramId,
+        description: newFinding.description,
+        severity: newFinding.severity,
+        status: 'Identified'
+      });
+      alert('Finding raised successfully!');
+      setFindingDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to create finding', error);
+      alert('Failed to create finding.');
     }
   };
 
@@ -138,7 +229,7 @@ const AuditExecutionModule: React.FC = () => {
                   {index > 0 && <Divider />}
                   <ListItemButton onClick={() => handleSelectAudit(audit)}>
                     <ListItemText 
-                      primary={audit.audit_name} 
+                      primary={audit.auditName} 
                       primaryTypographyProps={{ fontWeight: 'bold' }}
                     />
                     <Chip label={audit.status} color="primary" size="small" />
@@ -156,15 +247,23 @@ const AuditExecutionModule: React.FC = () => {
     <Box sx={{ p: { xs: 2, md: 3 } }}>
       <Button 
         startIcon={<ArrowBackIcon />} 
-        onClick={() => setSelectedAudit(null)} 
+        onClick={() => {
+          if (onBack) onBack();
+          else setSelectedAudit(null);
+        }} 
         sx={{ mb: 2 }}
       >
-        Back to Audit List
+        {onBack ? 'Back' : 'Back to Audit List'}
       </Button>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5" sx={{ color: '#0F1A2B', fontWeight: 'bold' }}>
-          Executing: {selectedAudit.audit_name}
-        </Typography>
+        <Box>
+          <Typography variant="h5" sx={{ color: '#0F1A2B', fontWeight: 'bold' }}>
+            Executing: {selectedAudit.auditName}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {selectedAudit.auditType} • {selectedAudit.startDate ? new Date(selectedAudit.startDate).toLocaleDateString() : 'No Start Date'} - {selectedAudit.endDate ? new Date(selectedAudit.endDate).toLocaleDateString() : 'No End Date'}
+          </Typography>
+        </Box>
         {userRole === 'Manager' && selectedAudit.status === 'Review' && (
           <Button 
             variant="contained" 
@@ -186,16 +285,16 @@ const AuditExecutionModule: React.FC = () => {
               sx={{ mb: 1 }}
             >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography fontWeight="bold">{program.procedure_name}</Typography>
+                <Typography fontWeight="bold">{program.procedureName}</Typography>
               </AccordionSummary>
               
               <AccordionDetails>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" color="text.secondary">Control Reference:</Typography>
-                  <Typography variant="body2" paragraph>{program.control_reference}</Typography>
+                  <Typography variant="body2" paragraph>{program.controlReference}</Typography>
                   
                   <Typography variant="subtitle2" color="text.secondary">Expected Outcome:</Typography>
-                  <Typography variant="body2" paragraph>{program.expected_outcome}</Typography>
+                  <Typography variant="body2" paragraph>{program.expectedOutcome}</Typography>
                   
                   <Box sx={{ mt: 2, p: 2, bgcolor: '#f0f4f8', borderRadius: 1 }}>
                     <TextField
@@ -203,14 +302,14 @@ const AuditExecutionModule: React.FC = () => {
                       multiline
                       minRows={3}
                       fullWidth
-                      value={program.actual_result || ''}
+                      value={program.actualResult || ''}
                       onChange={(e) => handleResultChange(program.id, e.target.value)}
                       placeholder="Document your findings here..."
                       variant="outlined"
                       sx={{ mb: 2, bgcolor: 'white' }}
                     />
                     
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
                       <Button
                         component="label"
                         variant="outlined"
@@ -228,11 +327,38 @@ const AuditExecutionModule: React.FC = () => {
                       <Button 
                         variant="contained" 
                         color="error" 
-                        onClick={() => alert('Finding creation modal would open here')}
+                        onClick={() => handleRaiseFinding(program.id)}
                       >
                         Raise Finding
                       </Button>
                     </Box>
+
+                    {/* Evidence List */}
+                    {evidenceMap[program.id] && evidenceMap[program.id].length > 0 && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom>Attached Evidence:</Typography>
+                        <List dense sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
+                          {evidenceMap[program.id].map((ev) => (
+                            <ListItem
+                              key={ev.id}
+                              secondaryAction={
+                                <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteEvidence(program.id, ev.id)}>
+                                  <DeleteIcon color="error" />
+                                </IconButton>
+                              }
+                            >
+                              <ListItemIcon>
+                                <InsertDriveFileIcon />
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={ev.fileName}
+                                secondary={ev.description || new Date(ev.createdAt).toLocaleDateString()}
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </Box>
+                    )}
                   </Box>
                 </Box>
               </AccordionDetails>
@@ -240,6 +366,42 @@ const AuditExecutionModule: React.FC = () => {
           ))}
         </Box>
       )}
+
+      {/* Raise Finding Dialog */}
+      <Dialog open={findingDialogOpen} onClose={() => setFindingDialogOpen(false)}>
+        <DialogTitle>Raise Finding</DialogTitle>
+        <DialogContent sx={{ minWidth: 300, pt: 2 }}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              autoFocus
+              label="Finding Description"
+              fullWidth
+              multiline
+              rows={3}
+              value={newFinding.description}
+              onChange={(e) => setNewFinding({ ...newFinding, description: e.target.value })}
+            />
+            <FormControl fullWidth>
+              <InputLabel>Severity</InputLabel>
+              <Select
+                value={newFinding.severity}
+                label="Severity"
+                onChange={(e) => setNewFinding({ ...newFinding, severity: e.target.value })}
+              >
+                <MenuItem value="High">High</MenuItem>
+                <MenuItem value="Medium">Medium</MenuItem>
+                <MenuItem value="Low">Low</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFindingDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveFinding} variant="contained" color="error" disabled={!newFinding.description}>
+            Raise Finding
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

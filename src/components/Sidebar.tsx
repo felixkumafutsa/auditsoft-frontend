@@ -1,114 +1,188 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Box,
+  Drawer,
   List,
-  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Typography,
-  Box,
+  Collapse,
   Divider,
+  Typography,
 } from '@mui/material';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import ReportProblemIcon from '@mui/icons-material/ReportProblem';
-import FactCheckIcon from '@mui/icons-material/FactCheck';
-import PeopleIcon from '@mui/icons-material/People';
-import SecurityIcon from '@mui/icons-material/Security';
-import HistoryIcon from '@mui/icons-material/History';
-import LogoutIcon from '@mui/icons-material/Logout';
-import ChecklistIcon from '@mui/icons-material/Checklist';
+import {
+  Dashboard as DashboardIcon,
+  Assignment as AssignmentIcon,
+  FactCheck as FactCheckIcon,
+  Person as PersonIcon,
+  ExpandLess,
+  ExpandMore,
+  Add as AddIcon,
+  List as ListIcon,
+  CheckCircle as CheckCircleIcon,
+  Description as DescriptionIcon,
+  Group as GroupIcon,
+  Security as SecurityIcon,
+  History as HistoryIcon,
+  Settings as SettingsIcon
+} from '@mui/icons-material';
 
-export type Page = 'dashboard' | 'audits' | 'users' | 'roles' | 'findings' | 'execution' | 'audit-logs' | 'audit-universe';
+export type Page = 
+  | 'dashboard' 
+  | 'audits' 
+  | 'audits-new' 
+  | 'audits-executed' 
+  | 'findings' 
+  | 'findings-draft' 
+  | 'profile' 
+  | 'users' 
+  | 'roles' 
+  | 'audit-logs'
+  | 'execution';
 
 interface SidebarProps {
+  userRole: string;
+  currentPage: Page;
   onNavigate: (page: Page) => void;
-  onLogout: () => void;
+  mobileOpen: boolean;
+  onDrawerToggle: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onNavigate, onLogout }) => {
-  const userRole = localStorage.getItem('userRole') || 'Auditor';
+const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mobileOpen, onDrawerToggle }) => {
+  const [auditsOpen, setAuditsOpen] = useState(true);
+  const [findingsOpen, setFindingsOpen] = useState(true);
+  const [adminOpen, setAdminOpen] = useState(false);
 
-  // Role-based menu configuration
-  const allMenuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, page: 'dashboard' as Page, roles: ['Admin', 'Executive', 'Manager', 'Auditor', 'ProcessOwner', 'CAE'] },
-    { text: 'Audit Universe', icon: <ChecklistIcon />, page: 'audit-universe' as Page, roles: ['Admin', 'Manager', 'CAE'] },
-    { text: 'Audits', icon: <FactCheckIcon />, page: 'audits' as Page, roles: ['Admin', 'Manager', 'Executive', 'CAE'] },
-    { text: 'My Audits', icon: <AssignmentIcon />, page: 'execution' as Page, roles: ['Auditor'] },
-    { text: 'Findings', icon: <ReportProblemIcon />, page: 'findings' as Page, roles: ['Manager', 'Auditor', 'ProcessOwner', 'CAE'] },
-    { text: 'Users', icon: <PeopleIcon />, page: 'users' as Page, roles: ['Admin'] },
-    { text: 'Roles', icon: <SecurityIcon />, page: 'roles' as Page, roles: ['Admin'] },
-    { text: 'Audit Logs', icon: <HistoryIcon />, page: 'audit-logs' as Page, roles: ['Admin'] },
-  ];
+  const isAuditor = userRole === 'Auditor' || userRole === 'auditor';
+  const canSeeAdmin = ['Admin', 'Manager', 'CAE', 'Chief Audit Executive'].includes(userRole);
+  const drawerWidth = 240;
 
-  const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
+  const drawerContent = (
+    <>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 64, bgcolor: '#0a121e' }}>
+        {/* System Logo */}
+        <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+           <Box component="span" sx={{ bgcolor: '#1976d2', width: 32, height: 32, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>A</Box>
+           AuditSoft
+        </Typography>
+      </Box>
+      <Divider sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+      
+      <List component="nav">
+        <ListItemButton selected={currentPage === 'dashboard'} onClick={() => onNavigate('dashboard')}>
+          <ListItemIcon><DashboardIcon sx={{ color: 'white' }} /></ListItemIcon>
+          <ListItemText primary="Dashboard" />
+        </ListItemButton>
+
+        <ListItemButton onClick={() => setAuditsOpen(!auditsOpen)}>
+          <ListItemIcon><AssignmentIcon sx={{ color: 'white' }} /></ListItemIcon>
+          <ListItemText primary="Audits" />
+          {auditsOpen ? <ExpandLess /> : <ExpandMore />}
+        </ListItemButton>
+        <Collapse in={auditsOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audits'} onClick={() => onNavigate('audits')}>
+              <ListItemIcon><ListIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+              <ListItemText primary="All Audits" />
+            </ListItemButton>
+            {isAuditor && (
+              <>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audits-new'} onClick={() => onNavigate('audits-new')}>
+                  <ListItemIcon><AddIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="New Audits" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audits-executed'} onClick={() => onNavigate('audits-executed')}>
+                  <ListItemIcon><CheckCircleIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Executed Audits" />
+                </ListItemButton>
+              </>
+            )}
+          </List>
+        </Collapse>
+
+        <ListItemButton onClick={() => setFindingsOpen(!findingsOpen)}>
+          <ListItemIcon><FactCheckIcon sx={{ color: 'white' }} /></ListItemIcon>
+          <ListItemText primary="Findings" />
+          {findingsOpen ? <ExpandLess /> : <ExpandMore />}
+        </ListItemButton>
+        <Collapse in={findingsOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'findings'} onClick={() => onNavigate('findings')}>
+              <ListItemIcon><ListIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+              <ListItemText primary="All Findings" />
+            </ListItemButton>
+            {isAuditor && (
+              <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'findings-draft'} onClick={() => onNavigate('findings-draft')}>
+                <ListItemIcon><DescriptionIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                <ListItemText primary="Draft Findings" />
+              </ListItemButton>
+            )}
+          </List>
+        </Collapse>
+
+        {canSeeAdmin && (
+          <>
+            <Divider sx={{ my: 1, bgcolor: 'rgba(255,255,255,0.1)' }} />
+            <ListItemButton onClick={() => setAdminOpen(!adminOpen)}>
+              <ListItemIcon><SettingsIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="Administration" />
+              {adminOpen ? <ExpandLess /> : <ExpandMore />}
+            </ListItemButton>
+            <Collapse in={adminOpen} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'users'} onClick={() => onNavigate('users')}>
+                  <ListItemIcon><GroupIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Users" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'roles'} onClick={() => onNavigate('roles')}>
+                  <ListItemIcon><SecurityIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Roles" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audit-logs'} onClick={() => onNavigate('audit-logs')}>
+                  <ListItemIcon><HistoryIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Audit Logs" />
+                </ListItemButton>
+              </List>
+            </Collapse>
+          </>
+        )}
+
+        <Divider sx={{ my: 1, bgcolor: 'rgba(255,255,255,0.1)' }} />
+
+        <ListItemButton selected={currentPage === 'profile'} onClick={() => onNavigate('profile')}>
+          <ListItemIcon><PersonIcon sx={{ color: 'white' }} /></ListItemIcon>
+          <ListItemText primary="My Profile" />
+        </ListItemButton>
+      </List>
+    </>
+  );
 
   return (
-    <Box
-      sx={{
-        width: 250,
-        backgroundColor: '#0F1A2B',
-        color: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        position: 'relative',
-      }}
-    >
-      {/* Header */}
-      <Box sx={{ p: 3, textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-        <Typography variant="h5" fontWeight="bold" color="inherit">
-          AuditSoft
-        </Typography>
-        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', mt: 1, display: 'block' }}>
-          {userRole}
-        </Typography>
-      </Box>
-
-      {/* Menu Items */}
-      <List sx={{ flex: 1, py: 2 }}>
-        {menuItems.map((item) => (
-          <ListItem key={item.page} disablePadding>
-            <ListItemButton
-              onClick={() => onNavigate(item.page)}
-              sx={{
-                color: 'white',
-                '&:hover': { 
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  paddingLeft: 3,
-                },
-                transition: 'all 0.3s ease',
-              }}
-            >
-              <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-
-      {/* Logout Button */}
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-      <Box sx={{ p: 2 }}>
-        <ListItemButton
-          onClick={onLogout}
-          sx={{
-            backgroundColor: 'rgba(220, 53, 69, 0.8)',
-            color: 'white',
-            borderRadius: 1,
-            justifyContent: 'center',
-            '&:hover': { backgroundColor: '#dc3545' },
-            transition: 'background-color 0.3s ease',
-          }}
-        >
-          <ListItemIcon sx={{ color: 'white', minWidth: 'auto', mr: 1 }}>
-            <LogoutIcon />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItemButton>
-      </Box>
+    <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
+      {/* Mobile Drawer */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={onDrawerToggle}
+        ModalProps={{ keepMounted: true }} // Better open performance on mobile.
+        sx={{
+          display: { xs: 'block', sm: 'none' },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, bgcolor: '#0F1A2B', color: 'white' },
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+      {/* Desktop Drawer */}
+      <Drawer
+        variant="permanent"
+        sx={{
+          display: { xs: 'none', sm: 'block' },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, bgcolor: '#0F1A2B', color: 'white' },
+        }}
+        open
+      >
+        {drawerContent}
+      </Drawer>
     </Box>
   );
 };

@@ -29,7 +29,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     setStatus('');
 
     try {
-      const user = await api.login(email, password);
+      const response = await api.login(email, password);
+      const user = response.user || response;
+      const token = response.token || 'mock-token';
       
       // --- Robust Role Mapping ---
       // This logic handles different possible shapes of the user object from the backend.
@@ -37,17 +39,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       let backendRoleName = '';
 
       if (user.role) { // Case 1: A simple 'role' string is returned
-        backendRoleName = user.role;
+        backendRoleName = typeof user.role === 'string' ? user.role : user.role.roleName || '';
       } else if (user.userRoles && user.userRoles.length > 0 && user.userRoles[0].role) { // Case 2: A nested object from Prisma 'include'
         backendRoleName = user.userRoles[0].role.roleName;
       }
       
       if (backendRoleName === 'System Administrator') role = 'Admin';
-      else if (backendRoleName === 'Chief Audit Executive (CAE)' || backendRoleName === 'Executive / Board Viewer') role = 'Executive';
+      else if (backendRoleName === 'Chief Audit Executive (CAE)') role = 'CAE';
+      else if (backendRoleName === 'Executive / Board Viewer') role = 'Executive';
       else if (backendRoleName === 'Audit Manager') role = 'Manager';
       else if (backendRoleName === 'Process Owner') role = 'ProcessOwner';
       else if (backendRoleName === 'Auditor') role = 'Auditor';
+      else if (['Admin', 'Manager', 'Auditor', 'Executive', 'ProcessOwner', 'CAE'].includes(backendRoleName)) role = backendRoleName;
 
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify({ ...user, role }));
       localStorage.setItem('userRole', role);
       setStatus('Login successful!');
       onLoginSuccess();

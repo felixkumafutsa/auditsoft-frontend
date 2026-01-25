@@ -16,13 +16,15 @@ interface AuditFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
   auditToEdit?: any;
+  auditors?: { id: number; name: string; role: string }[];
 }
 
-const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit }) => {
+const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit, auditors = [] }) => {
   const [auditName, setAuditName] = useState('');
   const [auditType, setAuditType] = useState('Operational');
   const [startDate, setStartDate] = useState<Dayjs | null>(null);
   const [endDate, setEndDate] = useState<Dayjs | null>(null);
+  const [assignedTo, setAssignedTo] = useState('');
   const [loading, setLoading] = useState(false);
 
   React.useEffect(() => {
@@ -31,9 +33,11 @@ const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit 
       setAuditType(auditToEdit.auditType || 'Operational');
       setStartDate(auditToEdit.startDate ? dayjs(auditToEdit.startDate) : null);
       setEndDate(auditToEdit.endDate ? dayjs(auditToEdit.endDate) : null);
+      setAssignedTo(auditToEdit.assignedTo || '');
     } else {
       // Reset form if we switch from edit to create
       setAuditName('');
+      setAssignedTo('');
     }
   }, [auditToEdit]);
 
@@ -53,7 +57,8 @@ const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit 
       // Format dates for the backend (ISO-8601 DateTime)
       startDate: startDate ? startDate.toISOString() : null,
       endDate: endDate ? endDate.toISOString() : null,
-      status: 'Planned'
+      assignedTo: assignedTo,
+      status: auditToEdit ? auditToEdit.status : 'Planned'
     };
 
     try {
@@ -68,6 +73,7 @@ const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit 
       setAuditName('');
       setStartDate(null);
       setEndDate(null);
+      setAssignedTo('');
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error creating audit:', error);
@@ -110,7 +116,22 @@ const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit 
             </TextField>
           </Box>
           
-          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' }, display: { xs: 'none', sm: 'block' } }} /> {/* Spacer */}
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
+            <TextField
+              select
+              fullWidth
+              label="Assign Auditor (Optional)"
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              {auditors.map((auditor) => (
+                <MenuItem key={auditor.id} value={auditor.name}>{auditor.name}</MenuItem>
+              ))}
+            </TextField>
+          </Box>
 
           <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
             <DatePicker

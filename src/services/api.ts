@@ -150,8 +150,9 @@ class ApiClient {
   };
   deleteEvidence = (id: number) => this.delete(`/evidence/${id}`);
 
-  // --- Findings ---
-  getFindings = (auditId?: number) => this.get(auditId ? `/audits/${auditId}/findings` : '/findings');
+  // --- Findings & Remediation ---
+  getFindings = () => this.get('/findings');
+  getAuditFindings = (auditId: number) => this.get(`/audits/${auditId}/findings`);
   getFinding = (id: number) => this.get(`/findings/${id}`);
   createFinding = (data: any) => this.post('/findings', data);
   updateFinding = (id: number, data: any) => this.put(`/findings/${id}`, data);

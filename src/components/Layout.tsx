@@ -22,6 +22,9 @@ const Layout: React.FC<LayoutProps> = ({ children, onNavigate, onLogout }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : { name: 'Guest', role: 'Viewer' };
 
   const handleDrawerToggle = () => {
     setMobileDrawerOpen(!mobileDrawerOpen);
@@ -35,7 +38,13 @@ const Layout: React.FC<LayoutProps> = ({ children, onNavigate, onLogout }) => {
   };
 
   const sidebarContent = (
-    <Sidebar onNavigate={handleNavigate} onLogout={onLogout} />
+    <Sidebar 
+      onNavigate={handleNavigate} 
+      userRole={user.role}
+      currentPage="dashboard"
+      mobileOpen={mobileDrawerOpen}
+      onDrawerToggle={handleDrawerToggle}
+    />
   );
 
   return (

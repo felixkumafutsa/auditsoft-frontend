@@ -1,6 +1,13 @@
 // --- src/services/api.ts ---
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const getBaseUrl = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return '/api';
+  }
+  return (process.env.REACT_APP_API_URL || 'http://localhost:5000') + '/api';
+};
+
+const BASE_URL = getBaseUrl();
 
 class ApiClient {
   private token: string | null = null;

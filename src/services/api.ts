@@ -1,10 +1,12 @@
 // --- src/services/api.ts ---
 
 const getBaseUrl = () => {
-  if (process.env.NODE_ENV === 'production') {
-    return '/api';
+  let apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  // Remove trailing slash if present to avoid double slashes
+  if (apiUrl.endsWith('/')) {
+    apiUrl = apiUrl.slice(0, -1);
   }
-  return (process.env.REACT_APP_API_URL || 'http://localhost:5000') + '/api';
+  return `${apiUrl}/api`;
 };
 
 const BASE_URL = getBaseUrl();

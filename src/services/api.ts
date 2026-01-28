@@ -117,8 +117,10 @@ class ApiClient {
   // --- Users ---
   getUsers = () => this.get('/users');
   getUser = (id: number) => this.get(`/users/${id}`);
+  getProfile = () => this.get('/users/me');
   createUser = (data: any) => this.post('/users', data); // Define a proper DTO later
   updateUser = (id: number, data: any) => this.put(`/users/${id}`, data);
+  updateProfile = (formData: FormData) => this.upload('/users/me', formData);
   deleteUser = (id: number) => this.delete(`/users/${id}`);
   assignRoleToUser = (userId: number, roleId: number) => this.post(`/users/${userId}/roles/${roleId}`, {});
   removeRoleFromUser = (userId: number, roleId: number) => this.delete(`/users/${userId}/roles/${roleId}`);
@@ -199,7 +201,8 @@ class ApiClient {
   getMyTasks = () => this.get('/users/me/tasks');
 
   // --- Audit Logs ---
-  getAuditLogs = (filters?: any) => this.post('/audit-logs/search', filters || {});
+  getAuditLogs = () => this.get('/audit-logs');
+  deleteAuditLog = (id: number) => this.delete(`/audit-logs/${id}`);
 
   // --- Administration ---
   getSystemStats = () => this.get('/admin/system-stats');
@@ -207,6 +210,22 @@ class ApiClient {
   // --- Integrations ---
   getIntegrations = () => this.get('/integrations');
   syncIntegration = (id: number) => this.post(`/integrations/${id}/sync`, {});
+
+  // --- Notifications ---
+  getNotifications = () => this.get('/notifications');
+  getUnreadNotificationCount = () => this.get('/notifications/unread-count');
+  markNotificationAsRead = (id: number) => this.patch(`/notifications/${id}/read`, {});
+  markAllNotificationsAsRead = () => this.patch('/notifications/read-all', {});
+
+  // --- Helper to handle PATCH requests ---
+  private async patch(endpoint: string, body: any): Promise<any> {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(body),
+    });
+    return this.handleResponse(response);
+  }
 }
 
 const api = new ApiClient();

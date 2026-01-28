@@ -23,6 +23,8 @@ import RolesPage from '../pages/RolesPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import ProfilePage from '../pages/ProfilePage';
 import AuditExecutionModule from './AuditExecutionModule';
+import NotificationsPage from '../pages/NotificationsPage';
+import api from '../services/api';
 
 interface User {
     name: string;
@@ -39,6 +41,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     const handleLogout = useCallback(() => {
         onLogout();
@@ -106,6 +109,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 return <ProfilePage />;
             case 'execution':
                 return <AuditExecutionModule />;
+            case 'notifications':
+                return <NotificationsPage />;
             default:
                 return <DashboardPage onNavigate={handleNavigate} />;
         }
@@ -144,11 +149,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                         {/* Page Title could go here */}
                     </Typography>
                     
-                    <IconButton size="large" aria-label="show notifications" color="inherit">
-                        <Badge badgeContent={3} color="error">
+                    {/* Notifications Icon */}
+                    <IconButton
+                        size="large"
+                        aria-label="show new notifications"
+                        color="inherit"
+                        onClick={() => handleNavigate('notifications')}
+                    >
+                        <Badge badgeContent={unreadCount} color="error">
                             <NotificationsIcon />
                         </Badge>
                     </IconButton>
+
+                    {/* Profile Menu */}
                     
                     <IconButton
                         size="large"

@@ -24,7 +24,8 @@ import {
   Group as GroupIcon,
   Security as SecurityIcon,
   History as HistoryIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Notifications as NotificationsIcon
 } from '@mui/icons-material';
 
 export type Page = 
@@ -38,7 +39,8 @@ export type Page =
   | 'users' 
   | 'roles' 
   | 'audit-logs'
-  | 'execution';
+  | 'execution'
+  | 'notifications';
 
 interface SidebarProps {
   userRole: string;
@@ -72,6 +74,11 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
         <ListItemButton selected={currentPage === 'dashboard'} onClick={() => onNavigate('dashboard')}>
           <ListItemIcon><DashboardIcon sx={{ color: 'white' }} /></ListItemIcon>
           <ListItemText primary="Dashboard" />
+        </ListItemButton>
+
+        <ListItemButton selected={currentPage === 'notifications'} onClick={() => onNavigate('notifications')}>
+          <ListItemIcon><NotificationsIcon sx={{ color: 'white' }} /></ListItemIcon>
+          <ListItemText primary="Notifications" />
         </ListItemButton>
 
         <ListItemButton onClick={() => setAuditsOpen(!auditsOpen)}>

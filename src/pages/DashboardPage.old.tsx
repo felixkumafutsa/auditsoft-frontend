@@ -86,7 +86,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
         // Fetch real data from the API
         const [sysStats, auditLogs] = await Promise.all([
           api.getSystemStats(),
-          api.getAuditLogs({ limit: 5 }) // Assuming backend supports a limit
+          api.getAuditLogs() // Assuming backend supports a limit
         ]);
         
         setStats({

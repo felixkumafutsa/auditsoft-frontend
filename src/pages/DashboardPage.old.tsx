@@ -42,7 +42,7 @@ import {
   Cell
 } from 'recharts';
 import api from '../services/api';
-import { Page } from '../components/Sidebar';
+import { Page } from '../types/navigation';
 
 // --- Types ---
 type UserRole = 'Admin' | 'Executive' | 'Manager' | 'Auditor' | 'ProcessOwner';

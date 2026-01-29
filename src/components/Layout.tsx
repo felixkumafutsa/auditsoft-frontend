@@ -10,7 +10,8 @@ import {
   Drawer,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import Sidebar, { Page } from './Sidebar';
+import Sidebar from './Sidebar';
+import { Page } from '../types/navigation';
 
 interface LayoutProps {
   children: React.ReactNode;

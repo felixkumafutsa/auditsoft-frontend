@@ -27,12 +27,17 @@ import {
   History as HistoryIcon,
   Security as SecurityIcon,
   Error as ErrorIcon,
+  Hub as HubIcon,
+  Link as LinkIcon,
+  Description as DescriptionIcon,
+  Gavel as GavelIcon,
+  BarChart as BarChartIcon,
 } from '@mui/icons-material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../services/api';
-import { Page } from '../components/Sidebar';
+import { Page } from '../types/navigation';
 
-type UserRole = 'Admin' | 'Executive' | 'Manager' | 'Auditor' | 'ProcessOwner' | 'CAE';
+type UserRole = 'Admin' | 'System Administrator' | 'Executive' | 'Manager' | 'Auditor' | 'ProcessOwner' | 'CAE';
 
 // ========== STAT CARD COMPONENT ==========
 const StatCard: React.FC<{
@@ -128,19 +133,11 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
         <Box>
           <StatCard
-            title="Total Audits"
-            value={loading ? <CircularProgress size={24} /> : stats.audits}
-            icon={<AssignmentIcon fontSize="large" />}
-            color="#1976d2"
-            onClick={() => onNavigate('audits')}
-          />
-        </Box>
-        <Box>
-          <StatCard
             title="System Health"
             value={stats.systemHealth}
             icon={<SettingsIcon fontSize="large" />}
             color={stats.systemHealth === 'Operational' ? '#2e7d32' : '#d32f2f'}
+            onClick={() => onNavigate('system-settings')}
           />
         </Box>
         <Box>
@@ -159,6 +156,43 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             icon={<SecurityIcon fontSize="large" />}
             color="#ed6c02"
             onClick={() => onNavigate('roles')}
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="Integrations"
+            value={
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    cursor: 'pointer', 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    fontSize: '0.875rem',
+                    '&:hover': { textDecoration: 'underline', color: 'primary.main' } 
+                  }}
+                  onClick={(e) => { e.stopPropagation(); onNavigate('system-settings'); }}
+                >
+                  <LinkIcon fontSize="inherit" sx={{ mr: 0.5 }} /> Connected Systems
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    cursor: 'pointer', 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    fontSize: '0.875rem',
+                    '&:hover': { textDecoration: 'underline', color: 'primary.main' } 
+                  }}
+                  onClick={(e) => { e.stopPropagation(); onNavigate('system-settings'); }}
+                >
+                  <LinkIcon fontSize="inherit" sx={{ mr: 0.5 }} /> Data Imports
+                </Typography>
+              </Box>
+            }
+            icon={<HubIcon fontSize="large" />}
+            color="#1976d2"
           />
         </Box>
       </Box>
@@ -489,27 +523,71 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     openIssues: 0,
     overallRisk: 'Medium',
   });
+  const [audits, setAudits] = useState<any[]>([]);
+  const [kris, setKris] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [audits, findings] = await Promise.all([
+        const [auditsData, findingsData, krisData, tasksData, notificationsData] = await Promise.all([
           api.getAudits(),
-          api.getFindings?.(),
+          api.getFindings?.() || Promise.resolve([]),
+          api.getKris?.() || Promise.resolve([]),
+          api.getMyTasks?.() || Promise.resolve([]),
+          api.getNotifications?.() || Promise.resolve([]),
         ]);
-        const criticalCount = (findings || []).filter((f: any) => f.severity === 'Critical').length;
+
+        const auditsArray = Array.isArray(auditsData) ? auditsData : [];
+        setAudits(auditsArray);
+        setKris(Array.isArray(krisData) ? krisData : []);
+        setTasks(Array.isArray(tasksData) ? tasksData : []);
+        setNotifications(Array.isArray(notificationsData) ? notificationsData : []);
+
+        const criticalCount = (findingsData || []).filter((f: any) => f.severity === 'Critical').length;
         setStats({
-          totalAudits: audits?.length || 0,
+          totalAudits: auditsArray.length,
           criticalFindings: criticalCount,
-          openIssues: (findings || []).filter((f: any) => f.status !== 'Closed').length,
+          openIssues: (findingsData || []).filter((f: any) => f.status !== 'Closed').length,
           overallRisk: criticalCount > 5 ? 'High' : 'Medium',
         });
       } catch (e) {
         console.error('Failed to fetch CAE data', e);
+      } finally {
+        setLoading(false);
       }
     };
     fetchData();
   }, []);
+
+  // Prepare Audit Progress Data
+  const auditStatusCounts = audits.reduce((acc: any, audit: any) => {
+    const status = audit.status || 'Planned';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const auditStatusData = Object.entries(auditStatusCounts).map(([name, value]) => ({ name, value }));
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
+  // Prepare KRI Data
+  const kriStatusCounts = kris.reduce((acc: any, kri: any) => {
+    const status = kri.status || 'Stable';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const kriStatusData = Object.entries(kriStatusCounts).map(([name, value]) => ({ name, value }));
+  const KRI_COLORS: Record<string, string> = {
+    'Critical': '#d32f2f',
+    'Warning': '#ed6c02',
+    'Stable': '#2e7d32',
+    'Low': '#2e7d32',
+    'Medium': '#ed6c02',
+    'High': '#d32f2f'
+  };
 
   return (
     <Box>
@@ -521,60 +599,176 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <strong>Overall Risk Level: {stats.overallRisk}</strong> - Review critical findings and escalations below.
       </Alert>
 
+      {/* Navigation Cards */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
         <Box>
           <StatCard
-            title="Total Audits"
-            value={stats.totalAudits}
-            icon={<AssignmentIcon fontSize="large" />}
+            title="Audit Plans"
+            value="View"
+            icon={<DescriptionIcon fontSize="large" />}
             color="#1976d2"
-            onClick={() => onNavigate('audits')}
+            onClick={() => onNavigate('audit-plans')}
           />
         </Box>
         <Box>
           <StatCard
-            title="Critical Findings"
-            value={stats.criticalFindings}
+            title="Risk Escalation"
+            value={stats.overallRisk === 'High' ? 'Action Req' : 'Stable'}
             icon={<WarningIcon fontSize="large" />}
-            color={stats.criticalFindings > 3 ? '#d32f2f' : '#ed6c02'}
-            onClick={() => onNavigate('findings')}
-          />
-        </Box>
-        <Box>
-          <StatCard
-            title="Open Issues"
-            value={stats.openIssues}
-            icon={<ErrorIcon fontSize="large" />}
-            color="#d32f2f"
-          />
-        </Box>
-        <Box>
-          <StatCard
-            title="Risk Assessment"
-            value={stats.overallRisk}
-            icon={<TrendingUpIcon fontSize="large" />}
             color={stats.overallRisk === 'High' ? '#d32f2f' : '#ed6c02'}
+            onClick={() => onNavigate('risk-register')}
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="Compliance"
+            value="Manage"
+            icon={<GavelIcon fontSize="large" />}
+            color="#2e7d32"
+            onClick={() => onNavigate('compliance-standards')}
+          />
+        </Box>
+        <Box>
+          <StatCard
+            title="Reports"
+            value="View"
+            icon={<BarChartIcon fontSize="large" />}
+            color="#9c27b0"
+            onClick={() => onNavigate('reports-executive')}
           />
         </Box>
       </Box>
 
-      <Paper elevation={2} sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-          Executive Summary
-        </Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography>Audit Completion Rate:</Typography>
-            <LinearProgress variant="determinate" value={60} sx={{ flex: 1, mx: 2 }} />
-            <Typography>60%</Typography>
+      {/* Main Executive Summary Grid */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+        
+        {/* 1. Audit Progress Snapshot */}
+        <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TrendingUpIcon color="primary" /> Audit Progress Snapshot
+          </Typography>
+          <Box sx={{ height: 300, width: '100%' }}>
+            {auditStatusData.length > 0 ? (
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={auditStatusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                  >
+                    {auditStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={36}/>
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                <Typography color="textSecondary">No active audit data available.</Typography>
+              </Box>
+            )}
           </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography>Finding Remediation Rate:</Typography>
-            <LinearProgress variant="determinate" value={45} sx={{ flex: 1, mx: 2 }} />
-            <Typography>45%</Typography>
+        </Paper>
+
+        {/* 2. Risk Key Indicators (KRIs) */}
+        <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <WarningIcon color="error" /> Key Risk Indicators (KRIs)
+          </Typography>
+          <Box sx={{ height: 300, width: '100%' }}>
+            {kriStatusData.length > 0 ? (
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={kriStatusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                  >
+                    {kriStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={KRI_COLORS[entry.name] || '#8884d8'} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={36}/>
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                <Typography color="textSecondary">No Key Risk Indicators tracked yet.</Typography>
+              </Box>
+            )}
           </Box>
-        </Box>
-      </Paper>
+        </Paper>
+
+        {/* 3. Tasks & Alerts */}
+        <Paper elevation={2} sx={{ p: 3, gridColumn: { md: '1 / -1' } }}>
+          <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AssignmentIcon color="secondary" /> Tasks & Alerts
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+            
+            {/* Tasks Column */}
+            <Box>
+              <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                My Pending Tasks
+              </Typography>
+              {tasks.length > 0 ? (
+                <List dense>
+                  {tasks.slice(0, 5).map((task: any) => (
+                    <ListItem key={task.id}>
+                      <ListItemIcon sx={{ minWidth: 36 }}>
+                        <CheckCircleIcon color="action" fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText primary={task.title} secondary={task.dueDate ? `Due: ${task.dueDate}` : 'No due date'} />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Alert severity="info" sx={{ mt: 1 }}>No pending tasks assigned to you.</Alert>
+              )}
+            </Box>
+
+            {/* Alerts/Notifications Column */}
+            <Box>
+              <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                Recent Alerts
+              </Typography>
+              {notifications.length > 0 ? (
+                <List dense>
+                  {notifications.slice(0, 5).map((notif: any) => (
+                    <ListItem key={notif.id}>
+                      <ListItemIcon sx={{ minWidth: 36 }}>
+                        <ErrorIcon color={notif.read ? 'disabled' : 'error'} fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={notif.message} 
+                        primaryTypographyProps={{ fontWeight: notif.read ? 'normal' : 'bold' }}
+                        secondary={new Date(notif.createdAt).toLocaleDateString()} 
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Alert severity="success" sx={{ mt: 1 }}>No new alerts or notifications.</Alert>
+              )}
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
     </Box>
   );
 };
@@ -585,6 +779,7 @@ const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   const renderDashboard = () => {
     switch (userRole) {
+      case 'System Administrator':
       case 'Admin':
         return <AdminDashboard onNavigate={onNavigate} />;
       case 'Manager':

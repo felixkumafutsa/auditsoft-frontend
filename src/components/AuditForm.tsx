@@ -4,7 +4,13 @@ import {
   TextField, 
   Button, 
   Typography, 
-  MenuItem 
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  OutlinedInput,
+  Chip,
+  SelectChangeEvent
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -17,14 +23,29 @@ interface AuditFormProps {
   onCancel?: () => void;
   auditToEdit?: any;
   auditors?: { id: number; name: string; role: string }[];
+  managers?: { id: number; name: string; role: string }[];
+  auditUniverseItems?: { id: number; entityName: string; entityType: string }[];
 }
 
-const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit, auditors = [] }) => {
+const AuditForm: React.FC<AuditFormProps> = ({ 
+  onSuccess, 
+  onCancel, 
+  auditToEdit, 
+  auditors = [],
+  managers = [],
+  auditUniverseItems = []
+}) => {
   const [auditName, setAuditName] = useState('');
   const [auditType, setAuditType] = useState('Operational');
   const [startDate, setStartDate] = useState<Dayjs | null>(null);
   const [endDate, setEndDate] = useState<Dayjs | null>(null);
   const [assignedTo, setAssignedTo] = useState('');
+  
+  // New Fields
+  const [auditUniverseId, setAuditUniverseId] = useState<number | ''>('');
+  const [assignedManagerId, setAssignedManagerId] = useState<number | ''>('');
+  const [assignedAuditorIds, setAssignedAuditorIds] = useState<number[]>([]);
+
   const [loading, setLoading] = useState(false);
 
   React.useEffect(() => {
@@ -34,12 +55,35 @@ const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit,
       setStartDate(auditToEdit.startDate ? dayjs(auditToEdit.startDate) : null);
       setEndDate(auditToEdit.endDate ? dayjs(auditToEdit.endDate) : null);
       setAssignedTo(auditToEdit.assignedTo || '');
+      
+      setAuditUniverseId(auditToEdit.auditUniverseId || '');
+      setAssignedManagerId(auditToEdit.assignedManagerId || '');
+      
+      // Handle existing assigned auditors
+      if (Array.isArray(auditToEdit.assignedAuditors)) {
+        setAssignedAuditorIds(auditToEdit.assignedAuditors.map((a: any) => a.id));
+      } else {
+        setAssignedAuditorIds([]);
+      }
     } else {
       // Reset form if we switch from edit to create
       setAuditName('');
       setAssignedTo('');
+      setAuditUniverseId('');
+      setAssignedManagerId('');
+      setAssignedAuditorIds([]);
     }
   }, [auditToEdit]);
+
+  const handleAuditorChange = (event: SelectChangeEvent<number[]>) => {
+    const {
+      target: { value },
+    } = event;
+    setAssignedAuditorIds(
+      // On autofill we get a stringified value.
+      typeof value === 'string' ? value.split(',').map(Number) : value,
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +102,10 @@ const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit,
       startDate: startDate ? startDate.toISOString() : null,
       endDate: endDate ? endDate.toISOString() : null,
       assignedTo: assignedTo,
-      status: auditToEdit ? auditToEdit.status : 'Planned'
+      status: auditToEdit ? auditToEdit.status : 'Planned',
+      auditUniverseId: auditUniverseId === '' ? undefined : Number(auditUniverseId),
+      assignedManagerId: assignedManagerId === '' ? undefined : Number(assignedManagerId),
+      assignedAuditorIds: assignedAuditorIds
     };
 
     try {
@@ -120,17 +167,62 @@ const AuditForm: React.FC<AuditFormProps> = ({ onSuccess, onCancel, auditToEdit,
             <TextField
               select
               fullWidth
-              label="Assign Auditor (Optional)"
-              value={assignedTo}
-              onChange={(e) => setAssignedTo(e.target.value)}
+              label="Audit Universe Entity"
+              value={auditUniverseId}
+              onChange={(e) => setAuditUniverseId(Number(e.target.value))}
             >
               <MenuItem value="">
                 <em>None</em>
               </MenuItem>
-              {auditors.map((auditor) => (
-                <MenuItem key={auditor.id} value={auditor.name}>{auditor.name}</MenuItem>
+              {auditUniverseItems.map((item) => (
+                <MenuItem key={item.id} value={item.id}>
+                  {item.entityName} ({item.entityType})
+                </MenuItem>
               ))}
             </TextField>
+          </Box>
+
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
+            <TextField
+              select
+              fullWidth
+              label="Assigned Manager"
+              value={assignedManagerId}
+              onChange={(e) => setAssignedManagerId(Number(e.target.value))}
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              {managers.map((manager) => (
+                <MenuItem key={manager.id} value={manager.id}>{manager.name}</MenuItem>
+              ))}
+            </TextField>
+          </Box>
+          
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 12' } }}>
+            <FormControl fullWidth>
+              <InputLabel id="assigned-auditors-label">Assigned Auditors</InputLabel>
+              <Select
+                labelId="assigned-auditors-label"
+                multiple
+                value={assignedAuditorIds}
+                onChange={handleAuditorChange}
+                input={<OutlinedInput label="Assigned Auditors" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={auditors.find(a => a.id === value)?.name} />
+                    ))}
+                  </Box>
+                )}
+              >
+                {auditors.map((auditor) => (
+                  <MenuItem key={auditor.id} value={auditor.id}>
+                    {auditor.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
 
           <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>

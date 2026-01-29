@@ -2,21 +2,19 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
     Box, 
     CircularProgress, 
-    AppBar, 
-    Toolbar, 
-    IconButton, 
-    Typography, 
-    Badge, 
-    Avatar, 
-    Menu, 
-    MenuItem,
-    CssBaseline
+    CssBaseline,
+    Drawer,
+    Typography
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import Sidebar, { Page } from './Sidebar';
+import Sidebar from './Sidebar';
+import { Page } from '../types/navigation';
 import DashboardPage from '../pages/DashboardPage';
 import AuditsPage from '../pages/AuditsPage';
+import AuditPlansPage from '../pages/AuditPlansPage';
+import AuditProgramsPage from '../pages/AuditProgramsPage';
+import StandardsLibraryPage from '../pages/StandardsLibraryPage';
+import ControlMappingPage from '../pages/ControlMappingPage';
+import CoverageAnalysisPage from '../pages/CoverageAnalysisPage';
 import FindingsPage from '../pages/FindingsPage';
 import UsersPage from '../pages/UsersPage';
 import RolesPage from '../pages/RolesPage';
@@ -24,6 +22,13 @@ import AuditLogsPage from '../pages/AuditLogsPage';
 import ProfilePage from '../pages/ProfilePage';
 import AuditExecutionModule from './AuditExecutionModule';
 import NotificationsPage from '../pages/NotificationsPage';
+import RiskRegisterPage from '../pages/RiskRegisterPage';
+import RiskKRIsPage from '../pages/RiskKRIsPage';
+import RiskHeatmapPage from '../pages/RiskHeatmapPage';
+import ExecutiveReportsPage from '../pages/ExecutiveReportsPage';
+import AuditUniversePage from '../pages/AuditUniversePage';
+import GlobalTopBar from './GlobalTopBar';
+import ContextualTopBar from './ContextualTopBar';
 import api from '../services/api';
 
 interface User {
@@ -40,7 +45,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [unreadCount, setUnreadCount] = useState(0);
 
     const handleLogout = useCallback(() => {
@@ -62,49 +66,78 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
         setMobileOpen(!mobileOpen);
     };
 
-    const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-        setAnchorEl(event.currentTarget);
-    };
-
-    const handleProfileMenuClose = () => {
-        setAnchorEl(null);
-    };
-
     const handleNavigate = (page: Page) => {
         setCurrentPage(page);
         setMobileOpen(false); // Close mobile drawer on navigation
-    };
-
-    const handleProfileNavigate = () => {
-        handleProfileMenuClose();
-        handleNavigate('profile');
-    };
-
-    const handleLogoutClick = () => {
-        handleProfileMenuClose();
-        handleLogout();
     };
 
     const renderPage = () => {
         switch (currentPage) {
             case 'dashboard':
                 return <DashboardPage onNavigate={handleNavigate} />;
+            
+            // Audits
             case 'audits':
                 return <AuditsPage filterType="all" />;
             case 'audits-new':
                 return <AuditsPage filterType="new" />;
             case 'audits-executed':
                 return <AuditsPage filterType="executed" />;
+            case 'audit-plans':
+                return <AuditPlansPage />;
+            case 'audit-programs':
+                return <AuditProgramsPage />;
+            case 'audit-universe':
+                return <AuditUniversePage />;
+            
+            // Findings
             case 'findings':
                 return <FindingsPage viewMode="all" />;
             case 'findings-draft':
                 return <FindingsPage viewMode="draft" />;
+            
+            // Evidence
+            case 'evidence':
+                return <Box sx={{ p: 3 }}><Typography variant="h4">Evidence Management</Typography><Typography>Module coming soon...</Typography></Box>;
+
+            // Admin
             case 'users':
                 return <UsersPage />;
             case 'roles':
                 return <RolesPage />;
             case 'audit-logs':
                 return <AuditLogsPage />;
+            case 'workflow-config':
+                return <Box sx={{ p: 3 }}><Typography variant="h4">Workflow Configuration</Typography><Typography>Module coming soon...</Typography></Box>;
+            case 'system-settings':
+                return <Box sx={{ p: 3 }}><Typography variant="h4">System Settings</Typography><Typography>Module coming soon...</Typography></Box>;
+
+
+            // Reports
+            case 'reports-executive':
+                return <ExecutiveReportsPage />;
+            case 'reports-operational':
+                return <Box sx={{ p: 3 }}><Typography variant="h4">Operational Reports</Typography><Typography>Module coming soon...</Typography></Box>;
+            case 'reports-custom':
+                return <Box sx={{ p: 3 }}><Typography variant="h4">Custom Reports</Typography><Typography>Module coming soon...</Typography></Box>;
+
+            // Risk Management
+            case 'risk-register':
+                return <RiskRegisterPage />;
+            case 'risk-kri':
+                return <RiskKRIsPage />;
+            case 'risk-heatmaps':
+                return <RiskHeatmapPage />;
+
+            // Compliance
+            case 'compliance-standards':
+                return <StandardsLibraryPage />;
+            case 'compliance-controls':
+                return <ControlMappingPage />;
+            case 'compliance-coverage':
+                return <CoverageAnalysisPage />;
+            
+            // Others
             case 'profile':
                 return <ProfilePage />;
             case 'execution':
@@ -117,87 +150,59 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
     };
 
     if (!currentUser) {
-        return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><CircularProgress /></Box>;
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <CircularProgress />
+            </Box>
+        );
     }
 
     return (
-        <Box sx={{ display: 'flex' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
             <CssBaseline />
             
-            {/* Top Bar */}
-            <AppBar
-                position="fixed"
-                sx={{
-                    width: { sm: `calc(100% - 240px)` },
-                    ml: { sm: `240px` },
-                    bgcolor: 'white',
-                    color: '#0F1A2B',
-                    boxShadow: 1
-                }}
-            >
-                <Toolbar>
-                    <IconButton
-                        color="inherit"
-                        aria-label="open drawer"
-                        edge="start"
-                        onClick={handleDrawerToggle}
-                        sx={{ mr: 2, display: { sm: 'none' } }}
-                    >
-                        <MenuIcon />
-                    </IconButton>
-                    <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-                        {/* Page Title could go here */}
-                    </Typography>
-                    
-                    {/* Notifications Icon */}
-                    <IconButton
-                        size="large"
-                        aria-label="show new notifications"
-                        color="inherit"
-                        onClick={() => handleNavigate('notifications')}
-                    >
-                        <Badge badgeContent={unreadCount} color="error">
-                            <NotificationsIcon />
-                        </Badge>
-                    </IconButton>
+            {/* Global Top Bar */}
+            <GlobalTopBar 
+                user={currentUser}
+                onDrawerToggle={handleDrawerToggle}
+                onLogout={handleLogout}
+                onNavigate={handleNavigate}
+                unreadCount={unreadCount}
+            />
 
-                    {/* Profile Menu */}
-                    
-                    <IconButton
-                        size="large"
-                        edge="end"
-                        aria-label="account of current user"
-                        aria-haspopup="true"
-                        onClick={handleProfileMenuOpen}
-                        color="inherit"
-                    >
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: '#0F1A2B' }}>
-                            {currentUser.name?.charAt(0) || 'U'}
-                        </Avatar>
-                    </IconButton>
-                    <Menu
-                        anchorEl={anchorEl}
-                        open={Boolean(anchorEl)}
-                        onClose={handleProfileMenuClose}
-                        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-                    >
-                        <MenuItem onClick={handleProfileNavigate}>My Profile</MenuItem>
-                        <MenuItem onClick={handleLogoutClick}>Logout</MenuItem>
-                    </Menu>
-                </Toolbar>
-            </AppBar>
-
-            <Sidebar
+            {/* Contextual Top Bar (Hidden on Mobile) */}
+            <ContextualTopBar 
                 userRole={currentUser.role}
                 currentPage={currentPage}
                 onNavigate={handleNavigate}
-                mobileOpen={mobileOpen}
-                onDrawerToggle={handleDrawerToggle}
             />
-            
-            <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - 240px)` }, bgcolor: '#f4f6f8', minHeight: '100vh' }}>
-                <Toolbar /> {/* Spacer for AppBar */}
+
+            {/* Mobile Sidebar (Drawer) */}
+            <Box component="nav">
+                <Drawer
+                    variant="temporary"
+                    open={mobileOpen}
+                    onClose={handleDrawerToggle}
+                    ModalProps={{
+                        keepMounted: true, // Better open performance on mobile.
+                    }}
+                    sx={{
+                        display: { xs: 'block', md: 'none' },
+                        '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
+                    }}
+                >
+                    <Sidebar 
+                        userRole={currentUser.role}
+                        currentPage={currentPage}
+                        onNavigate={handleNavigate}
+                        mobileOpen={mobileOpen}
+                        onDrawerToggle={handleDrawerToggle}
+                    />
+                </Drawer>
+            </Box>
+
+            {/* Main Content Area */}
+            <Box component="main" sx={{ flexGrow: 1, p: 3, width: '100%' }}>
                 {renderPage()}
             </Box>
         </Box>

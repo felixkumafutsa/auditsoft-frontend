@@ -63,6 +63,7 @@ interface Audit {
   startDate?: Date;
   endDate?: Date;
   assignedTo?: string;
+  assignedAuditors?: { id: number; name: string }[];
 }
 
 interface AuditsPageProps {
@@ -84,8 +85,16 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [auditorName, setAuditorName] = useState("");
   const [auditors, setAuditors] = useState<{ id: number; name: string; role: string }[]>([]);
-  const [currentUser, setCurrentUser] = useState<{ name?: string; username?: string; role: string } | null>(null);
+  const [managers, setManagers] = useState<{ id: number; name: string; role: string }[]>([]);
+  const [auditUniverseItems, setAuditUniverseItems] = useState<{ id: number; entityName: string; entityType: string }[]>([]);
+  
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [currentUser, setCurrentUser] = useState<{ id?: number; name?: string; username?: string; role: string } | null>(null);
   const [filterMode, setFilterMode] = useState<'all' | 'my'>('all');
+
+  // Filtering State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [tabValue, setTabValue] = useState(0);
 
   // Approval State
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -119,7 +128,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         auditType: a.auditType || a.audit_type,
         startDate: a.startDate || a.start_date,
         endDate: a.endDate || a.end_date,
-        assignedTo: a.assignedTo || a.assigned_to
+        assignedTo: a.assignedManager ? a.assignedManager.name : (a.assignedTo || a.assigned_to)
       })) : [];
       setAudits(mappedData);
       setError(null);
@@ -154,21 +163,52 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   }, [currentUser]);
 
   useEffect(() => {
-    const loadAuditors = async () => {
+    const loadData = async () => {
       try {
-        // Try to fetch users from API
-        const data = await (api as any).getUsers();
-        if (Array.isArray(data)) setAuditors(data.filter((u: any) => u.role === "Auditor"));
+        // Load Users
+        const usersData = await (api as any).getUsers();
+        if (Array.isArray(usersData)) {
+          // Filter Auditors
+          const validAuditors = usersData.filter((u: any) => 
+            u.role === "Auditor" || 
+            u.userRoles?.some((ur: any) => ur.role?.roleName === "Auditor")
+          ).map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            role: "Auditor"
+          }));
+          setAuditors(validAuditors);
+
+          // Filter Managers
+          const validManagers = usersData.filter((u: any) => 
+            u.role === "Manager" || u.role === "Audit Manager" ||
+            u.userRoles?.some((ur: any) => ur.role?.roleName === "Audit Manager" || ur.role?.roleName === "Manager")
+          ).map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            role: "Manager"
+          }));
+          setManagers(validManagers);
+        }
+
+        // Load Audit Universe
+        const universeData = await api.getAuditUniverse();
+        if (Array.isArray(universeData)) {
+          setAuditUniverseItems(universeData);
+        }
+
       } catch (err) {
-        console.log("Using mock auditors");
+        console.log("Using mock data due to error", err);
         setAuditors([
           { id: 1, name: "Alice Johnson", role: "Auditor" },
-          { id: 2, name: "Bob Smith", role: "Manager" },
           { id: 3, name: "Charlie Brown", role: "Auditor" },
-        ].filter((u) => u.role === "Auditor"));
+        ]);
+        setManagers([
+          { id: 2, name: "Bob Smith", role: "Manager" },
+        ]);
       }
     };
-    loadAuditors();
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -185,7 +225,17 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     if (isAuditor) {
       const userName = currentUser.name || currentUser.username || '';
       // Auditors ONLY see their own audits
-      const myAudits = audits.filter((a) => a.assignedTo && a.assignedTo.toLowerCase() === userName.toLowerCase());
+      const myAudits = audits.filter((a) => {
+        // Trust backend filtering if available, but also check client side for safety/consistency
+        if (a.assignedAuditors && a.assignedAuditors.length > 0) {
+           if (currentUser.id) {
+               return a.assignedAuditors.some(u => u.id === currentUser.id);
+           }
+           return a.assignedAuditors.some(u => u.name.toLowerCase() === userName.toLowerCase());
+        }
+        // Fallback for string-based assignment
+        return a.assignedTo && a.assignedTo.toLowerCase().includes(userName.toLowerCase());
+      });
 
       if (filterType === 'new') {
         return myAudits.filter((a) => ['Planned', 'Approved', 'In Progress'].includes(a.status));
@@ -200,7 +250,15 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
     if (filterMode === 'my') {
       const userName = currentUser.name || currentUser.username || '';
-      return audits.filter((a) => a.assignedTo && a.assignedTo.toLowerCase() === userName.toLowerCase());
+      return audits.filter((a) => {
+         if (a.assignedAuditors && a.assignedAuditors.length > 0) {
+             if (currentUser.id) {
+                 return a.assignedAuditors.some(u => u.id === currentUser.id);
+             }
+             return a.assignedAuditors.some(u => u.name.toLowerCase() === userName.toLowerCase());
+         }
+         return a.assignedTo && a.assignedTo.toLowerCase().includes(userName.toLowerCase());
+      });
     }
     
     if (filterType === 'new') {
@@ -236,12 +294,19 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     try {
       // Find the auditor ID based on the selected name
       const selectedAuditor = auditors.find(u => u.name === auditorName);
-      const assignedManagerId = selectedAuditor ? selectedAuditor.id : undefined;
-
-      const updatedAudit = { ...auditToEdit, assignedTo: auditorName, status: newStatus, assignedManagerId };
       
-      await api.updateAudit(auditToEdit.id, updatedAudit);
-      setAudits(audits.map((a) => (a.id === auditToEdit.id ? updatedAudit : a)));
+      if (selectedAuditor) {
+          await api.assignAuditors(auditToEdit.id, [selectedAuditor.id]);
+          
+          const updatedAudit = { 
+              ...auditToEdit, 
+              assignedTo: auditorName, 
+              status: newStatus,
+              assignedAuditors: [{ id: selectedAuditor.id, name: selectedAuditor.name }]
+          };
+          
+          setAudits(audits.map((a) => (a.id === auditToEdit.id ? updatedAudit : a)));
+      }
       setAssignDialogOpen(false);
     } catch (err) {
       console.error("Failed to assign auditor", err);
@@ -1002,7 +1067,12 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         <AuditForm
           auditToEdit={auditToEdit}
           auditors={auditors}
-          onSuccess={() => setView("list")}
+          managers={managers}
+          auditUniverseItems={auditUniverseItems}
+          onSuccess={() => {
+            setView("list");
+            fetchAudits();
+          }}
           onCancel={() => setView("list")}
         />
       )}

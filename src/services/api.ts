@@ -131,17 +131,13 @@ class ApiClient {
   createAudit = (data: any) => this.post('/audits', data); // Define a proper DTO later
   updateAudit = (id: number, data: any) => this.put(`/audits/${id}`, data);
   deleteAudit = (id: number) => this.delete(`/audits/${id}`);
+  assignAuditors = (id: number, auditorIds: number[]) => 
+    this.post(`/audits/${id}/assign`, { auditorIds });
   transitionAudit = (id: number, toStatus: string, userRole?: string) => 
     this.post(`/audits/${id}/transition`, { toStatus, userRole });
   getAllowedTransitionsAudit = (id: number) => 
     this.get(`/audits/${id}/allowed-transitions`);
 
-  // --- Audit Universe ---
-  getAuditUniverse = () => this.get('/audit-universe');
-  getAuditUniverseItem = (id: number) => this.get(`/audit-universe/${id}`);
-  createAuditUniverseItem = (data: any) => this.post('/audit-universe', data);
-  updateAuditUniverseItem = (id: number, data: any) => this.put(`/audit-universe/${id}`, data);
-  deleteAuditUniverseItem = (id: number) => this.delete(`/audit-universe/${id}`);
 
   // --- Audit Programs ---
   getAuditPrograms = (auditId: number) => this.get(`/audits/${auditId}/programs`);
@@ -185,12 +181,29 @@ class ApiClient {
 
   // --- Compliance & Frameworks ---
   getFrameworks = () => this.get('/compliance-frameworks');
+  getFramework = (id: number) => this.get(`/compliance-frameworks/${id}`);
+  createFramework = (data: any) => this.post('/compliance-frameworks', data);
+  updateFramework = (id: number, data: any) => this.put(`/compliance-frameworks/${id}`, data);
+  deleteFramework = (id: number) => this.delete(`/compliance-frameworks/${id}`);
+  getCoverageStats = () => this.get('/compliance-stats');
+
   getControlMappings = (programId: number) => this.get(`/audit-programs/${programId}/controls`);
+  createControlMapping = (data: any) => this.post('/control-mappings', data);
+  updateControlMapping = (id: number, data: any) => this.put(`/control-mappings/${id}`, data);
+  deleteControlMapping = (id: number) => this.delete(`/control-mappings/${id}`);
 
   // --- Risk Management ---
   getRisks = () => this.get('/risks');
+  getRisk = (id: number) => this.get(`/risks/${id}`);
   createRisk = (data: any) => this.post('/risks', data);
-  updateRisk = (id: number, data: any) => this.put(`/risks/${id}`, data);
+  updateRisk = (id: number, data: any) => this.patch(`/risks/${id}`, data);
+  deleteRisk = (id: number) => this.delete(`/risks/${id}`);
+
+  getKris = () => this.get('/risks/kri/all');
+  getKri = (id: number) => this.get(`/risks/kri/${id}`);
+  createKri = (data: any) => this.post('/risks/kri', data);
+  updateKri = (id: number, data: any) => this.patch(`/risks/kri/${id}`, data);
+  deleteKri = (id: number) => this.delete(`/risks/kri/${id}`);
 
   // --- Reports & Analytics ---
   getDashboardStats = () => this.get('/reports/dashboard');
@@ -216,6 +229,13 @@ class ApiClient {
   getUnreadNotificationCount = () => this.get('/notifications/unread-count');
   markNotificationAsRead = (id: number) => this.patch(`/notifications/${id}/read`, {});
   markAllNotificationsAsRead = () => this.patch('/notifications/read-all', {});
+
+  // --- Audit Universe ---
+  getAuditUniverse = () => this.get('/audit-universe');
+  getAuditUniverseItem = (id: number) => this.get(`/audit-universe/${id}`);
+  createAuditUniverse = (data: any) => this.post('/audit-universe', data);
+  updateAuditUniverse = (id: number, data: any) => this.patch(`/audit-universe/${id}`, data);
+  deleteAuditUniverse = (id: number) => this.delete(`/audit-universe/${id}`);
 
   // --- Helper to handle PATCH requests ---
   private async patch(endpoint: string, body: any): Promise<any> {

@@ -6,7 +6,7 @@ const getBaseUrl = () => {
   if (apiUrl.endsWith('/')) {
     apiUrl = apiUrl.slice(0, -1);
   }
-  return `${apiUrl}/api`;
+  return apiUrl;
 };
 
 const BASE_URL = getBaseUrl();

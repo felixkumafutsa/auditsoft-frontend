@@ -51,6 +51,7 @@ const AuditUniversePage: React.FC = () => {
   });
 
   const userRole = localStorage.getItem('userRole');
+  const isManager = userRole === 'Manager' || userRole === 'Audit Manager';
 
   const fetchUniverse = async () => {
     setLoading(true);
@@ -183,20 +184,21 @@ const AuditUniversePage: React.FC = () => {
       headerName: 'Actions',
       width: 120,
       sortable: false,
-      renderCell: (params) => (
-        <Box>
-          <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" onClick={() => handleDelete(params.row.id)} color="error">
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      ),
+      renderCell: (params) => {
+        if (isManager) return null;
+        return (
+          <Box>
+            <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+            <IconButton size="small" onClick={() => handleDelete(params.row.id)} color="error">
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        );
+      },
     },
   ];
-
-  const isManager = userRole === 'Manager' || userRole === 'Audit Manager';
 
   return (
     <Box p={3}>

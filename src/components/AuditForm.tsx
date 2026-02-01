@@ -43,10 +43,25 @@ const AuditForm: React.FC<AuditFormProps> = ({
   
   // New Fields
   const [auditUniverseId, setAuditUniverseId] = useState<number | ''>('');
+  const [selectedProgramTemplateId, setSelectedProgramTemplateId] = useState<number | ''>('');
   const [assignedManagerId, setAssignedManagerId] = useState<number | ''>('');
   const [assignedAuditorIds, setAssignedAuditorIds] = useState<number[]>([]);
+  const [programTemplates, setProgramTemplates] = useState<{ id: number; auditName: string }[]>([]);
 
   const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    // Fetch Audit Templates
+    const fetchTemplates = async () => {
+      try {
+        const templates = await api.getAuditTemplates();
+        setProgramTemplates(templates);
+      } catch (error) {
+        console.error('Failed to fetch audit templates:', error);
+      }
+    };
+    fetchTemplates();
+  }, []);
 
   React.useEffect(() => {
     if (auditToEdit) {
@@ -105,7 +120,8 @@ const AuditForm: React.FC<AuditFormProps> = ({
       status: auditToEdit ? auditToEdit.status : 'Planned',
       auditUniverseId: auditUniverseId === '' ? undefined : Number(auditUniverseId),
       assignedManagerId: assignedManagerId === '' ? undefined : Number(assignedManagerId),
-      assignedAuditorIds: assignedAuditorIds
+      assignedAuditorIds: assignedAuditorIds,
+      templateId: selectedProgramTemplateId === '' ? undefined : Number(selectedProgramTemplateId)
     };
 
     try {
@@ -177,6 +193,27 @@ const AuditForm: React.FC<AuditFormProps> = ({
               {auditUniverseItems.map((item) => (
                 <MenuItem key={item.id} value={item.id}>
                   {item.entityName} ({item.entityType})
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
+
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
+            <TextField
+              select
+              fullWidth
+              label="Audit Program Template"
+              value={selectedProgramTemplateId}
+              onChange={(e) => setSelectedProgramTemplateId(Number(e.target.value))}
+              helperText={!auditToEdit ? "Optional: Select a template to pre-fill programs" : ""}
+              disabled={!!auditToEdit} // Disable on edit for now to avoid overwriting
+            >
+              <MenuItem value="">
+                <em>None (Start from scratch)</em>
+              </MenuItem>
+              {programTemplates.map((template) => (
+                <MenuItem key={template.id} value={template.id}>
+                  {template.auditName}
                 </MenuItem>
               ))}
             </TextField>

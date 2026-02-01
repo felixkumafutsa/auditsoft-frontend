@@ -54,7 +54,7 @@ const GlobalTopBar: React.FC<GlobalTopBarProps> = ({
   };
 
   return (
-    <AppBar position="static" sx={{ bgcolor: '#0F1A2B', zIndex: theme.zIndex.drawer + 1 }}>
+    <AppBar position="fixed" sx={{ bgcolor: '#0F1A2B', zIndex: theme.zIndex.drawer + 1 }}>
       <Toolbar>
         {isMobile && (
           <IconButton
@@ -73,7 +73,7 @@ const GlobalTopBar: React.FC<GlobalTopBarProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', mr: 4, cursor: 'pointer' }} onClick={() => onNavigate('dashboard')}>
            <Box component="span" sx={{ bgcolor: '#1976d2', width: 32, height: 32, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 1, fontWeight: 'bold', color: 'white' }}>A</Box>
            <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-             AuditSoft
+             AUDITSOFT
            </Typography>
         </Box>
 

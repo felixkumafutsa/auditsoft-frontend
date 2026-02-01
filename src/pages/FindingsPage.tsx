@@ -35,12 +35,13 @@ interface Finding {
 }
 
 interface FindingsPageProps {
-  viewMode?: 'all' | 'draft';
+  viewMode?: 'all' | 'draft' | 'my';
 }
 
 const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
   const [transitionDialog, setTransitionDialog] = useState(false);
   const [newStatus, setNewStatus] = useState('');
@@ -57,14 +58,36 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
   const [selectedFindingIdForActions, setSelectedFindingIdForActions] = useState<number | null>(null);
 
   useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      setCurrentUser(JSON.parse(userStr));
+    }
     fetchFindings();
-  }, []);
+  }, [viewMode]);
 
   const fetchFindings = async () => {
     setLoading(true);
     try {
       const data = await api.getFindings?.();
-      setFindings(Array.isArray(data) ? data : []);
+      let filteredData = Array.isArray(data) ? data : [];
+      
+      // Client-side filtering based on viewMode
+      if (viewMode === 'draft') {
+        filteredData = filteredData.filter((f: any) => f.status === 'Identified' || f.status === 'Draft');
+      } else if (viewMode === 'my') {
+        // Filter by assigned user
+        // Assuming finding has assignedToId or we check ActionPlans
+        // For now, we simulate this since backend might not return assignedToId yet
+        // filteredData = filteredData.filter((f: any) => f.assignedToId === currentUser?.id);
+        
+        // Temporary: Just show all for demo, or filter if property exists
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.id) {
+             filteredData = filteredData.filter((f: any) => f.assignedToId === user.id);
+        }
+      }
+      
+      setFindings(filteredData);
     } catch (err) {
       console.error('Failed to fetch findings', err);
     } finally {

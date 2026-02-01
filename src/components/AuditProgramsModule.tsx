@@ -53,6 +53,9 @@ const AuditProgramsModule: React.FC<AuditProgramsModuleProps> = ({ audit, onBack
     expectedOutcome: ''
   });
 
+  const userRole = localStorage.getItem('userRole');
+  const canEdit = userRole === 'Manager' || userRole === 'Audit Manager' || userRole === 'Admin' || userRole === 'System Admin' || userRole === 'CAE';
+
   const fetchPrograms = useCallback(async () => {
     setLoading(true);
     try {
@@ -128,13 +131,15 @@ const AuditProgramsModule: React.FC<AuditProgramsModuleProps> = ({ audit, onBack
         <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#0F1A2B' }}>
           Manage Audit Programs: {audit.auditName}
         </Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<AddIcon />} 
-          onClick={() => handleOpenDialog()}
-        >
-          Add Program
-        </Button>
+        {canEdit && (
+          <Button 
+            variant="contained" 
+            startIcon={<AddIcon />} 
+            onClick={() => handleOpenDialog()}
+          >
+            Add Program
+          </Button>
+        )}
       </Box>
 
       {loading ? (
@@ -165,12 +170,16 @@ const AuditProgramsModule: React.FC<AuditProgramsModuleProps> = ({ audit, onBack
                       }
                     />
                     <ListItemSecondaryAction>
-                      <IconButton edge="end" onClick={() => handleOpenDialog(program)} sx={{ mr: 1 }}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton edge="end" onClick={() => handleDelete(program.id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
+                      {canEdit && (
+                        <>
+                          <IconButton edge="end" onClick={() => handleOpenDialog(program)} sx={{ mr: 1 }}>
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton edge="end" onClick={() => handleDelete(program.id)} color="error">
+                            <DeleteIcon />
+                          </IconButton>
+                        </>
+                      )}
                     </ListItemSecondaryAction>
                   </ListItem>
                 </React.Fragment>

@@ -127,6 +127,7 @@ class ApiClient {
 
   // --- Audits ---
   getAudits = () => this.get('/audits');
+  getAuditTemplates = () => this.get('/audits/templates');
   getAudit = (id: number) => this.get(`/audits/${id}`);
   createAudit = (data: any) => this.post('/audits', data); // Define a proper DTO later
   updateAudit = (id: number, data: any) => this.put(`/audits/${id}`, data);
@@ -137,7 +138,10 @@ class ApiClient {
     this.post(`/audits/${id}/transition`, { toStatus, userRole });
   getAllowedTransitionsAudit = (id: number) => 
     this.get(`/audits/${id}/allowed-transitions`);
-
+  
+  // --- Audit Comments ---
+  getAuditComments = (auditId: number) => this.get(`/audits/${auditId}/comments`);
+  addAuditComment = (auditId: number, data: any) => this.post(`/audits/${auditId}/comments`, data);
 
   // --- Audit Programs ---
   getAuditPrograms = (auditId: number) => this.get(`/audits/${auditId}/programs`);
@@ -156,6 +160,10 @@ class ApiClient {
     return this.upload('/evidence', formData);
   };
   deleteEvidence = (id: number) => this.delete(`/evidence/${id}`);
+  transitionEvidence = (id: number, toStatus: string, userRole?: string) =>
+    this.post(`/evidence/${id}/transition`, { toStatus, userRole });
+  getAllowedEvidenceTransitions = (id: number) =>
+    this.get(`/evidence/${id}/allowed-transitions`);
 
   // --- Findings & Remediation ---
   getFindings = () => this.get('/findings');
@@ -222,10 +230,15 @@ class ApiClient {
 
   // --- Integrations ---
   getIntegrations = () => this.get('/integrations');
+  getIntegration = (id: number) => this.get(`/integrations/${id}`);
+  createIntegration = (data: any) => this.post('/integrations', data);
+  updateIntegration = (id: number, data: any) => this.put(`/integrations/${id}`, data);
+  deleteIntegration = (id: number) => this.delete(`/integrations/${id}`);
   syncIntegration = (id: number) => this.post(`/integrations/${id}/sync`, {});
 
   // --- Notifications ---
   getNotifications = () => this.get('/notifications');
+  createNotification = (data: { userId: number, title: string, message: string, type: string }) => this.post('/notifications', data);
   getUnreadNotificationCount = () => this.get('/notifications/unread-count');
   markNotificationAsRead = (id: number) => this.patch(`/notifications/${id}/read`, {});
   markAllNotificationsAsRead = () => this.patch('/notifications/read-all', {});
@@ -236,6 +249,12 @@ class ApiClient {
   createAuditUniverse = (data: any) => this.post('/audit-universe', data);
   updateAuditUniverse = (id: number, data: any) => this.patch(`/audit-universe/${id}`, data);
   deleteAuditUniverse = (id: number) => this.delete(`/audit-universe/${id}`);
+
+  // --- Continuous Auditing ---
+  getAutomatedControls = () => this.get('/continuous-audit/controls');
+  createAutomatedControl = (data: any) => this.post('/continuous-audit/controls', data);
+  getControlRuns = (id: number) => this.get(`/continuous-audit/controls/${id}/runs`);
+  runControl = (id: number) => this.post(`/continuous-audit/controls/${id}/run`, {});
 
   // --- Helper to handle PATCH requests ---
   private async patch(endpoint: string, body: any): Promise<any> {

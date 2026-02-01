@@ -13,12 +13,15 @@ import {
   Tooltip,
   TextField,
   InputAdornment,
+  Button,
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
 import api from '../services/api';
+import AuditForm from '../components/AuditForm';
 
 interface Audit {
   id: number;
@@ -37,32 +40,95 @@ const AuditPlansPage: React.FC = () => {
   const [audits, setAudits] = useState<Audit[]>([]);
   const [tabIndex, setTabIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [userRole, setUserRole] = useState<string>('');
+  const [view, setView] = useState<'list' | 'create'>('list');
+  const [auditors, setAuditors] = useState<{ id: number; name: string; role: string }[]>([]);
+  const [managers, setManagers] = useState<{ id: number; name: string; role: string }[]>([]);
+  const [auditUniverseItems, setAuditUniverseItems] = useState<{ id: number; entityName: string; entityType: string }[]>([]);
+
+  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
+  const isAuditor = userRole === 'Auditor' || userRole === 'auditor';
 
   useEffect(() => {
-    const fetchAudits = async () => {
-      setLoading(true);
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
       try {
-        const data = await api.getAudits();
-        // Normalize data keys if necessary (snake_case -> camelCase)
-        const mappedData = Array.isArray(data) ? data.map((a: any) => ({
-          ...a,
-          auditName: a.auditName || a.audit_name,
-          auditType: a.auditType || a.audit_type,
-          startDate: a.startDate || a.start_date,
-          endDate: a.endDate || a.end_date,
-          assignedTo: a.assignedAuditors && Array.isArray(a.assignedAuditors) && a.assignedAuditors.length > 0
-            ? a.assignedAuditors.map((u: any) => u.name).join(', ')
-            : (a.assignedTo || a.assigned_to || '-')
-        })) : [];
-        setAudits(mappedData);
+        const user = JSON.parse(userStr);
+        setUserRole(user.role || '');
+      } catch (e) {
+        console.error("Failed to parse user from local storage", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load Users
+        const usersData = await (api as any).getUsers();
+        if (Array.isArray(usersData)) {
+          // Filter Auditors
+          const validAuditors = usersData.filter((u: any) => 
+            u.userRoles?.some((ur: any) => ur.role?.roleName === "Auditor")
+          ).map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            role: "Auditor"
+          }));
+          setAuditors(validAuditors);
+
+          // Filter Managers
+          const validManagers = usersData.filter((u: any) => 
+            u.userRoles?.some((ur: any) => ur.role?.roleName === "Audit Manager" || ur.role?.roleName === "Manager" || ur.role?.roleName === "Chief Audit Executive")
+          ).map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            role: "Manager"
+          }));
+          setManagers(validManagers);
+        }
+
+        // Load Audit Universe
+        const universeData = await api.getAuditUniverse();
+        if (Array.isArray(universeData)) {
+          setAuditUniverseItems(universeData);
+        }
+
       } catch (err) {
-        console.error("Failed to fetch audits", err);
-      } finally {
-        setLoading(false);
+        console.error("Failed to load dependency data:", err);
       }
     };
-    fetchAudits();
+    loadData();
   }, []);
+
+  const fetchAudits = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getAudits();
+      // Normalize data keys if necessary (snake_case -> camelCase)
+      const mappedData = Array.isArray(data) ? data.map((a: any) => ({
+        ...a,
+        auditName: a.auditName || a.audit_name,
+        auditType: a.auditType || a.audit_type,
+        startDate: a.startDate || a.start_date,
+        endDate: a.endDate || a.end_date,
+        assignedTo: a.assignedAuditors && Array.isArray(a.assignedAuditors) && a.assignedAuditors.length > 0
+          ? a.assignedAuditors.map((u: any) => u.name).join(', ')
+          : (a.assignedTo || a.assigned_to || '-')
+      })) : [];
+      setAudits(mappedData);
+    } catch (err) {
+      console.error("Failed to fetch audits", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (view === 'list') {
+      fetchAudits();
+    }
+  }, [view]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue);
@@ -165,7 +231,7 @@ const AuditPlansPage: React.FC = () => {
       width: 120,
       sortable: false,
       renderCell: (params) => {
-        if (params.row.status === 'Planned') {
+        if (params.row.status === 'Planned' && isCAE) {
           return (
             <Box>
               <Tooltip title="Approve">
@@ -190,65 +256,102 @@ const AuditPlansPage: React.FC = () => {
     <Box sx={{ width: '100%', p: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-          Audit Plans
+          {view === 'create' ? 'Create New Audit Plan' : 'Audit Plans'}
         </Typography>
-        <TextField
-          variant="outlined"
-          size="small"
-          placeholder="Search audits..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ width: 300 }}
-        />
+        {view === 'list' && (
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              variant="outlined"
+              size="small"
+              placeholder="Search audits..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ width: 300 }}
+            />
+            {!isAuditor && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setView('create')}
+                sx={{ bgcolor: "#0F1A2B" }}
+              >
+                New Audit
+              </Button>
+            )}
+          </Box>
+        )}
+        {view === 'create' && (
+          <Button
+            variant="outlined"
+            onClick={() => setView('list')}
+          >
+            Back to List
+          </Button>
+        )}
       </Box>
       
-      <Paper sx={{ width: '100%', mb: 2 }}>
-        <Tabs
-          value={tabIndex}
-          onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="scrollable"
-          scrollButtons="auto"
-          aria-label="audit plan tabs"
-        >
-          <Tab label="All Audits" />
-          <Tab label="Planned Audits" />
-          <Tab label="Approved Audits" />
-          <Tab label="In Progress" />
-          <Tab label="Under Review" />
-          <Tab label="Finalized" />
-          <Tab label="Closed" />
-        </Tabs>
-        
-        <Box sx={{ p: 2, height: 600, width: '100%' }}>
-           {loading ? (
-             <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-               <CircularProgress />
-             </Box>
-           ) : (
-             <DataGrid
-                rows={filteredAudits}
-                columns={columns}
-                initialState={{
-                  pagination: {
-                    paginationModel: { pageSize: 10, page: 0 },
-                  },
-                }}
-                pageSizeOptions={[10, 25, 50]}
-                disableRowSelectionOnClick
-                autoHeight={false} // fixed height container
-             />
-           )}
-        </Box>
-      </Paper>
+      {view === 'list' ? (
+        <Paper sx={{ width: '100%', mb: 2 }}>
+          <Tabs
+            value={tabIndex}
+            onChange={handleTabChange}
+            indicatorColor="primary"
+            textColor="primary"
+            variant="scrollable"
+            scrollButtons="auto"
+            aria-label="audit plan tabs"
+          >
+            <Tab label="All Audits" />
+            <Tab label="Planned Audits" />
+            <Tab label="Approved Audits" />
+            <Tab label="In Progress" />
+            <Tab label="Under Review" />
+            <Tab label="Finalized" />
+            <Tab label="Closed" />
+          </Tabs>
+          
+          <Box sx={{ p: 2, height: 600, width: '100%' }}>
+             {loading ? (
+               <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                 <CircularProgress />
+               </Box>
+             ) : (
+               <DataGrid
+                  rows={filteredAudits}
+                  columns={columns}
+                  initialState={{
+                    pagination: {
+                      paginationModel: { pageSize: 10, page: 0 },
+                    },
+                  }}
+                  pageSizeOptions={[10, 25, 50]}
+                  disableRowSelectionOnClick
+                  autoHeight={false} // fixed height container
+               />
+             )}
+          </Box>
+        </Paper>
+      ) : (
+        <Paper sx={{ p: 3 }}>
+          <AuditForm
+            auditors={auditors}
+            managers={managers}
+            auditUniverseItems={auditUniverseItems}
+            onSuccess={() => {
+              setView('list');
+              fetchAudits();
+            }}
+            onCancel={() => setView('list')}
+          />
+        </Paper>
+      )}
     </Box>
   );
 };

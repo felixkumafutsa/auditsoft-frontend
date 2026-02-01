@@ -16,6 +16,9 @@ import StandardsLibraryPage from '../pages/StandardsLibraryPage';
 import ControlMappingPage from '../pages/ControlMappingPage';
 import CoverageAnalysisPage from '../pages/CoverageAnalysisPage';
 import FindingsPage from '../pages/FindingsPage';
+import EvidencePage from '../pages/EvidencePage';
+import RemediationPage from '../pages/RemediationPage';
+import CommentsPage from '../pages/CommentsPage';
 import UsersPage from '../pages/UsersPage';
 import RolesPage from '../pages/RolesPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
@@ -27,6 +30,8 @@ import RiskKRIsPage from '../pages/RiskKRIsPage';
 import RiskHeatmapPage from '../pages/RiskHeatmapPage';
 import ExecutiveReportsPage from '../pages/ExecutiveReportsPage';
 import AuditUniversePage from '../pages/AuditUniversePage';
+import ContinuousAuditsPage from '../pages/ContinuousAuditsPage';
+import IntegrationsPage from '../pages/IntegrationsPage';
 import GlobalTopBar from './GlobalTopBar';
 import ContextualTopBar from './ContextualTopBar';
 import api from '../services/api';
@@ -71,6 +76,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
         setMobileOpen(false); // Close mobile drawer on navigation
     };
 
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [currentPage]);
+
     const renderPage = () => {
         switch (currentPage) {
             case 'dashboard':
@@ -83,22 +92,34 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 return <AuditsPage filterType="new" />;
             case 'audits-executed':
                 return <AuditsPage filterType="executed" />;
+            case 'my-audits':
+                return <AuditsPage filterType="my" />;
             case 'audit-plans':
                 return <AuditPlansPage />;
             case 'audit-programs':
                 return <AuditProgramsPage />;
             case 'audit-universe':
                 return <AuditUniversePage />;
+            case 'continuous-audits':
+                return <ContinuousAuditsPage />;
             
             // Findings
             case 'findings':
                 return <FindingsPage viewMode="all" />;
             case 'findings-draft':
                 return <FindingsPage viewMode="draft" />;
+            case 'my-findings':
+                return <FindingsPage viewMode="my" />;
+            
+            // Process Owner
+            case 'remediation':
+                return <RemediationPage />;
+            case 'comments':
+                return <CommentsPage />;
             
             // Evidence
             case 'evidence':
-                return <Box sx={{ p: 3 }}><Typography variant="h4">Evidence Management</Typography><Typography>Module coming soon...</Typography></Box>;
+                return <EvidencePage />;
 
             // Admin
             case 'users':
@@ -110,7 +131,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             case 'workflow-config':
                 return <Box sx={{ p: 3 }}><Typography variant="h4">Workflow Configuration</Typography><Typography>Module coming soon...</Typography></Box>;
             case 'system-settings':
-                return <Box sx={{ p: 3 }}><Typography variant="h4">System Settings</Typography><Typography>Module coming soon...</Typography></Box>;
+                return <IntegrationsPage />;
 
 
             // Reports
@@ -169,6 +190,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 onNavigate={handleNavigate}
                 unreadCount={unreadCount}
             />
+            
+            {/* Spacer for fixed GlobalTopBar */}
+            <Box sx={{ height: 64 }} />
 
             {/* Contextual Top Bar (Hidden on Mobile) */}
             <ContextualTopBar 

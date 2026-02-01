@@ -37,6 +37,7 @@ import {
   Grid,
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
+import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import AssessmentIcon from "@mui/icons-material/Assessment";
@@ -67,7 +68,7 @@ interface Audit {
 }
 
 interface AuditsPageProps {
-  filterType?: 'all' | 'new' | 'executed';
+  filterType?: 'all' | 'new' | 'executed' | 'my';
 }
 
 const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
@@ -99,6 +100,11 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   // Approval State
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [auditToApprove, setAuditToApprove] = useState<number | null>(null);
+
+  // Check roles
+  const isAuditor = currentUser?.role === 'Auditor' || currentUser?.role === 'auditor';
+  const isCAE = currentUser?.role === 'CAE' || currentUser?.role === 'Chief Audit Executive' || currentUser?.role === 'Chief Audit Executive (CAE)';
+  const isManager = currentUser?.role === 'Manager' || currentUser?.role === 'Audit Manager' || currentUser?.role === 'manager';
 
   // Finding Creation State
   const [addFindingDialogOpen, setAddFindingDialogOpen] = useState(false);
@@ -168,9 +174,8 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         // Load Users
         const usersData = await (api as any).getUsers();
         if (Array.isArray(usersData)) {
-          // Filter Auditors
+          // Filter Auditors - Check nested userRoles from backend
           const validAuditors = usersData.filter((u: any) => 
-            u.role === "Auditor" || 
             u.userRoles?.some((ur: any) => ur.role?.roleName === "Auditor")
           ).map((u: any) => ({
             id: u.id,
@@ -179,10 +184,9 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           }));
           setAuditors(validAuditors);
 
-          // Filter Managers
+          // Filter Managers - Check nested userRoles from backend
           const validManagers = usersData.filter((u: any) => 
-            u.role === "Manager" || u.role === "Audit Manager" ||
-            u.userRoles?.some((ur: any) => ur.role?.roleName === "Audit Manager" || ur.role?.roleName === "Manager")
+            u.userRoles?.some((ur: any) => ur.role?.roleName === "Audit Manager" || ur.role?.roleName === "Manager" || ur.role?.roleName === "Chief Audit Executive")
           ).map((u: any) => ({
             id: u.id,
             name: u.name,
@@ -198,14 +202,8 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         }
 
       } catch (err) {
-        console.log("Using mock data due to error", err);
-        setAuditors([
-          { id: 1, name: "Alice Johnson", role: "Auditor" },
-          { id: 3, name: "Charlie Brown", role: "Auditor" },
-        ]);
-        setManagers([
-          { id: 2, name: "Bob Smith", role: "Manager" },
-        ]);
+        console.error("Failed to load real data:", err);
+        // Do not fallback to mock data silently, let the user know or keep lists empty
       }
     };
     loadData();
@@ -248,7 +246,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       return myAudits;
     }
 
-    if (filterMode === 'my') {
+    if (filterMode === 'my' || filterType === 'my') {
       const userName = currentUser.name || currentUser.username || '';
       return audits.filter((a) => {
          if (a.assignedAuditors && a.assignedAuditors.length > 0) {
@@ -331,7 +329,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         // setAuditPrograms((audit as any).auditPrograms || []);
     }
     
-    setView("findings");
+    setView("execution");
   }, []);
 
   const handleApproveFinding = (id: number) => {
@@ -425,6 +423,18 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     }
   };
 
+  const handleDeleteAudit = async (id: number) => {
+    if (window.confirm("Are you sure you want to delete this audit? This action cannot be undone.")) {
+      try {
+        await api.deleteAudit(id);
+        setAudits(audits.filter((a) => a.id !== id));
+      } catch (err) {
+        console.error("Failed to delete audit", err);
+        setError("Failed to delete audit.");
+      }
+    }
+  };
+
   // Dashboard KPI Stats
   const kpiStats = useMemo(
     () => [
@@ -458,10 +468,9 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
   // Responsive columns based on screen size
   const columns: GridColDef<Audit>[] = useMemo(() => {
-    const isAuditor = currentUser?.role === 'Auditor' || currentUser?.role === 'auditor';
-    const isManager = currentUser?.role === 'Manager' || currentUser?.role === 'manager';
-    const isCAE = currentUser?.role === 'CAE' || currentUser?.role === 'Chief Audit Executive';
-
+    // Re-use role checks from outer scope if possible, or re-calculate
+    // Note: useMemo dependency array must include currentUser
+    
     if (isMobile) {
       return [
         {
@@ -485,7 +494,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         {
           field: "actions",
           headerName: "",
-          width: 80,
+          width: 100,
           sortable: false,
           renderCell: (params) => (
             <Stack direction="row" spacing={0}>
@@ -494,7 +503,12 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                   <EditIcon fontSize="small" />
                 </IconButton>
               )}
-              {(currentUser?.role === "CAE" || currentUser?.role === "Chief Audit Executive") && params.row.status === "Planned" && (
+              {(isManager || isCAE) && (
+                <IconButton size="small" onClick={() => handleDeleteAudit(params.row.id)} color="error">
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              )}
+              {isCAE && params.row.status === "Planned" && (
                 <IconButton size="small" onClick={() => handleApproveClick(params.row.id)} color="success">
                   <CheckCircleIcon fontSize="small" />
                 </IconButton>
@@ -535,7 +549,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         {
           field: "actions",
           headerName: "Actions",
-          width: 100,
+          width: 120,
           sortable: false,
           renderCell: (params) => (
             <Stack direction="row" spacing={1}>
@@ -544,7 +558,12 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                   <EditIcon fontSize="small" />
                 </IconButton>
               )}
-              {(currentUser?.role === "CAE" || currentUser?.role === "Chief Audit Executive") && params.row.status === "Planned" && (
+              {(isManager || isCAE) && (
+                <IconButton size="small" onClick={() => handleDeleteAudit(params.row.id)} color="error">
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              )}
+              {isCAE && params.row.status === "Planned" && (
                 <IconButton size="small" onClick={() => handleApproveClick(params.row.id)} color="success">
                   <CheckCircleIcon fontSize="small" />
                 </IconButton>
@@ -584,6 +603,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       },
       // Hide Assigned To for Auditors as they only see their own audits
       ...(!isAuditor ? [{ field: "assignedTo", headerName: "Assigned To", width: 150 }] : []),
+      { field: "entityName", headerName: "Entity", width: 150 },
       { 
         field: "startDate", 
         headerName: "Start Date", 
@@ -605,7 +625,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       {
         field: "actions",
         headerName: "Actions",
-        width: 180,
+        width: 200,
         sortable: false,
         renderCell: (params) => (
           <Stack direction="row" spacing={1}>
@@ -613,6 +633,15 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               <Tooltip title="Edit Audit">
                 <IconButton size="small" onClick={() => handleEdit(params.row)}>
                   <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            {/* Delete Audit - Manager/CAE */}
+            {(isManager || isCAE) && (
+              <Tooltip title="Delete Audit">
+                <IconButton size="small" onClick={() => handleDeleteAudit(params.row.id)} color="error">
+                  <DeleteIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
@@ -693,7 +722,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         ),
       },
     ];
-  }, [isMobile, isTablet, currentUser, handleApproveClick, handleReviewFindings, handleStartAudit]);
+  }, [isMobile, isTablet, currentUser, handleApproveClick, handleReviewFindings, handleStartAudit, isAuditor, isManager, isCAE]);
 
   return (
     <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, height: "100%" }}>
@@ -726,6 +755,13 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         
         {view === "list" && (
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexDirection: { xs: 'column', sm: 'row' }, width: { xs: '100%', sm: 'auto' } }}>
+            <TextField
+              placeholder="Search Audits..."
+              size="small"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{ bgcolor: 'white', minWidth: 200 }}
+            />
             {/* Filter Toggle - Visible to auditors and managers */}
             {currentUser && ['Manager', 'manager'].includes(currentUser.role) && (
               <ToggleButtonGroup
@@ -739,15 +775,18 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                 <ToggleButton value="my">My Audits</ToggleButton>
               </ToggleButtonGroup>
             )}
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setView("create")}
-              sx={{ bgcolor: "#0F1A2B" }}
-              fullWidth={isMobile}
-            >
-              New Audit
-            </Button>
+            {/* New Audit Button - Only Manager and CAE */}
+            {(isManager || isCAE) && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setView("create")}
+                sx={{ bgcolor: "#0F1A2B" }}
+                fullWidth={isMobile}
+              >
+                New Audit
+              </Button>
+            )}
           </Box>
         )}
         {view !== "list" && (

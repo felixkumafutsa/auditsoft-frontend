@@ -37,7 +37,8 @@ import {
   Rule as RuleIcon,
   Shield as ShieldIcon,
   PieChart as PieChartIcon,
-  Hub as HubIcon
+  Hub as HubIcon,
+  Work as WorkIcon
 } from '@mui/icons-material';
 import { Page } from '../types/navigation';
 
@@ -52,11 +53,11 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mobileOpen, onDrawerToggle }) => {
   // State for collapsible menus
   const [auditsOpen, setAuditsOpen] = useState(false);
-  const [findingsOpen, setFindingsOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
   const [riskOpen, setRiskOpen] = useState(false);
   const [complianceOpen, setComplianceOpen] = useState(false);
+  const [fieldWorkOpen, setFieldWorkOpen] = useState(false);
 
   const isSystemAdmin = userRole === 'System Administrator' || userRole === 'Admin';
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
@@ -142,9 +143,13 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                   <ListItemIcon><LibraryBooksIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Audit Programs" />
                 </ListItemButton>
-                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audits'} onClick={() => onNavigate('audits')}>
-                  <ListItemIcon><ListIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
-                  <ListItemText primary="All Audits" />
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audit-universe'} onClick={() => onNavigate('audit-universe')}>
+                  <ListItemIcon><HubIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Audit Universe" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'continuous-audits'} onClick={() => onNavigate('continuous-audits')}>
+                  <ListItemIcon><HistoryIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Continuous Audits" />
                 </ListItemButton>
               </List>
             </Collapse>
@@ -242,33 +247,35 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
             </ListItemButton>
             <Collapse in={auditsOpen} timeout="auto" unmountOnExit>
               <List component="div" disablePadding>
-                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audits'} onClick={() => onNavigate('audits')}>
-                  <ListItemIcon><ListIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
-                  <ListItemText primary="All Audits" />
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audit-plans'} onClick={() => onNavigate('audit-plans')}>
+                  <ListItemIcon><DescriptionIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Audit Plans" />
                 </ListItemButton>
-                {isAuditor && (
-                  <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audits-new'} onClick={() => onNavigate('audits-new')}>
-                    <ListItemIcon><AddIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
-                    <ListItemText primary="New Audits" />
-                  </ListItemButton>
-                )}
-                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audits-executed'} onClick={() => onNavigate('audits-executed')}>
-                  <ListItemIcon><CheckCircleIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
-                  <ListItemText primary="Executed Audits" />
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audit-programs'} onClick={() => onNavigate('audit-programs')}>
+                  <ListItemIcon><LibraryBooksIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Audit Programs" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audit-universe'} onClick={() => onNavigate('audit-universe')}>
+                  <ListItemIcon><HubIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Audit Universe" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'continuous-audits'} onClick={() => onNavigate('continuous-audits')}>
+                  <ListItemIcon><HistoryIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Continuous Audits" />
                 </ListItemButton>
               </List>
             </Collapse>
 
-            <ListItemButton onClick={() => setFindingsOpen(!findingsOpen)}>
-              <ListItemIcon><FactCheckIcon sx={{ color: 'white' }} /></ListItemIcon>
-              <ListItemText primary="Findings" />
-              {findingsOpen ? <ExpandLess /> : <ExpandMore />}
+            <ListItemButton onClick={() => setFieldWorkOpen(!fieldWorkOpen)}>
+              <ListItemIcon><WorkIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="Field Work" />
+              {fieldWorkOpen ? <ExpandLess /> : <ExpandMore />}
             </ListItemButton>
-            <Collapse in={findingsOpen} timeout="auto" unmountOnExit>
+            <Collapse in={fieldWorkOpen} timeout="auto" unmountOnExit>
               <List component="div" disablePadding>
                 <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'findings'} onClick={() => onNavigate('findings')}>
-                  <ListItemIcon><ListIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
-                  <ListItemText primary="All Findings" />
+                  <ListItemIcon><FactCheckIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Findings" />
                 </ListItemButton>
                 {isAuditor && (
                   <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'findings-draft'} onClick={() => onNavigate('findings-draft')}>
@@ -276,13 +283,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                     <ListItemText primary="Draft Findings" />
                   </ListItemButton>
                 )}
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'evidence'} onClick={() => onNavigate('evidence')}>
+                  <ListItemIcon><FolderIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Evidence" />
+                </ListItemButton>
               </List>
             </Collapse>
-
-            <ListItemButton selected={currentPage === 'evidence'} onClick={() => onNavigate('evidence')}>
-              <ListItemIcon><FolderIcon sx={{ color: 'white' }} /></ListItemIcon>
-              <ListItemText primary="Evidence" />
-            </ListItemButton>
           </>
         )}
 

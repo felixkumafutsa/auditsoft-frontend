@@ -36,7 +36,9 @@ import {
   Rule as RuleIcon,
   Shield as ShieldIcon,
   PieChart as PieChartIcon,
-  Hub as HubIcon
+  Hub as HubIcon,
+  Work as WorkIcon,
+  RateReview as RateReviewIcon
 } from '@mui/icons-material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { Page } from '../types/navigation';
@@ -58,13 +60,56 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   const [complianceAnchor, setComplianceAnchor] = React.useState<null | HTMLElement>(null);
   const [adminAnchor, setAdminAnchor] = React.useState<null | HTMLElement>(null);
   const [usersAnchor, setUsersAnchor] = React.useState<null | HTMLElement>(null);
-  const [findingsAnchor, setFindingsAnchor] = React.useState<null | HTMLElement>(null);
+  const [fieldWorkAnchor, setFieldWorkAnchor] = React.useState<null | HTMLElement>(null);
 
   const isSystemAdmin = userRole === 'System Administrator' || userRole === 'Admin';
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
   const isAuditor = userRole === 'Auditor';
+  const isProcessOwner = userRole === 'ProcessOwner';
 
   if (isMobile) return null; // Hide on mobile
+
+  // =========================================================================
+  // PROCESS OWNER VIEW
+  // =========================================================================
+  if (isProcessOwner) {
+    return (
+      <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
+        <Toolbar variant="dense" sx={{ minHeight: 48 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              startIcon={<DashboardIcon />}
+              color={currentPage === 'dashboard' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('dashboard')}
+            >
+              Dashboard
+            </Button>
+            <Button
+              startIcon={<AssignmentIcon />}
+              color={currentPage === 'my-findings' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('my-findings')}
+            >
+              My Findings
+            </Button>
+            <Button
+              startIcon={<FactCheckIcon />}
+              color={currentPage === 'remediation' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('remediation')}
+            >
+              Remediation / Evidence
+            </Button>
+            <Button
+              startIcon={<RateReviewIcon />}
+              color={currentPage === 'comments' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('comments')}
+            >
+              Comments
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
+    );
+  }
 
   // =========================================================================
   // SYSTEM ADMINISTRATOR VIEW
@@ -160,7 +205,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             <Button
               startIcon={<AssignmentIcon />}
               endIcon={<KeyboardArrowDownIcon />}
-              color={['audits', 'audit-plans', 'audit-programs', 'audit-universe'].includes(currentPage) ? 'primary' : 'inherit'}
+              color={['audit-plans', 'audit-programs', 'audit-universe', 'continuous-audits'].includes(currentPage) ? 'primary' : 'inherit'}
               onClick={(e) => setAuditsAnchor(e.currentTarget)}
             >
               Audits
@@ -181,6 +226,10 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
               <MenuItem onClick={() => { onNavigate('audit-universe'); setAuditsAnchor(null); }}>
                 <ListItemIcon><HubIcon fontSize="small" /></ListItemIcon>
                 <ListItemText>Audit Universe</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={() => { onNavigate('continuous-audits'); setAuditsAnchor(null); }}>
+                <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>Continuous Audits</ListItemText>
               </MenuItem>
             </Menu>
 
@@ -268,23 +317,29 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
               </MenuItem>
             </Menu>
 
-            {/* 6. Findings */}
-            <Button 
-              startIcon={<FactCheckIcon />}
-              color={currentPage === 'findings' ? 'primary' : 'inherit'}
-              onClick={() => onNavigate('findings')}
+            {/* 6. Field Work */}
+            <Button
+              startIcon={<WorkIcon />}
+              endIcon={<KeyboardArrowDownIcon />}
+              color={['findings', 'evidence'].includes(currentPage) ? 'primary' : 'inherit'}
+              onClick={(e) => setFieldWorkAnchor(e.currentTarget)}
             >
-              Findings
+              Field Work
             </Button>
-
-            {/* 7. Evidence */}
-            <Button 
-              startIcon={<FolderIcon />}
-              color={currentPage === 'evidence' ? 'primary' : 'inherit'}
-              onClick={() => onNavigate('evidence')}
+            <Menu
+              anchorEl={fieldWorkAnchor}
+              open={Boolean(fieldWorkAnchor)}
+              onClose={() => setFieldWorkAnchor(null)}
             >
-              Evidence
-            </Button>
+              <MenuItem onClick={() => { onNavigate('findings'); setFieldWorkAnchor(null); }}>
+                <ListItemIcon><FactCheckIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>Findings</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={() => { onNavigate('evidence'); setFieldWorkAnchor(null); }}>
+                <ListItemIcon><FolderIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>Evidence</ListItemText>
+              </MenuItem>
+            </Menu>
 
           </Box>
         </Toolbar>
@@ -299,6 +354,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
     <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
       <Toolbar variant="dense" sx={{ minHeight: 48 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          {/* 1. Dashboard */}
           <Button 
             startIcon={<DashboardIcon />}
             color={currentPage === 'dashboard' ? 'primary' : 'inherit'}
@@ -307,11 +363,11 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             Dashboard
           </Button>
 
-          {/* Audits Dropdown */}
+          {/* 2. Audits (Audit Plans, Audit Programs, Audit Universe) */}
           <Button
             startIcon={<AssignmentIcon />}
             endIcon={<KeyboardArrowDownIcon />}
-            color={['audits', 'audits-new', 'audits-executed', 'audit-universe'].includes(currentPage) ? 'primary' : 'inherit'}
+            color={['audit-plans', 'audit-programs', 'audit-universe', 'continuous-audits', 'my-audits'].includes(currentPage) ? 'primary' : 'inherit'}
             onClick={(e) => setAuditsAnchor(e.currentTarget)}
           >
             Audits
@@ -321,61 +377,51 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             open={Boolean(auditsAnchor)}
             onClose={() => setAuditsAnchor(null)}
           >
-            <MenuItem onClick={() => { onNavigate('audits'); setAuditsAnchor(null); }}>
-              <ListItemIcon><ListIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>All Audits</ListItemText>
+            <MenuItem onClick={() => { onNavigate('my-audits'); setAuditsAnchor(null); }}>
+              <ListItemIcon><AssignmentIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>My Audits</ListItemText>
             </MenuItem>
-            {isAuditor && (
-              <MenuItem onClick={() => { onNavigate('audits-new'); setAuditsAnchor(null); }}>
-                <ListItemIcon><AddIcon fontSize="small" /></ListItemIcon>
-                <ListItemText>New Audits</ListItemText>
-              </MenuItem>
-            )}
-            <MenuItem onClick={() => { onNavigate('audits-executed'); setAuditsAnchor(null); }}>
-              <ListItemIcon><CheckCircleIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Executed Audits</ListItemText>
+            <MenuItem onClick={() => { onNavigate('audit-plans'); setAuditsAnchor(null); }}>
+              <ListItemIcon><DescriptionIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Audit Plans</ListItemText>
             </MenuItem>
-            {!isAuditor && (
-              <MenuItem onClick={() => { onNavigate('audit-universe'); setAuditsAnchor(null); }}>
-                <ListItemIcon><HubIcon fontSize="small" /></ListItemIcon>
-                <ListItemText>Audit Universe</ListItemText>
-              </MenuItem>
-            )}
+            <MenuItem onClick={() => { onNavigate('audit-programs'); setAuditsAnchor(null); }}>
+              <ListItemIcon><LibraryBooksIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Audit Programs</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { onNavigate('audit-universe'); setAuditsAnchor(null); }}>
+              <ListItemIcon><HubIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Audit Universe</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { onNavigate('continuous-audits'); setAuditsAnchor(null); }}>
+              <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Continuous Audits</ListItemText>
+            </MenuItem>
           </Menu>
 
-          {/* Findings Dropdown */}
+          {/* 3. Field Work */}
           <Button
-            startIcon={<FactCheckIcon />}
+            startIcon={<WorkIcon />}
             endIcon={<KeyboardArrowDownIcon />}
-            color={['findings', 'findings-draft'].includes(currentPage) ? 'primary' : 'inherit'}
-            onClick={(e) => setFindingsAnchor(e.currentTarget)}
+            color={['findings', 'evidence'].includes(currentPage) ? 'primary' : 'inherit'}
+            onClick={(e) => setFieldWorkAnchor(e.currentTarget)}
           >
-            Findings
+            Field Work
           </Button>
           <Menu
-            anchorEl={findingsAnchor}
-            open={Boolean(findingsAnchor)}
-            onClose={() => setFindingsAnchor(null)}
+            anchorEl={fieldWorkAnchor}
+            open={Boolean(fieldWorkAnchor)}
+            onClose={() => setFieldWorkAnchor(null)}
           >
-            <MenuItem onClick={() => { onNavigate('findings'); setFindingsAnchor(null); }}>
-              <ListItemIcon><ListIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>All Findings</ListItemText>
+            <MenuItem onClick={() => { onNavigate('findings'); setFieldWorkAnchor(null); }}>
+              <ListItemIcon><FactCheckIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Findings</ListItemText>
             </MenuItem>
-            {isAuditor && (
-              <MenuItem onClick={() => { onNavigate('findings-draft'); setFindingsAnchor(null); }}>
-                <ListItemIcon><DescriptionIcon fontSize="small" /></ListItemIcon>
-                <ListItemText>Draft Findings</ListItemText>
-              </MenuItem>
-            )}
+            <MenuItem onClick={() => { onNavigate('evidence'); setFieldWorkAnchor(null); }}>
+              <ListItemIcon><FolderIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Evidence</ListItemText>
+            </MenuItem>
           </Menu>
-          
-          <Button 
-             startIcon={<FolderIcon />}
-             color={currentPage === 'evidence' ? 'primary' : 'inherit'}
-             onClick={() => onNavigate('evidence')}
-          >
-             Evidence
-          </Button>
         </Box>
       </Toolbar>
     </AppBar>

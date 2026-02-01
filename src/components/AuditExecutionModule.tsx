@@ -25,13 +25,29 @@ import {
   Stack,
   ListItem,
   ListItemIcon,
-  IconButton
+  IconButton,
+  Tabs,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Link
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
+import FolderIcon from '@mui/icons-material/Folder';
+import { ToggleButton, ToggleButtonGroup } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import api from '../services/api';
 
 interface Audit {
@@ -49,6 +65,7 @@ interface AuditProgram {
   controlReference: string | null;
   expectedOutcome: string | null;
   actualResult: string | null;
+  reviewerComment: string | null;
   expanded?: boolean; // UI state for accordion
 }
 
@@ -64,6 +81,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
   const [evidenceMap, setEvidenceMap] = useState<{[key: number]: any[]}>({});
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState(0); // 0: Programs, 1: Fieldwork, 2: Working Papers
   
   // Finding Dialog State
   const [findingDialogOpen, setFindingDialogOpen] = useState(false);
@@ -146,6 +164,19 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
     }
   };
 
+  const handleCommentChange = async (id: number, comment: string) => {
+    // Optimistic update
+    setPrograms(programs.map(p => p.id === id ? { ...p, reviewerComment: comment } : p));
+  };
+
+  const saveComment = async (id: number, comment: string) => {
+    try {
+      await api.updateAuditProgram(id, { reviewerComment: comment });
+    } catch (error) {
+      console.error('Failed to save comment', error);
+    }
+  };
+
   const handleFileUpload = async (programId: number, e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
@@ -213,11 +244,35 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
     }
   };
 
+  const loadAllEvidence = useCallback(async () => {
+    if (programs.length === 0) return;
+    
+    const promises = programs.map(p => api.getEvidenceList(p.id));
+    try {
+      const results = await Promise.all(promises);
+      const newMap: {[key: number]: any[]} = {};
+      results.forEach((data, index) => {
+        if (Array.isArray(data)) {
+            newMap[programs[index].id] = data;
+        }
+      });
+      setEvidenceMap(newMap);
+    } catch (e) {
+      console.error("Failed to load all evidence", e);
+    }
+  }, [programs]);
+
+  useEffect(() => {
+    if (activeTab === 2 && selectedAudit) {
+        loadAllEvidence();
+    }
+  }, [activeTab, selectedAudit, loadAllEvidence]);
+
   if (!selectedAudit) {
     return (
       <Box sx={{ p: { xs: 2, md: 3 } }}>
         <Typography variant="h5" gutterBottom sx={{ color: '#0F1A2B', fontWeight: 'bold' }}>
-          Select an Audit to Execute
+          Active Audits (Select to Execute)
         </Typography>
         {audits.length === 0 ? (
           <Typography>No active audits found.</Typography>
@@ -231,6 +286,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
                     <ListItemText 
                       primary={audit.auditName} 
                       primaryTypographyProps={{ fontWeight: 'bold' }}
+                      secondary={`${audit.auditType || 'Audit'} • ${audit.status}`}
                     />
                     <Chip label={audit.status} color="primary" size="small" />
                   </ListItemButton>
@@ -253,7 +309,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
         }} 
         sx={{ mb: 2 }}
       >
-        {onBack ? 'Back' : 'Back to Audit List'}
+        {onBack ? 'Back' : 'Back to Active Audits'}
       </Button>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Box>
@@ -274,96 +330,215 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
           </Button>
         )}
       </Box>
+
+      <Paper sx={{ mb: 3 }}>
+        <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} variant="fullWidth">
+          <Tab icon={<AssignmentIcon />} label="Audit Programs" />
+          <Tab icon={<FactCheckIcon />} label="Fieldwork & Testing" />
+          <Tab icon={<FolderIcon />} label="Working Papers" />
+        </Tabs>
+      </Paper>
       
       {loading ? <CircularProgress /> : (
         <Box sx={{ mt: 2 }}>
-          {programs.map(program => (
-            <Accordion 
-              key={program.id} 
-              expanded={program.expanded} 
-              onChange={() => toggleAccordion(program.id)}
-              sx={{ mb: 1 }}
-            >
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography fontWeight="bold">{program.procedureName}</Typography>
-              </AccordionSummary>
-              
-              <AccordionDetails>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" color="text.secondary">Control Reference:</Typography>
-                  <Typography variant="body2" paragraph>{program.controlReference}</Typography>
-                  
-                  <Typography variant="subtitle2" color="text.secondary">Expected Outcome:</Typography>
-                  <Typography variant="body2" paragraph>{program.expectedOutcome}</Typography>
-                  
-                  <Box sx={{ mt: 2, p: 2, bgcolor: '#f0f4f8', borderRadius: 1 }}>
-                    <TextField
-                      label="Test Result / Actual Outcome"
-                      multiline
-                      minRows={3}
-                      fullWidth
-                      value={program.actualResult || ''}
-                      onChange={(e) => handleResultChange(program.id, e.target.value)}
-                      placeholder="Document your findings here..."
-                      variant="outlined"
-                      sx={{ mb: 2, bgcolor: 'white' }}
-                    />
-                    
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-                      <Button
-                        component="label"
-                        variant="outlined"
-                        startIcon={<CloudUploadIcon />}
-                        disabled={uploading === program.id}
-                      >
-                        {uploading === program.id ? 'Uploading...' : 'Upload Evidence'}
-                        <input 
-                          type="file" 
-                          hidden
-                          onChange={(e) => handleFileUpload(program.id, e)}
-                          disabled={uploading === program.id}
-                        />
-                      </Button>
-                      <Button 
-                        variant="contained" 
-                        color="error" 
-                        onClick={() => handleRaiseFinding(program.id)}
-                      >
-                        Raise Finding
-                      </Button>
-                    </Box>
+          {/* Tab 0: Audit Programs (Read-Only Summary) */}
+          {activeTab === 0 && (
+             <TableContainer component={Paper}>
+                <Table>
+                    <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                        <TableRow>
+                            <TableCell><strong>Procedure</strong></TableCell>
+                            <TableCell><strong>Control Reference</strong></TableCell>
+                            <TableCell><strong>Expected Outcome</strong></TableCell>
+                            <TableCell><strong>Status</strong></TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {programs.map(p => (
+                            <TableRow key={p.id}>
+                                <TableCell>{p.procedureName}</TableCell>
+                                <TableCell>{p.controlReference || 'N/A'}</TableCell>
+                                <TableCell>{p.expectedOutcome || 'N/A'}</TableCell>
+                                <TableCell>
+                                    <Chip 
+                                        label={p.actualResult ? "Tested" : "Pending"} 
+                                        color={p.actualResult ? "success" : "default"} 
+                                        size="small" 
+                                    />
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        {programs.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={4} align="center">No audit programs defined.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+             </TableContainer>
+          )}
 
-                    {/* Evidence List */}
-                    {evidenceMap[program.id] && evidenceMap[program.id].length > 0 && (
-                      <Box sx={{ mt: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>Attached Evidence:</Typography>
-                        <List dense sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
-                          {evidenceMap[program.id].map((ev) => (
-                            <ListItem
-                              key={ev.id}
-                              secondaryAction={
-                                <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteEvidence(program.id, ev.id)}>
-                                  <DeleteIcon color="error" />
-                                </IconButton>
-                              }
-                            >
-                              <ListItemIcon>
-                                <InsertDriveFileIcon />
-                              </ListItemIcon>
-                              <ListItemText
-                                primary={ev.fileName}
-                                secondary={ev.description || new Date(ev.createdAt).toLocaleDateString()}
-                              />
-                            </ListItem>
-                          ))}
-                        </List>
+          {/* Tab 1: Fieldwork & Testing (Interactive Accordion) */}
+          {activeTab === 1 && (
+             <Box>
+               {programs.map(program => (
+                <Accordion 
+                  key={program.id} 
+                  expanded={program.expanded} 
+                  onChange={() => toggleAccordion(program.id)}
+                  sx={{ mb: 1 }}
+                >
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                        <Typography fontWeight="bold">{program.procedureName}</Typography>
+                        {program.actualResult && <Chip label="Tested" color="success" size="small" />}
+                    </Box>
+                  </AccordionSummary>
+                  
+                  <AccordionDetails>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary">Control Reference:</Typography>
+                      <Typography variant="body2" paragraph>{program.controlReference}</Typography>
+                      
+                      <Typography variant="subtitle2" color="text.secondary">Expected Outcome:</Typography>
+                      <Typography variant="body2" paragraph>{program.expectedOutcome}</Typography>
+                      
+                      <Box sx={{ mt: 2, p: 2, bgcolor: '#f0f4f8', borderRadius: 1 }}>
+                        <Typography variant="subtitle2" gutterBottom>Test Result:</Typography>
+                        <ToggleButtonGroup
+                          value={program.actualResult || ''}
+                          exclusive
+                          onChange={(e, val) => val && handleResultChange(program.id, val)}
+                          sx={{ mb: 2 }}
+                          size="small"
+                        >
+                           <ToggleButton value="Pass" color="success">
+                             <CheckCircleIcon sx={{ mr: 1 }} /> Pass
+                           </ToggleButton>
+                           <ToggleButton value="Fail" color="error">
+                             <CancelIcon sx={{ mr: 1 }} /> Fail
+                           </ToggleButton>
+                           <ToggleButton value="Partial" color="warning">
+                             <HelpOutlineIcon sx={{ mr: 1 }} /> Partial
+                           </ToggleButton>
+                        </ToggleButtonGroup>
+
+                        <TextField
+                          label="Reviewer Comments"
+                          multiline
+                          minRows={2}
+                          fullWidth
+                          value={program.reviewerComment || ''}
+                          onChange={(e) => handleCommentChange(program.id, e.target.value)}
+                          onBlur={(e) => saveComment(program.id, e.target.value)}
+                          placeholder="Add comments..."
+                          variant="outlined"
+                          sx={{ mb: 2, bgcolor: 'white' }}
+                        />
+                        
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                          <Button
+                            component="label"
+                            variant="outlined"
+                            startIcon={<CloudUploadIcon />}
+                            disabled={uploading === program.id}
+                          >
+                            {uploading === program.id ? 'Uploading...' : 'Upload Evidence'}
+                            <input 
+                              type="file" 
+                              hidden
+                              onChange={(e) => handleFileUpload(program.id, e)}
+                              disabled={uploading === program.id}
+                            />
+                          </Button>
+                          <Button 
+                            variant="contained" 
+                            color="error" 
+                            onClick={() => handleRaiseFinding(program.id)}
+                          >
+                            Raise Finding
+                          </Button>
+                        </Box>
+
+                        {/* Evidence List */}
+                        {evidenceMap[program.id] && evidenceMap[program.id].length > 0 && (
+                          <Box sx={{ mt: 2 }}>
+                            <Typography variant="subtitle2" gutterBottom>Attached Evidence:</Typography>
+                            <List dense sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
+                              {evidenceMap[program.id].map((ev: any) => (
+                                <ListItem
+                                  key={ev.id}
+                                  secondaryAction={
+                                    <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteEvidence(program.id, ev.id)}>
+                                      <DeleteIcon color="error" />
+                                    </IconButton>
+                                  }
+                                >
+                                  <ListItemIcon>
+                                    <InsertDriveFileIcon />
+                                  </ListItemIcon>
+                                  <ListItemText
+                                    primary={ev.fileName}
+                                    secondary={ev.description || new Date(ev.createdAt).toLocaleDateString()}
+                                  />
+                                </ListItem>
+                              ))}
+                            </List>
+                          </Box>
+                        )}
                       </Box>
-                    )}
-                  </Box>
-                </Box>
-              </AccordionDetails>
-            </Accordion>
-          ))}
+                    </Box>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
+              {programs.length === 0 && <Typography>No programs to execute.</Typography>}
+             </Box>
+          )}
+
+          {/* Tab 2: Working Papers (All Evidence) */}
+          {activeTab === 2 && (
+             <TableContainer component={Paper}>
+                <Table>
+                    <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                        <TableRow>
+                            <TableCell><strong>File Name</strong></TableCell>
+                            <TableCell><strong>Related Procedure</strong></TableCell>
+                            <TableCell><strong>Date Uploaded</strong></TableCell>
+                            <TableCell align="right"><strong>Actions</strong></TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {Object.keys(evidenceMap).length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={4} align="center">No working papers uploaded yet.</TableCell>
+                            </TableRow>
+                        ) : (
+                            Object.entries(evidenceMap).flatMap(([progId, evidenceList]) => {
+                                const prog = programs.find(p => p.id === Number(progId));
+                                return evidenceList.map((ev: any) => (
+                                    <TableRow key={ev.id}>
+                                        <TableCell>
+                                            <Box display="flex" alignItems="center" gap={1}>
+                                                <InsertDriveFileIcon color="action" />
+                                                <Link href="#" color="inherit" underline="hover">{ev.fileName}</Link>
+                                            </Box>
+                                        </TableCell>
+                                        <TableCell>{prog?.procedureName || `Program #${progId}`}</TableCell>
+                                        <TableCell>{new Date(ev.createdAt).toLocaleDateString()}</TableCell>
+                                        <TableCell align="right">
+                                            <IconButton size="small" onClick={() => handleDeleteEvidence(Number(progId), ev.id)} color="error">
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                ));
+                            })
+                        )}
+                    </TableBody>
+                </Table>
+             </TableContainer>
+          )}
+
         </Box>
       )}
 

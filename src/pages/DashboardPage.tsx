@@ -36,6 +36,8 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../services/api';
 import { Page } from '../types/navigation';
+import ActionPlansModule from '../components/ActionPlansModule';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
 
 type UserRole = 'Admin' | 'System Administrator' | 'Executive' | 'Manager' | 'Auditor' | 'ProcessOwner' | 'CAE';
 
@@ -773,6 +775,150 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   );
 };
 
+// ========== PROCESS OWNER DASHBOARD ==========
+const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const [findings, setFindings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedFindingId, setSelectedFindingId] = useState<number | null>(null);
+  const [actionPlansOpen, setActionPlansOpen] = useState(false);
+  const [stats, setStats] = useState({
+    assignedFindings: 0,
+    openActionPlans: 0,
+    overdueItems: 0
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // In a real app, we would filter by the logged-in user's ID
+      // const user = await api.getProfile();
+      const allFindings = await api.getFindings?.() || [];
+      
+      // For demo, assuming all findings are relevant or filtering client-side would happen here
+      // const myFindings = allFindings.filter(f => f.assignedToId === user.id);
+      const myFindings = Array.isArray(allFindings) ? allFindings : [];
+      
+      setFindings(myFindings);
+      
+      setStats({
+        assignedFindings: myFindings.length,
+        openActionPlans: 0, // Would need to fetch action plans count
+        overdueItems: 0 // Would calculate based on due dates
+      });
+    } catch (error) {
+      console.error("Failed to fetch process owner data", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenActionPlans = (findingId: number) => {
+    setSelectedFindingId(findingId);
+    setActionPlansOpen(true);
+  };
+
+  const columns: GridColDef[] = [
+    { field: 'id', headerName: 'ID', width: 70 },
+    { field: 'description', headerName: 'Description', flex: 1, minWidth: 200 },
+    { field: 'severity', headerName: 'Severity', width: 120, 
+      renderCell: (params) => (
+        <Chip 
+          label={params.value} 
+          color={params.value === 'Critical' ? 'error' : params.value === 'High' ? 'warning' : 'default'} 
+          size="small" 
+        />
+      )
+    },
+    { field: 'status', headerName: 'Status', width: 120,
+      renderCell: (params) => (
+        <Chip label={params.value} variant="outlined" size="small" />
+      )
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 200,
+      sortable: false,
+      renderCell: (params) => (
+        <Box>
+          <Button 
+            variant="contained" 
+            size="small" 
+            onClick={() => handleOpenActionPlans(params.row.id)}
+            sx={{ fontSize: '0.75rem' }}
+          >
+            Remediation / Evidence
+          </Button>
+        </Box>
+      ),
+    },
+  ];
+
+  return (
+    <Box>
+      <Typography variant="h4" sx={{ color: '#0F1A2B', fontWeight: 'bold', mb: 3 }}>
+        Process Owner Dashboard
+      </Typography>
+
+      {/* Stats Grid */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 3, mb: 4 }}>
+        <StatCard
+          title="Assigned Findings"
+          value={stats.assignedFindings}
+          icon={<AssignmentIcon fontSize="large" />}
+          color="#1976d2"
+        />
+        <StatCard
+          title="Open Action Plans"
+          value={stats.openActionPlans}
+          icon={<TrendingUpIcon fontSize="large" />}
+          color="#ed6c02"
+        />
+        <StatCard
+          title="Overdue Items"
+          value={stats.overdueItems}
+          icon={<WarningIcon fontSize="large" />}
+          color="#d32f2f"
+        />
+      </Box>
+
+      {/* Findings Table */}
+      <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+          My Assigned Findings
+        </Typography>
+        <Box sx={{ height: 400, width: '100%' }}>
+          <DataGrid
+            rows={findings}
+            columns={columns}
+            initialState={{
+              pagination: {
+                paginationModel: { pageSize: 5, page: 0 },
+              },
+            }}
+            pageSizeOptions={[5, 10, 25]}
+            disableRowSelectionOnClick
+            loading={loading}
+          />
+        </Box>
+      </Paper>
+
+      {/* Action Plans Module (Dialog) */}
+      {selectedFindingId && (
+        <ActionPlansModule
+          findingId={selectedFindingId}
+          open={actionPlansOpen}
+          onClose={() => setActionPlansOpen(false)}
+        />
+      )}
+    </Box>
+  );
+};
+
 // ========== MAIN DASHBOARD COMPONENT ==========
 const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
   const userRole = (localStorage.getItem('userRole') || 'Auditor') as UserRole;
@@ -790,6 +936,8 @@ const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
         return <CAEDashboard onNavigate={onNavigate} />;
       case 'Executive':
         return <CAEDashboard onNavigate={onNavigate} />;
+      case 'ProcessOwner':
+        return <ProcessOwnerDashboard onNavigate={onNavigate} />;
       default:
         return <AuditorDashboard onNavigate={onNavigate} />;
     }

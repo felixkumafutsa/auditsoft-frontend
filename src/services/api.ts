@@ -1,12 +1,12 @@
 // --- src/services/api.ts ---
 
 const getBaseUrl = () => {
-  let apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  let apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:4000';
   // Remove trailing slash if present to avoid double slashes
   if (apiUrl.endsWith('/')) {
     apiUrl = apiUrl.slice(0, -1);
   }
-  return apiUrl;
+  return `${apiUrl}/api`;
 };
 
 const BASE_URL = getBaseUrl();

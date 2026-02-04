@@ -32,6 +32,7 @@ import ExecutiveReportsPage from '../pages/ExecutiveReportsPage';
 import AuditUniversePage from '../pages/AuditUniversePage';
 import ContinuousAuditsPage from '../pages/ContinuousAuditsPage';
 import IntegrationsPage from '../pages/IntegrationsPage';
+import MessagingPage from '../pages/MessagingPage';
 import GlobalTopBar from './GlobalTopBar';
 import ContextualTopBar from './ContextualTopBar';
 import api from '../services/api';
@@ -165,6 +166,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 return <AuditExecutionModule />;
             case 'notifications':
                 return <NotificationsPage />;
+            case 'messaging':
+                return <MessagingPage />;
             default:
                 return <DashboardPage onNavigate={handleNavigate} />;
         }
@@ -201,7 +204,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 onNavigate={handleNavigate}
             />
 
-            {/* Mobile Sidebar (Drawer) */}
+            {/* Sidebar (Drawer) */}
             <Box component="nav">
                 <Drawer
                     variant="temporary"
@@ -211,7 +214,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                         keepMounted: true, // Better open performance on mobile.
                     }}
                     sx={{
-                        display: { xs: 'block', md: 'none' },
+                        display: { xs: 'block', md: 'block' },
                         '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
                     }}
                 >

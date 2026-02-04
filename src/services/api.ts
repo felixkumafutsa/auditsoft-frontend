@@ -218,6 +218,28 @@ class ApiClient {
   getExecutiveReport = () => this.get('/reports/executive');
   getRiskHeatmap = () => this.get('/reports/risk-heatmap');
 
+  downloadAuditReportPDF = (auditId: number) => {
+    return fetch(`${BASE_URL}/reports/audit/${auditId}/pdf`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    })
+    .then(response => {
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.blob();
+    });
+  };
+
+  downloadAuditReportWord = (auditId: number) => {
+    return fetch(`${BASE_URL}/reports/audit/${auditId}/docx`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    })
+    .then(response => {
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.blob();
+    });
+  };
+
   // --- Tasks & Alerts ---
   getMyTasks = () => this.get('/users/me/tasks');
 
@@ -242,6 +264,13 @@ class ApiClient {
   getUnreadNotificationCount = () => this.get('/notifications/unread-count');
   markNotificationAsRead = (id: number) => this.patch(`/notifications/${id}/read`, {});
   markAllNotificationsAsRead = () => this.patch('/notifications/read-all', {});
+
+  // --- Messaging ---
+  getConversations = () => this.get('/messages/conversations');
+  getMessages = (contactId: number) => this.get(`/messages/${contactId}`);
+  sendMessage = (receiverId: number, content: string) => this.post('/messages', { receiverId, content });
+  markMessagesAsRead = (contactId: number) => this.patch(`/messages/${contactId}/read`, {});
+  deleteConversation = (contactId: number) => this.delete(`/messages/${contactId}`);
 
   // --- Audit Universe ---
   getAuditUniverse = () => this.get('/audit-universe');

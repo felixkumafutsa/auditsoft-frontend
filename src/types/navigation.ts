@@ -30,4 +30,5 @@ export type Page =
   | 'continuous-audits'
   | 'profile' 
   | 'execution'
-  | 'notifications';
+  | 'notifications'
+  | 'messaging';

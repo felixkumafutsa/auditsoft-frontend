@@ -33,7 +33,7 @@ import {
   Gavel as GavelIcon,
   BarChart as BarChartIcon,
 } from '@mui/icons-material';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../services/api';
 import { Page } from '../types/navigation';
 import ActionPlansModule from '../components/ActionPlansModule';
@@ -80,6 +80,161 @@ const StatCard: React.FC<{
     </CardContent>
   </Card>
 );
+
+// ========== AUDIT MANAGER DASHBOARD ==========
+const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const [stats, setStats] = useState<{
+    auditTrend: any[];
+    auditStatusDistribution: any[];
+    tasks: any[];
+    notifications: any[];
+  }>({
+    auditTrend: [],
+    auditStatusDistribution: [],
+    tasks: [],
+    notifications: []
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const dashboardStats = await api.getDashboardStats();
+        const tasks = await api.getMyTasks();
+        // Assuming notifications are fetched via a context or separate call if needed, 
+        // but here we might need to rely on what's available or fetch them.
+        // For now, we'll mock or use what we can get. 
+        // Ideally api.getNotifications() should exist.
+        
+        setStats({
+          auditTrend: dashboardStats.auditTrend || [],
+          auditStatusDistribution: dashboardStats.auditStatusDistribution || [],
+          tasks: Array.isArray(tasks) ? tasks : [],
+          notifications: [] // Placeholder, will need real notifications
+        });
+      } catch (e) {
+        console.error('Failed to fetch manager data', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
+  return (
+    <Box>
+      <Typography variant="h4" sx={{ color: '#0F1A2B', fontWeight: 'bold', mb: 3 }}>
+        Audit Manager Dashboard
+      </Typography>
+
+      {/* Top Section: Quick Links/Stats */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 4 }}>
+         <Card elevation={2}>
+            <CardContent>
+                <Typography variant="h6" gutterBottom>Audit Planning Snapshot</Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={stats.auditTrend}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="audits" stroke="#8884d8" activeDot={{ r: 8 }} />
+                    </LineChart>
+                </ResponsiveContainer>
+            </CardContent>
+         </Card>
+
+         <Card elevation={2}>
+            <CardContent>
+                <Typography variant="h6" gutterBottom>Audit Status Distribution</Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                        <Pie
+                            data={stats.auditStatusDistribution}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, percent }: { name?: string | number; percent?: number }) => `${name || ''} ${(percent ? percent * 100 : 0).toFixed(0)}%`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                        >
+                            {stats.auditStatusDistribution.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                        </Pie>
+                        <Tooltip />
+                    </PieChart>
+                </ResponsiveContainer>
+            </CardContent>
+         </Card>
+      </Box>
+
+      {/* Middle Section: Quick Actions */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3, mb: 4 }}>
+          <Button 
+            variant="contained" 
+            size="large" 
+            startIcon={<AssignmentIcon />}
+            onClick={() => onNavigate('audit-plans')}
+            sx={{ py: 2, bgcolor: '#1976d2' }}
+          >
+            View All Audit Plans
+          </Button>
+          <Button 
+            variant="contained" 
+            size="large" 
+            startIcon={<DescriptionIcon />}
+            onClick={() => onNavigate('audit-programs')}
+            sx={{ py: 2, bgcolor: '#2e7d32' }}
+          >
+            Manage Audit Programs
+          </Button>
+      </Box>
+
+      {/* Bottom Section: Tasks & Notifications */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+        <Card elevation={2}>
+            <CardContent>
+                <Typography variant="h6" gutterBottom>My Tasks</Typography>
+                <List>
+                    {stats.tasks.length > 0 ? stats.tasks.map((task: any, index) => (
+                        <ListItem key={index}>
+                            <ListItemIcon><CheckCircleIcon color="primary" /></ListItemIcon>
+                            <ListItemText primary={task.title} secondary={task.dueDate} />
+                        </ListItem>
+                    )) : (
+                        <ListItem>
+                            <ListItemText primary="No pending tasks" />
+                        </ListItem>
+                    )}
+                </List>
+            </CardContent>
+        </Card>
+
+        <Card elevation={2}>
+            <CardContent>
+                <Typography variant="h6" gutterBottom>Recent Notifications</Typography>
+                <List>
+                    {/* Placeholder for notifications - typically would come from a NotificationContext or API */}
+                    <ListItem>
+                        <ListItemIcon><WarningIcon color="warning" /></ListItemIcon>
+                        <ListItemText primary="Audit 'IT Security 2024' execution completed" secondary="Review findings pending" />
+                    </ListItem>
+                    <ListItem>
+                        <ListItemIcon><CheckCircleIcon color="success" /></ListItemIcon>
+                        <ListItemText primary="Audit Plan 'Financial Q1' approved" secondary="Ready for assignment" />
+                    </ListItem>
+                </List>
+            </CardContent>
+        </Card>
+      </Box>
+    </Box>
+  );
+};
 
 // ========== ADMIN DASHBOARD ==========
 interface DashboardProps {
@@ -929,7 +1084,7 @@ const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
       case 'Admin':
         return <AdminDashboard onNavigate={onNavigate} />;
       case 'Manager':
-        return <ManagerDashboard onNavigate={onNavigate} />;
+        return <AuditManagerDashboard onNavigate={onNavigate} />;
       case 'Auditor':
         return <AuditorDashboard onNavigate={onNavigate} />;
       case 'CAE':

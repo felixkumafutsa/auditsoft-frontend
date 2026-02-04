@@ -50,9 +50,13 @@ import ScheduleIcon from "@mui/icons-material/Schedule";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import SendIcon from "@mui/icons-material/Send";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import DescriptionIcon from "@mui/icons-material/Description";
+
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import AuditForm from "../components/AuditForm";
 import AuditExecutionModule from "../components/AuditExecutionModule";
+
 import AuditProgramsModule from "../components/AuditProgramsModule";
 import api from "../services/api";
 
@@ -96,6 +100,38 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   // Filtering State
   const [searchQuery, setSearchQuery] = useState('');
   const [tabValue, setTabValue] = useState(0);
+
+  const handleDownloadPDF = async (auditId: number) => {
+    try {
+      const blob = await api.downloadAuditReportPDF(auditId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Audit_Report_${auditId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+      setError('Failed to download PDF report.');
+    }
+  };
+
+  const handleDownloadWord = async (auditId: number) => {
+    try {
+      const blob = await api.downloadAuditReportWord(auditId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Audit_Report_${auditId}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      console.error('Failed to download Word doc:', err);
+      setError('Failed to download Word report.');
+    }
+  };
 
   // Approval State
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -722,7 +758,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         ),
       },
     ];
-  }, [isMobile, isTablet, currentUser, handleApproveClick, handleReviewFindings, handleStartAudit, isAuditor, isManager, isCAE]);
+  }, [isMobile, isTablet, currentUser, handleApproveClick, handleReviewFindings, handleStartAudit, isAuditor, isManager, isCAE, handleDeleteAudit, handleEdit, handleAssignClick]);
 
   return (
     <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, height: "100%" }}>

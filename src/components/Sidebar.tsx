@@ -38,7 +38,8 @@ import {
   Shield as ShieldIcon,
   PieChart as PieChartIcon,
   Hub as HubIcon,
-  Work as WorkIcon
+  Work as WorkIcon,
+  Chat as ChatIcon
 } from '@mui/icons-material';
 import { Page } from '../types/navigation';
 
@@ -79,6 +80,11 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
         <ListItemButton selected={currentPage === 'dashboard'} onClick={() => onNavigate('dashboard')}>
           <ListItemIcon><DashboardIcon sx={{ color: 'white' }} /></ListItemIcon>
           <ListItemText primary="Dashboard" />
+        </ListItemButton>
+
+        <ListItemButton selected={currentPage === 'messaging'} onClick={() => onNavigate('messaging')}>
+          <ListItemIcon><ChatIcon sx={{ color: 'white' }} /></ListItemIcon>
+          <ListItemText primary="Messages" />
         </ListItemButton>
 
         {/* ================= SYSTEM ADMIN MENU ================= */}

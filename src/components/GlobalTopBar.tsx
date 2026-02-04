@@ -9,7 +9,6 @@ import {
   Menu,
   MenuItem,
   Badge,
-  useMediaQuery,
   useTheme
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -33,7 +32,6 @@ const GlobalTopBar: React.FC<GlobalTopBarProps> = ({
 }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -56,18 +54,16 @@ const GlobalTopBar: React.FC<GlobalTopBarProps> = ({
   return (
     <AppBar position="fixed" sx={{ bgcolor: '#0F1A2B', zIndex: theme.zIndex.drawer + 1 }}>
       <Toolbar>
-        {isMobile && (
-          <IconButton
-            size="large"
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            sx={{ mr: 2 }}
-            onClick={onDrawerToggle}
-          >
-            <MenuIcon />
-          </IconButton>
-        )}
+        <IconButton
+          size="large"
+          edge="start"
+          color="inherit"
+          aria-label="menu"
+          sx={{ mr: 2 }}
+          onClick={onDrawerToggle}
+        >
+          <MenuIcon />
+        </IconButton>
         
         {/* Logo */}
         <Box sx={{ display: 'flex', alignItems: 'center', mr: 4, cursor: 'pointer' }} onClick={() => onNavigate('dashboard')}>

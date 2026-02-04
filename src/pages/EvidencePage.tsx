@@ -241,35 +241,45 @@ const EvidencePage: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 180,
+      width: 250,
       sortable: false,
-      renderCell: (params) => (
-        <Box>
-          {isManager && params.row.status !== 'Approved' && (
-            <>
-              <Tooltip title="Review">
-                <IconButton onClick={() => handleTransition(params.row.id, 'Reviewed')} color="info" size="small">
-                  <RateReviewIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Approve">
-                <IconButton onClick={() => handleTransition(params.row.id, 'Approved')} color="success" size="small">
-                  <CheckCircleIcon />
-                </IconButton>
-              </Tooltip>
-            </>
-          )}
-          {/* Allow delete if uploaded by user or if manager/admin, but maybe restrict if approved */}
-          {(!isManager || params.row.status !== 'Approved') && (
-             <Tooltip title="Delete">
-               <IconButton onClick={() => handleDelete(params.row.id)} color="error" size="small">
-                 <DeleteIcon />
-               </IconButton>
-             </Tooltip>
-          )}
-        </Box>
-      )
-    }
+      renderCell: (params) => {
+        const status = params.row.status;
+        return (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {/* Review Action: For Manager/Auditor when Uploaded */}
+            {status === 'Uploaded' && (isManager || isAuditor) && (
+                <Button size="small" variant="outlined" startIcon={<RateReviewIcon />} onClick={() => handleTransition(params.row.id, 'Reviewed')}>
+                    Review
+                </Button>
+            )}
+
+            {/* Approve Action: For Manager when Reviewed */}
+            {status === 'Reviewed' && isManager && (
+                <>
+                    <Button size="small" variant="contained" color="success" startIcon={<CheckCircleIcon />} onClick={() => handleTransition(params.row.id, 'Approved')}>
+                        Approve
+                    </Button>
+                    <Button size="small" variant="outlined" color="error" onClick={() => handleTransition(params.row.id, 'Uploaded')}>
+                        Reject
+                    </Button>
+                </>
+            )}
+             
+            {/* Archive Action: For Manager/Admin when Approved */}
+            {status === 'Approved' && isManager && (
+                 <Button size="small" variant="outlined" color="warning" onClick={() => handleTransition(params.row.id, 'Archived')}>
+                    Archive
+                </Button>
+            )}
+
+            <IconButton size="small" color="error" onClick={() => handleDelete(params.row.id)}>
+              <DeleteIcon />
+            </IconButton>
+          </Box>
+        );
+      },
+    },
   ];
 
   return (

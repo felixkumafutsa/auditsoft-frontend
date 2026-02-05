@@ -127,6 +127,7 @@ class ApiClient {
 
   // --- Audits ---
   getAudits = () => this.get('/audits');
+  getOwnerAudits = () => this.get('/audits/owner');
   getAuditTemplates = () => this.get('/audits/templates');
   getAudit = (id: number) => this.get(`/audits/${id}`);
   createAudit = (data: any) => this.post('/audits', data); // Define a proper DTO later
@@ -246,6 +247,26 @@ class ApiClient {
     })
     .then(response => {
       if (!response.ok) throw new Error('Network response was not ok');
+      return response.blob();
+    });
+  };
+
+  previewAuditReport = (auditId: number) => {
+    return fetch(`${BASE_URL}/reports/audit/${auditId}/preview`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    }).then(response => {
+      if (!response.ok) throw new Error('Failed to preview audit report');
+      return response.blob();
+    });
+  };
+
+  downloadStoredAuditReport = (auditId: number) => {
+    return fetch(`${BASE_URL}/reports/audit/${auditId}/file`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    }).then(response => {
+      if (!response.ok) throw new Error('Failed to download stored audit report');
       return response.blob();
     });
   };

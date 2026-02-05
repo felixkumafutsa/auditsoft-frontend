@@ -31,4 +31,6 @@ export type Page =
   | 'profile' 
   | 'execution'
   | 'notifications'
-  | 'messaging';
+  | 'messaging'
+  | 'process-owner'
+  | 'board-viewer';

@@ -132,6 +132,34 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       setError('Failed to download Word report.');
     }
   };
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const handlePreviewReport = async (auditId: number) => {
+    try {
+      const blob = await api.previewAuditReport(auditId);
+      const url = window.URL.createObjectURL(blob);
+      setPreviewUrl(url);
+      setPreviewOpen(true);
+    } catch (err) {
+      console.error('Failed to preview audit report', err);
+      setError('Failed to preview audit report.');
+    }
+  };
+  const handleDownloadStoredReport = async (auditId: number) => {
+    try {
+      const blob = await api.downloadStoredAuditReport(auditId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Audit_Report_${auditId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      console.error('Failed to download stored report', err);
+      setError('Failed to download stored report.');
+    }
+  };
 
   // Approval State
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -588,6 +616,16 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                   <CheckCircleOutlineIcon fontSize="small" />
                 </IconButton>
               )}
+              {isManager && params.row.status === 'Closed' && (
+                <IconButton size="small" onClick={() => handlePreviewReport(params.row.id)}>
+                  <PictureAsPdfIcon fontSize="small" />
+                </IconButton>
+              )}
+              {isCAE && params.row.status === 'Closed' && (
+                <IconButton size="small" onClick={() => handleDownloadStoredReport(params.row.id)}>
+                  <DescriptionIcon fontSize="small" />
+                </IconButton>
+              )}
             </Stack>
           ),
         },
@@ -780,6 +818,20 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               <Tooltip title="Review Findings">
                 <IconButton size="small" onClick={() => handleReviewFindings(params.row)}>
                   <FactCheckIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {isManager && params.row.status === 'Closed' && (
+              <Tooltip title="Preview Audit Report">
+                <IconButton size="small" onClick={() => handlePreviewReport(params.row.id)}>
+                  <PictureAsPdfIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {isCAE && params.row.status === 'Closed' && (
+              <Tooltip title="Download Audit Report">
+                <IconButton size="small" onClick={() => handleDownloadStoredReport(params.row.id)}>
+                  <DescriptionIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
@@ -1211,6 +1263,23 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         <DialogActions>
           <Button onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleAssignConfirm} variant="contained">Assign</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Report Preview Dialog (Manager review-only) */}
+      <Dialog open={previewOpen} onClose={() => { if (previewUrl) { window.URL.revokeObjectURL(previewUrl); } setPreviewOpen(false); setPreviewUrl(null); }} maxWidth="lg" fullWidth>
+        <DialogTitle>Audit Report Preview</DialogTitle>
+        <DialogContent dividers>
+          {previewUrl ? (
+            <Box sx={{ height: 600 }}>
+              <iframe title="Audit Report" src={previewUrl} style={{ width: '100%', height: '100%', border: 'none' }} />
+            </Box>
+          ) : (
+            <Typography variant="body2">No preview available.</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { if (previewUrl) { window.URL.revokeObjectURL(previewUrl); } setPreviewOpen(false); setPreviewUrl(null); }}>Close</Button>
         </DialogActions>
       </Dialog>
 

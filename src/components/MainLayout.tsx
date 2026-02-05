@@ -33,6 +33,8 @@ import AuditUniversePage from '../pages/AuditUniversePage';
 import ContinuousAuditsPage from '../pages/ContinuousAuditsPage';
 import IntegrationsPage from '../pages/IntegrationsPage';
 import MessagingPage from '../pages/MessagingPage';
+import ProcessOwnerPage from '../pages/ProcessOwnerPage';
+import BoardViewerPage from '../pages/BoardViewerPage';
 import GlobalTopBar from './GlobalTopBar';
 import ContextualTopBar from './ContextualTopBar';
 import api from '../services/api';
@@ -168,6 +170,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 return <NotificationsPage />;
             case 'messaging':
                 return <MessagingPage />;
+            case 'process-owner':
+                return <ProcessOwnerPage />;
+            case 'board-viewer':
+                return <BoardViewerPage />;
             default:
                 return <DashboardPage onNavigate={handleNavigate} />;
         }

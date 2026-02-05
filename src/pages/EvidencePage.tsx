@@ -27,6 +27,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RateReviewIcon from '@mui/icons-material/RateReview';
 import DescriptionIcon from '@mui/icons-material/Description';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import DownloadIcon from '@mui/icons-material/Download';
 import api from '../services/api';
 
 interface Audit {
@@ -65,6 +67,11 @@ const EvidencePage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [description, setDescription] = useState('');
   const [uploading, setUploading] = useState(false);
+
+  // Preview Dialog State
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewType, setPreviewType] = useState<string | null>(null);
 
   // User Role
   const userRole = localStorage.getItem('userRole');
@@ -195,6 +202,36 @@ const EvidencePage: React.FC = () => {
     }
   };
 
+  const handleDownload = async (id: number, fileName: string) => {
+    try {
+      const blob = await api.downloadEvidence(id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'evidence';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      console.error('Failed to download evidence', e);
+      alert('Failed to download evidence');
+    }
+  };
+
+  const handlePreview = async (row: Evidence) => {
+    try {
+      const blob = await api.downloadEvidence(row.id);
+      const url = URL.createObjectURL(blob);
+      setPreviewUrl(url);
+      setPreviewType(row.fileType);
+      setPreviewOpen(true);
+    } catch (e) {
+      console.error('Failed to preview evidence', e);
+      alert('Failed to preview evidence');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Approved': return 'success';
@@ -241,12 +278,22 @@ const EvidencePage: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 250,
+      width: 350,
       sortable: false,
       renderCell: (params) => {
         const status = params.row.status;
         return (
           <Box sx={{ display: 'flex', gap: 1 }}>
+            <Tooltip title="Preview">
+              <IconButton size="small" color="primary" onClick={() => handlePreview(params.row)}>
+                <VisibilityIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Download">
+              <IconButton size="small" onClick={() => handleDownload(params.row.id, params.row.fileName)}>
+                <DownloadIcon />
+              </IconButton>
+            </Tooltip>
             {/* Review Action: For Manager/Auditor when Uploaded */}
             {status === 'Uploaded' && (isManager || isAuditor) && (
                 <Button size="small" variant="outlined" startIcon={<RateReviewIcon />} onClick={() => handleTransition(params.row.id, 'Reviewed')}>
@@ -419,6 +466,49 @@ const EvidencePage: React.FC = () => {
           >
             {uploading ? 'Uploading...' : 'Upload'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={previewOpen} onClose={() => { 
+        if (previewUrl) URL.revokeObjectURL(previewUrl); 
+        setPreviewOpen(false); 
+        setPreviewUrl(null); 
+        setPreviewType(null);
+      }} maxWidth="md" fullWidth>
+        <DialogTitle>Preview Evidence</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 1 }}>
+            {previewUrl && previewType?.startsWith('image/') && (
+              <img src={previewUrl} alt="Evidence preview" style={{ maxWidth: '100%' }} />
+            )}
+            {previewUrl && previewType === 'application/pdf' && (
+              <iframe src={previewUrl} title="Evidence PDF" width="100%" height={600} />
+            )}
+            {previewUrl && !previewType?.startsWith('image/') && previewType !== 'application/pdf' && (
+              <Typography variant="body2" color="text.secondary">
+                Preview not available for this file type. Please use Download.
+              </Typography>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            if (previewUrl) {
+              const a = document.createElement('a');
+              a.href = previewUrl;
+              a.download = 'evidence';
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            }
+          }} startIcon={<DownloadIcon />}>Download</Button>
+          <Button onClick={() => { 
+            if (previewUrl) URL.revokeObjectURL(previewUrl); 
+            setPreviewOpen(false); 
+            setPreviewUrl(null); 
+            setPreviewType(null);
+          }}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

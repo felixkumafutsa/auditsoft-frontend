@@ -156,7 +156,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     { id: 3, description: "Outdated software version", severity: "Low", status: "Open" },
   ]);
 
-  const workflowSteps = ['Planned', 'Approved', 'In Progress', 'Under Review', 'Finalized'];
+  const workflowSteps = ['Planned', 'Approved', 'In Progress', 'Under Review', 'Finalized', 'Closed'];
 
   const fetchAudits = async () => {
     setLoading(true);
@@ -382,7 +382,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       try {
         const audit = audits.find((a) => a.id === auditToApprove);
         if (audit) {
-          await api.updateAudit(auditToApprove, { ...audit, status: "Approved" });
+          await api.transitionAudit(auditToApprove, "Approved", currentUser?.role);
           setAudits(audits.map((a) => (a.id === auditToApprove ? { ...a, status: "Approved" } : a)));
         }
       } catch (err) {
@@ -396,8 +396,9 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
   const handleStartAudit = useCallback(async (audit: Audit) => {
     try {
-      const updatedAudit = { ...audit, status: "In Progress" };
-      await api.updateAudit(audit.id, updatedAudit);
+      const toStatus = "In Progress";
+      await api.transitionAudit(audit.id, toStatus, currentUser?.role);
+      const updatedAudit = { ...audit, status: toStatus };
       setAudits((prev) => prev.map((a) => (a.id === audit.id ? updatedAudit : a)));
       handleReviewFindings(updatedAudit);
     } catch (err) {
@@ -434,8 +435,9 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const handleSubmitForReview = async () => {
     if (auditToEdit) {
       try {
-        const updatedAudit = { ...auditToEdit, status: "Under Review" };
-        await api.updateAudit(auditToEdit.id, updatedAudit);
+        const toStatus = "Under Review";
+        await api.transitionAudit(auditToEdit.id, toStatus, currentUser?.role);
+        const updatedAudit = { ...auditToEdit, status: toStatus };
         setAudits(audits.map(a => a.id === auditToEdit.id ? updatedAudit : a));
         setView("list");
       } catch (err) {
@@ -448,13 +450,30 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const handleFinalizeAudit = async () => {
     if (auditToEdit) {
       try {
-        const updatedAudit = { ...auditToEdit, status: "Finalized" };
-        await api.updateAudit(auditToEdit.id, updatedAudit);
+        const toStatus = "Finalized";
+        await api.transitionAudit(auditToEdit.id, toStatus, currentUser?.role);
+        const updatedAudit = { ...auditToEdit, status: toStatus };
         setAudits(audits.map(a => a.id === auditToEdit.id ? updatedAudit : a));
         setView("list");
       } catch (err) {
         console.error("Failed to finalize audit", err);
         setError("Failed to finalize audit.");
+      }
+    }
+  };
+
+  const handleCloseAudit = async (audit?: Audit) => {
+    const target = audit || auditToEdit;
+    if (target) {
+      try {
+        const toStatus = "Closed";
+        await api.transitionAudit(target.id, toStatus, currentUser?.role);
+        const updatedAudit = { ...target, status: toStatus };
+        setAudits(audits.map(a => a.id === target.id ? updatedAudit : a));
+        setView("list");
+      } catch (err) {
+        console.error("Failed to close audit", err);
+        setError("Failed to close audit.");
       }
     }
   };
@@ -557,6 +576,16 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               {isAuditor && (params.row.status === 'Planned' || params.row.status === 'Approved') && (
                 <IconButton size="small" onClick={() => handleStartAudit(params.row)} color="primary">
                   <PlayArrowIcon fontSize="small" />
+                </IconButton>
+              )}
+              {isCAE && params.row.status === 'Under Review' && (
+                <IconButton size="small" onClick={() => { setAuditToEdit(params.row); handleFinalizeAudit(); }} color="success">
+                  <CheckCircleIcon fontSize="small" />
+                </IconButton>
+              )}
+              {isCAE && params.row.status === 'Finalized' && (
+                <IconButton size="small" onClick={() => handleCloseAudit(params.row)} color="warning">
+                  <CheckCircleOutlineIcon fontSize="small" />
                 </IconButton>
               )}
             </Stack>
@@ -998,7 +1027,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
           {/* Workflow Stepper */}
           <Box sx={{ width: '100%', mb: 4 }}>
-            <Stepper activeStep={workflowSteps.indexOf(auditToEdit?.status === 'Completed' ? 'Finalized' : auditToEdit?.status)} alternativeLabel>
+            <Stepper activeStep={workflowSteps.indexOf(auditToEdit?.status || 'Planned')} alternativeLabel>
               {workflowSteps.map((label) => (
                 <Step key={label}>
                   <StepLabel>{label}</StepLabel>
@@ -1121,9 +1150,13 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               </Button>
             )}
 
-            {/* Manager: Finalize */}
-            {auditToEdit?.status === 'Under Review' && (currentUser?.role === 'Manager' || currentUser?.role === 'manager') && (
+            {/* CAE: Finalize */}
+            {auditToEdit?.status === 'Under Review' && (isCAE) && (
               <Button variant="contained" color="success" onClick={handleFinalizeAudit}>Finalize Audit</Button>
+            )}
+            {/* CAE: Close */}
+            {auditToEdit?.status === 'Finalized' && (isCAE) && (
+              <Button variant="contained" color="warning" onClick={() => handleCloseAudit()}>Close Audit</Button>
             )}
           </Box>
         </Paper>

@@ -165,6 +165,16 @@ class ApiClient {
   getAllowedEvidenceTransitions = (id: number) =>
     this.get(`/evidence/${id}/allowed-transitions`);
 
+  downloadEvidence = (id: number) => {
+    return fetch(`${BASE_URL}/evidence/${id}/file`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    }).then(response => {
+      if (!response.ok) throw new Error('Failed to download evidence');
+      return response.blob();
+    });
+  };
+
   // --- Findings & Remediation ---
   getFindings = () => this.get('/findings');
   getAuditFindings = (auditId: number) => this.get(`/audits/${auditId}/findings`);

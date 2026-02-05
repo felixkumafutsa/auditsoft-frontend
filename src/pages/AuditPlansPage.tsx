@@ -41,10 +41,11 @@ const AuditPlansPage: React.FC = () => {
   const [tabIndex, setTabIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [userRole, setUserRole] = useState<string>('');
-  const [view, setView] = useState<'list' | 'create'>('list');
+  const [view, setView] = useState<'list' | 'create' | 'review'>('list');
   const [auditors, setAuditors] = useState<{ id: number; name: string; role: string }[]>([]);
   const [managers, setManagers] = useState<{ id: number; name: string; role: string }[]>([]);
   const [auditUniverseItems, setAuditUniverseItems] = useState<{ id: number; entityName: string; entityType: string }[]>([]);
+  const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
 
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
   const isAuditor = userRole === 'Auditor' || userRole === 'auditor';
@@ -155,6 +156,32 @@ const AuditPlansPage: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to reject audit", error);
+    }
+  };
+
+  const handleFinalize = async (id: number) => {
+    try {
+      const audit = audits.find(a => a.id === id);
+      if (audit) {
+        await (api as any).transitionAudit(id, 'Finalized', isCAE ? 'Chief Audit Executive (CAE)' : userRole);
+        setAudits(audits.map(a => a.id === id ? { ...a, status: 'Finalized' } : a));
+        setSelectedAudit({ ...(audit as any), status: 'Finalized' });
+      }
+    } catch (error) {
+      console.error("Failed to finalize audit", error);
+    }
+  };
+
+  const handleClose = async (id: number) => {
+    try {
+      const audit = audits.find(a => a.id === id);
+      if (audit) {
+        await (api as any).transitionAudit(id, 'Closed', isCAE ? 'Chief Audit Executive (CAE)' : userRole);
+        setAudits(audits.map(a => a.id === id ? { ...a, status: 'Closed' } : a));
+        setSelectedAudit({ ...(audit as any), status: 'Closed' });
+      }
+    } catch (error) {
+      console.error("Failed to close audit", error);
     }
   };
 
@@ -334,23 +361,55 @@ const AuditPlansPage: React.FC = () => {
                   pageSizeOptions={[10, 25, 50]}
                   disableRowSelectionOnClick
                   autoHeight={false} // fixed height container
+                  onRowClick={(params) => {
+                    setSelectedAudit(params.row as Audit);
+                    setView('review');
+                  }}
                />
              )}
           </Box>
         </Paper>
       ) : (
-        <Paper sx={{ p: 3 }}>
-          <AuditForm
-            auditors={auditors}
-            managers={managers}
-            auditUniverseItems={auditUniverseItems}
-            onSuccess={() => {
-              setView('list');
-              fetchAudits();
-            }}
-            onCancel={() => setView('list')}
-          />
-        </Paper>
+        view === 'create' ? (
+          <Paper sx={{ p: 3 }}>
+            <AuditForm
+              auditors={auditors}
+              managers={managers}
+              auditUniverseItems={auditUniverseItems}
+              onSuccess={() => {
+                setView('list');
+                fetchAudits();
+              }}
+              onCancel={() => setView('list')}
+            />
+          </Paper>
+        ) : (
+          <Paper sx={{ p: 3 }}>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h5">Audit Plan Review</Typography>
+              <Button variant="outlined" onClick={() => setView('list')}>Back to List</Button>
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="subtitle1">{selectedAudit?.auditName}</Typography>
+                <Typography variant="body2">Type: {selectedAudit?.auditType}</Typography>
+                <Typography variant="body2">Status: {selectedAudit?.status}</Typography>
+                <Typography variant="body2">Assigned: {selectedAudit?.assignedTo || '-'}</Typography>
+              </Paper>
+            </Box>
+            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+              {selectedAudit?.status === 'Planned' && isCAE && (
+                <Button variant="contained" color="success" onClick={() => handleApprove(selectedAudit.id)}>Approve</Button>
+              )}
+              {selectedAudit?.status === 'Under Review' && isCAE && (
+                <Button variant="contained" color="success" onClick={() => handleFinalize(selectedAudit.id)}>Finalize</Button>
+              )}
+              {selectedAudit?.status === 'Finalized' && isCAE && (
+                <Button variant="contained" color="warning" onClick={() => handleClose(selectedAudit.id)}>Close</Button>
+              )}
+            </Box>
+          </Paper>
+        )
       )}
     </Box>
   );

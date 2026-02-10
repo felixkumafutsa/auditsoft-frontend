@@ -361,7 +361,7 @@ const EvidencePage: React.FC = () => {
       field: 'auditName', 
       headerName: 'Audit', 
       width: 150,
-      valueGetter: (params: any) => params.row?.auditProgram?.audit?.auditName || 'N/A'
+      valueGetter: (_value, row) => row?.auditProgram?.audit?.auditName ?? 'N/A'
     },
     { field: 'fileName', headerName: 'File Name', flex: 1, minWidth: 200 },
     { field: 'description', headerName: 'Description', flex: 1, minWidth: 200 },
@@ -369,60 +369,74 @@ const EvidencePage: React.FC = () => {
       field: 'uploadedBy', 
       headerName: 'Uploaded By', 
       width: 150,
-      valueGetter: (params: any) => params.row?.uploadedBy?.name || 'Unknown'
+      valueGetter: (_value, row) =>
+  row?.uploadedBy?.name ?? 'Unknown'
+
     },
     { 
       field: 'uploadedAt', 
       headerName: 'Date', 
       width: 150,
-      valueFormatter: (params: any) => params.value ? new Date(params.value).toLocaleDateString() : 'N/A'
+      valueFormatter: (value) =>
+  value ? new Date(value as string).toLocaleDateString() : 'N/A'
+
     },
     { 
       field: 'status', 
       headerName: 'Status', 
       width: 120,
-      renderCell: (params: any) => (
-        <Chip label={params.value} color={getStatusColor(params.value) as any} size="small" />
-      )
+     renderCell: ({ value }) => (
+  <Chip
+    label={value}
+    color={getStatusColor(value) as any}
+    size="small"
+  />
+)
+
     },
     {
       field: 'actions',
       headerName: 'Actions',
       width: 250,
       sortable: false,
-      renderCell: (params: any) => (
-        <Box>
-          <Tooltip title="Preview">
-            <IconButton size="small" onClick={() => handlePreview(params.row)}>
-              <VisibilityIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Download">
-            <IconButton size="small" onClick={() => handleDownload(params.row.id, params.row.fileName)}>
-              <DownloadIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Version History">
-            <IconButton size="small" onClick={() => handleViewVersions(params.row)}>
-              <HistoryIcon />
-            </IconButton>
-          </Tooltip>
-          {isAuditor && (
-            <Tooltip title="Delete">
-              <IconButton size="small" color="error" onClick={() => handleDelete(params.row.id)}>
-                <DeleteIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-          {isManager && params.row.status === 'Uploaded' && (
-            <Tooltip title="Mark as Reviewed">
-              <IconButton size="small" color="primary" onClick={() => handleTransition(params.row.id, 'Reviewed')}>
-                <RateReviewIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-        </Box>
-      )
+renderCell: ({ row }) => (
+  <Box>
+    <Tooltip title="Preview">
+      <IconButton size="small" onClick={() => handlePreview(row)}>
+        <VisibilityIcon />
+      </IconButton>
+    </Tooltip>
+
+    <Tooltip title="Download">
+      <IconButton size="small" onClick={() => handleDownload(row.id, row.fileName)}>
+        <DownloadIcon />
+      </IconButton>
+    </Tooltip>
+
+    <Tooltip title="Version History">
+      <IconButton size="small" onClick={() => handleViewVersions(row)}>
+        <HistoryIcon />
+      </IconButton>
+    </Tooltip>
+
+    {isAuditor && (
+      <Tooltip title="Delete">
+        <IconButton size="small" color="error" onClick={() => handleDelete(row.id)}>
+          <DeleteIcon />
+        </IconButton>
+      </Tooltip>
+    )}
+
+    {isManager && row.status === 'Uploaded' && (
+      <Tooltip title="Mark as Reviewed">
+        <IconButton size="small" color="primary" onClick={() => handleTransition(row.id, 'Reviewed')}>
+          <RateReviewIcon />
+        </IconButton>
+      </Tooltip>
+    )}
+  </Box>
+)
+
     }
   ];
 
@@ -702,23 +716,28 @@ const EvidencePage: React.FC = () => {
                   field: 'uploadedBy', 
                   headerName: 'By', 
                   width: 150, 
-                  valueGetter: (params: any) => params.row?.uploadedBy?.name || 'Unknown' 
+                  valueGetter: (_value, row) =>
+  row?.uploadedBy?.name ?? 'Unknown'
+
                 },
                 { 
                   field: 'uploadedAt', 
                   headerName: 'Date', 
                   width: 150, 
-                  valueFormatter: (params: any) => params.value ? new Date(params.value).toLocaleString() : 'N/A'
+                  valueGetter: (_value, row) =>
+  row?.uploadedBy?.name ?? 'Unknown'
+
                 },
                 {
                   field: 'actions',
                   headerName: 'Actions',
                   width: 100,
-                  renderCell: (params: any) => (
-                    <IconButton size="small" onClick={() => handleDownload(params.row.id, params.row.fileName)}>
-                      <DownloadIcon />
-                    </IconButton>
-                  )
+                 renderCell: ({ row }) => (
+  <IconButton size="small" onClick={() => handleDownload(row.id, row.fileName)}>
+    <DownloadIcon />
+  </IconButton>
+)
+
                 }
               ]}
               autoHeight

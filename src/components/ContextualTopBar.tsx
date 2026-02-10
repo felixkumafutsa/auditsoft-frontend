@@ -113,6 +113,41 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   }
 
   // =========================================================================
+  // AUDITOR VIEW
+  // =========================================================================
+  if (isAuditor) {
+    return (
+      <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
+        <Toolbar variant="dense" sx={{ minHeight: 48 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              startIcon={<DashboardIcon />}
+              color={currentPage === 'dashboard' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('dashboard')}
+            >
+              Dashboard
+            </Button>
+            <Button
+              startIcon={<AssignmentIcon />}
+              color={currentPage === 'audits' || currentPage === 'my-audits' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('audits')}
+            >
+              My Audits
+            </Button>
+            <Button
+              startIcon={<RateReviewIcon />}
+              color={currentPage === 'comments' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('comments')}
+            >
+              Comments
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
+    );
+  }
+
+  // =========================================================================
   // SYSTEM ADMINISTRATOR VIEW
   // =========================================================================
   if (isSystemAdmin) {
@@ -178,6 +213,13 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
               onClick={() => onNavigate('system-settings')}
             >
               System Settings
+            </Button>
+            <Button
+              startIcon={<RateReviewIcon />}
+              color={currentPage === 'comments' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('comments')}
+            >
+              Comments
             </Button>
           </Box>
         </Toolbar>
@@ -342,6 +384,13 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
               </MenuItem>
             </Menu>
 
+            <Button
+              startIcon={<RateReviewIcon />}
+              color={currentPage === 'comments' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('comments')}
+            >
+              Comments
+            </Button>
           </Box>
         </Toolbar>
       </AppBar>
@@ -349,7 +398,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   }
 
   // =========================================================================
-  // DEFAULT / OTHER ROLES VIEW (e.g. Auditor, Manager)
+  // DEFAULT / OTHER ROLES VIEW (e.g. Manager)
   // =========================================================================
   return (
     <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
@@ -378,8 +427,8 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             open={Boolean(auditsAnchor)}
             onClose={() => setAuditsAnchor(null)}
           >
-            {/* "My Audits" for Auditors and Managers */}
-            {(isAuditor || isManager) && (
+            {/* "My Audits" for Managers */}
+            {isManager && (
               <MenuItem onClick={() => { onNavigate('my-audits'); setAuditsAnchor(null); }}>
                 <ListItemIcon><AssignmentIcon fontSize="small" /></ListItemIcon>
                 <ListItemText>My Audits</ListItemText>
@@ -426,6 +475,14 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
               <ListItemText>Evidence</ListItemText>
             </MenuItem>
           </Menu>
+
+          <Button
+            startIcon={<RateReviewIcon />}
+            color={currentPage === 'comments' ? 'primary' : 'inherit'}
+            onClick={() => onNavigate('comments')}
+          >
+            Comments
+          </Button>
         </Box>
       </Toolbar>
     </AppBar>

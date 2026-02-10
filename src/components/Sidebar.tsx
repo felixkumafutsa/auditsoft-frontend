@@ -39,7 +39,8 @@ import {
   PieChart as PieChartIcon,
   Hub as HubIcon,
   Work as WorkIcon,
-  Chat as ChatIcon
+  Chat as ChatIcon,
+  QuestionAnswer as QuestionAnswerIcon
 } from '@mui/icons-material';
 import { Page } from '../types/navigation';
 
@@ -87,6 +88,22 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
           <ListItemIcon><ChatIcon sx={{ color: 'white' }} /></ListItemIcon>
           <ListItemText primary="Messages" />
         </ListItemButton>
+
+        <ListItemButton selected={currentPage === 'comments'} onClick={() => onNavigate('comments')}>
+          <ListItemIcon><QuestionAnswerIcon sx={{ color: 'white' }} /></ListItemIcon>
+          <ListItemText primary="Comments" />
+        </ListItemButton>
+
+        {/* Auditor Specific Menu */}
+        {isAuditor && (
+          <>
+            <Divider sx={{ my: 1, bgcolor: 'rgba(255,255,255,0.1)' }} />
+            <ListItemButton selected={currentPage === 'audits'} onClick={() => onNavigate('audits')}>
+              <ListItemIcon><AssignmentIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="My Audits" />
+            </ListItemButton>
+          </>
+        )}
 
         {/* ================= SYSTEM ADMIN MENU ================= */}
         {isSystemAdmin && (
@@ -246,8 +263,8 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
           </>
         )}
 
-        {/* ================= DEFAULT / OTHER ROLES (e.g. Auditor) ================= */}
-        {!isSystemAdmin && !isCAE && (
+        {/* ================= DEFAULT / OTHER ROLES (e.g. Process Owner) ================= */}
+        {!isSystemAdmin && !isCAE && !isAuditor && (
           <>
             <Divider sx={{ my: 1, bgcolor: 'rgba(255,255,255,0.1)' }} />
             

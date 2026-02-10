@@ -1059,7 +1059,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                       />
                     </TableCell>
                     <TableCell align="right">
-                      {finding.status !== "Approved" && (
+                      {finding.status !== "Approved" && (isManager || isCAE) && (
                         <Button 
                           size="small" 
                           variant="contained" 

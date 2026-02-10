@@ -154,6 +154,10 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialAudit]);
 
+  const hasEvidence = React.useMemo(() => {
+    return Object.values(evidenceMap).some(list => list && list.length > 0);
+  }, [evidenceMap]);
+
   const fetchActiveAudits = async () => {
     try {
       const data = await api.getAudits();
@@ -173,6 +177,19 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
   const handleUpdateStatus = async (newStatus: string) => {
     if (!selectedAudit) return;
     
+    // Validation: Auditor cannot submit for review without evidence
+    if (isAuditor && newStatus === 'Under Review') {
+      if (!hasEvidence) {
+        MySwal.fire({
+          title: 'Evidence Required',
+          text: 'You must upload at least one piece of evidence before submitting the audit for review.',
+          icon: 'warning',
+          confirmButtonColor: '#1976d2'
+        });
+        return;
+      }
+    }
+
     const result = await MySwal.fire({
       title: `Transition to ${newStatus}?`,
       text: "Are you sure you want to change the audit status?",
@@ -203,6 +220,11 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
       const mappedPrograms = Array.isArray(data) ? data.map((p: any) => ({ ...p, expanded: false })) : [];
       setPrograms(mappedPrograms);
       localStorage.setItem(`cached_programs_${audit.id}`, JSON.stringify(mappedPrograms));
+      
+      // Pre-fetch evidence for all programs to support validation
+      if (Array.isArray(data)) {
+        data.forEach((p: any) => fetchEvidence(p.id));
+      }
     } catch (error) {
       console.error('Failed to fetch audit programs', error);
       const cached = localStorage.getItem(`cached_programs_${audit.id}`);
@@ -421,70 +443,90 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             {selectedAudit.auditType} • {selectedAudit.startDate ? new Date(selectedAudit.startDate).toLocaleDateString() : 'No Start Date'} - {selectedAudit.endDate ? new Date(selectedAudit.endDate).toLocaleDateString() : 'No End Date'}
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          {/* Actions from Table */}
-          {!isAuditor && onEdit && (
-            <Tooltip title="Edit Audit">
-              <IconButton size="small" onClick={() => onEdit(selectedAudit)}>
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+          {/* Contextual Action Buttons */}
+          {!isAuditor && onEdit && (selectedAudit.status === 'Planned' || selectedAudit.status === 'Approved') && (
+            <Button 
+              variant="outlined" 
+              size="small" 
+              startIcon={<EditIcon />} 
+              onClick={() => onEdit(selectedAudit)}
+            >
+              Edit Plan
+            </Button>
           )}
 
-          {(isManager || isCAE) && onDelete && (
-            <Tooltip title="Delete Audit">
-              <IconButton size="small" onClick={() => onDelete(selectedAudit.id)} color="error">
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+          {(isManager || isCAE) && onDelete && selectedAudit.status !== 'Closed' && (
+            <Button 
+              variant="outlined" 
+              size="small" 
+              color="error" 
+              startIcon={<DeleteIcon />} 
+              onClick={() => onDelete(selectedAudit.id)}
+            >
+              Delete
+            </Button>
           )}
 
           {((isManager || isCAE) && selectedAudit.status === 'Planned') && onManagePrograms && (
-            <Tooltip title="Manage Audit Programs">
-              <IconButton size="small" onClick={() => onManagePrograms(selectedAudit)} color="primary">
-                <PlaylistAddIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <Button 
+              variant="outlined" 
+              size="small" 
+              startIcon={<PlaylistAddIcon />} 
+              onClick={() => onManagePrograms(selectedAudit)}
+            >
+              Programs
+            </Button>
           )}
           
-          {isManager && onAssign && (
-            <Tooltip title={selectedAudit.status === 'Approved' ? "Assign Auditor" : "Audit must be approved first"}>
-              <span>
-                <IconButton 
-                  size="small" 
-                  onClick={() => onAssign(selectedAudit)}
-                  disabled={selectedAudit.status !== 'Approved'}
-                >
-                  <PersonAddIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
+          {isManager && onAssign && selectedAudit.status === 'Approved' && (
+            <Button 
+              variant="outlined" 
+              size="small" 
+              startIcon={<PersonAddIcon />} 
+              onClick={() => onAssign(selectedAudit)}
+            >
+              Assign
+            </Button>
           )}
 
           {isCAE && selectedAudit.status === 'Planned' && onApprove && (
-            <Tooltip title="Approve Audit">
-              <IconButton size="small" onClick={() => onApprove(selectedAudit.id)} color="success">
-                <CheckCircleIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <Button 
+              variant="contained" 
+              size="small" 
+              color="success" 
+              startIcon={<CheckCircleIcon />} 
+              onClick={() => onApprove(selectedAudit.id)}
+            >
+              Approve Plan
+            </Button>
           )}
 
-          {isCAE && selectedAudit.status === 'Execution Finished' && onFinalize && (
-            <Tooltip title="Finalize Audit">
-              <IconButton size="small" onClick={() => onFinalize(selectedAudit)} color="success">
-                <CheckCircleIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+          {isCAE && (selectedAudit.status === 'Execution Finished' || selectedAudit.status === 'Under Review') && onFinalize && (
+            <Button 
+              variant="contained" 
+              size="small" 
+              color="success" 
+              startIcon={<CheckCircleIcon />} 
+              onClick={() => onFinalize(selectedAudit)}
+            >
+              Finalize Audit
+            </Button>
           )}
 
-          {isCAE && selectedAudit.status === 'Reviewed by Owner' && onClose && (
-            <Tooltip title="Close Audit">
-              <IconButton size="small" onClick={() => onClose(selectedAudit)} color="warning">
-                <CheckCircleOutlineIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+          {isCAE && (selectedAudit.status === 'Reviewed by Owner' || selectedAudit.status === 'Finalized') && onClose && (
+            <Button 
+              variant="contained" 
+              size="small" 
+              color="warning" 
+              startIcon={<CheckCircleOutlineIcon />} 
+              onClick={() => onClose(selectedAudit)}
+            >
+              Close Audit
+            </Button>
           )}
 
+          {/* Icon-only secondary actions */}
           {isManager && selectedAudit.status === 'Closed' && onPreview && (
             <Tooltip title="Preview Audit Report">
               <IconButton size="small" onClick={() => onPreview(selectedAudit.id)}>
@@ -503,13 +545,14 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
 
           <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
 
-          {/* Workflow Status Transitions */}
+          {/* Workflow Status Transitions (Interactive) */}
           {isAuditor && selectedAudit.status === 'In Progress' && (
             <Button 
               variant="contained" 
               color="primary" 
               onClick={() => handleUpdateStatus('Under Review')}
               size="small"
+              disabled={!hasEvidence}
             >
               Submit for Review
             </Button>

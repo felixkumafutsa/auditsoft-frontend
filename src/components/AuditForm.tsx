@@ -16,6 +16,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
+import Swal from 'sweetalert2';
 import api from '../services/api';
 
 interface AuditFormProps {
@@ -105,7 +106,7 @@ const AuditForm: React.FC<AuditFormProps> = ({
     setLoading(true);
 
     if (startDate && endDate && endDate.isBefore(startDate)) {
-      alert('End Date must be after Start Date');
+      Swal.fire('Error', 'End Date must be after Start Date', 'error');
       setLoading(false);
       return;
     }
@@ -127,10 +128,10 @@ const AuditForm: React.FC<AuditFormProps> = ({
     try {
       if (auditToEdit) {
         await api.updateAudit(auditToEdit.id, payload);
-        alert('Audit updated successfully!');
+        Swal.fire('Success', 'Audit updated successfully!', 'success');
       } else {
         await api.createAudit(payload);
-        alert('Audit created successfully!');
+        Swal.fire('Success', 'Audit created successfully!', 'success');
       }
       // Reset form
       setAuditName('');
@@ -140,7 +141,7 @@ const AuditForm: React.FC<AuditFormProps> = ({
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error creating audit:', error);
-      alert('Failed to create audit.');
+      Swal.fire('Error', 'Failed to create audit.', 'error');
     } finally {
       setLoading(false);
     }

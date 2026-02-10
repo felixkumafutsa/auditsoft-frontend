@@ -109,17 +109,31 @@ const ContinuousAuditsPage: React.FC = () => {
   const handleSave = async () => {
     try {
       if (selectedControl) {
-        // Update not implemented in frontend yet, but let's assume create for now or just skip
-        // API method updateAutomatedControl needed if we want update
-        // For now, let's just support create
-        alert("Update functionality not yet implemented in API wrapper.");
+        await api.updateAutomatedControl(selectedControl.id, formData);
+        alert("Control updated successfully!");
       } else {
         await api.createAutomatedControl(formData);
+        alert("Control created successfully!");
       }
       handleCloseDialog();
       fetchControls();
     } catch (error) {
       console.error('Failed to save control:', error);
+      alert("Failed to save control.");
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm("Are you sure you want to delete this automated control?")) {
+      try {
+        await api.deleteAutomatedControl(id);
+        alert("Control deleted successfully!");
+        handleCloseDialog();
+        fetchControls();
+      } catch (error) {
+        console.error("Failed to delete control:", error);
+        alert("Failed to delete control.");
+      }
     }
   };
 
@@ -173,35 +187,7 @@ const ContinuousAuditsPage: React.FC = () => {
           variant="outlined"
         />
       )
-    },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 180,
-      sortable: false,
-      renderCell: (params) => (
-        <Box>
-          <Tooltip title="View History">
-            <IconButton size="small" onClick={() => handleViewHistory(params.row)}>
-              <HistoryIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          {canEdit && (
-            <>
-              <Tooltip title="Run Now">
-                <IconButton size="small" onClick={() => handleRunNow(params.row.id)} color="primary">
-                  <RunIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              {/* Edit button placeholder - update API needed */}
-              {/* <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
-                <EditIcon fontSize="small" />
-              </IconButton> */}
-            </>
-          )}
-        </Box>
-      ),
-    },
+    }
   ];
 
   const historyColumns: GridColDef[] = [
@@ -250,6 +236,8 @@ const ContinuousAuditsPage: React.FC = () => {
             pagination: { paginationModel: { pageSize: 10 } },
           }}
           pageSizeOptions={[10, 25, 50]}
+          onRowClick={(params) => handleOpenDialog(params.row as AutomatedControl)}
+          sx={{ cursor: 'pointer' }}
         />
       </Paper>
 
@@ -308,6 +296,39 @@ const ContinuousAuditsPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
+          {selectedControl && (
+            <>
+              {canEdit && (
+                <Button 
+                  color="error" 
+                  startIcon={<AddIcon sx={{ transform: 'rotate(45deg)' }} />} 
+                  onClick={() => handleDelete(selectedControl.id)}
+                >
+                  Delete
+                </Button>
+              )}
+              <Button 
+                startIcon={<HistoryIcon />} 
+                onClick={() => {
+                  handleCloseDialog();
+                  handleViewHistory(selectedControl);
+                }}
+              >
+                View History
+              </Button>
+              {canEdit && (
+                <Button 
+                  color="primary" 
+                  startIcon={<RunIcon />} 
+                  onClick={() => {
+                    handleRunNow(selectedControl.id);
+                  }}
+                >
+                  Run Now
+                </Button>
+              )}
+            </>
+          )}
           <Button onClick={handleSave} variant="contained" color="primary">
             Save
           </Button>

@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { Box, Typography, Button, Chip, Alert } from '@mui/material';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 import api from '../services/api';
 
 interface Finding {
@@ -80,7 +84,7 @@ const FindingsModule: React.FC = () => {
         <Button 
           variant="contained" 
           size="small" 
-          onClick={() => alert(`View Action Plans for Finding #${params.row.id}`)}
+          onClick={() => MySwal.fire(`Finding #${params.row.id}`, `View Action Plans for Finding #${params.row.id}`, 'info')}
           sx={{ textTransform: 'none' }}
         >
           Manage Actions

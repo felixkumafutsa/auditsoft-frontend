@@ -179,25 +179,6 @@ const AuditUniversePage: React.FC = () => {
       width: 150,
       valueGetter: (value, row) => row.owner?.name || 'N/A'
     },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 120,
-      sortable: false,
-      renderCell: (params) => {
-        if (isManager) return null;
-        return (
-          <Box>
-            <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
-              <EditIcon fontSize="small" />
-            </IconButton>
-            <IconButton size="small" onClick={() => handleDelete(params.row.id)} color="error">
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        );
-      },
-    },
   ];
 
   return (
@@ -256,6 +237,8 @@ const AuditUniversePage: React.FC = () => {
             loading={loading}
             slots={{ toolbar: GridToolbar }}
             disableRowSelectionOnClick
+            onRowClick={(params) => handleOpenDialog(params.row as AuditUniverseItem)}
+            sx={{ cursor: 'pointer' }}
           />
         </CardContent>
       </Card>

@@ -122,16 +122,13 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       try {
         const dashboardStats = await api.getDashboardStats();
         const tasks = await api.getMyTasks();
-        // Assuming notifications are fetched via a context or separate call if needed,
-        // but here we might need to rely on what's available or fetch them.
-        // For now, we'll mock or use what we can get.
-        // Ideally api.getNotifications() should exist.
+        const notifications = await (api as any).getNotifications?.();
 
         setStats({
           auditTrend: dashboardStats.auditTrend || [],
           auditStatusDistribution: dashboardStats.auditStatusDistribution || [],
           tasks: Array.isArray(tasks) ? tasks : [],
-          notifications: [], // Placeholder, will need real notifications
+          notifications: Array.isArray(notifications) ? notifications : [],
         });
       } catch (e) {
         console.error("Failed to fetch manager data", e);
@@ -294,25 +291,65 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               Recent Notifications
             </Typography>
             <List>
-              {/* Placeholder for notifications - typically would come from a NotificationContext or API */}
-              <ListItem>
-                <ListItemIcon>
-                  <WarningIcon color="warning" />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Audit 'IT Security 2024' execution completed"
-                  secondary="Review findings pending"
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon>
-                  <CheckCircleIcon color="success" />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Audit Plan 'Financial Q1' approved"
-                  secondary="Ready for assignment"
-                />
-              </ListItem>
+              {stats.notifications.length > 0 ? (
+                stats.notifications.slice(0, 5).map((n: any) => {
+                  const isAuditReport =
+                    typeof n.title === "string" &&
+                    (n.title.toLowerCase().includes("audit closed") ||
+                      n.title.toLowerCase().includes("report"));
+
+                  const Icon =
+                    n.type === "action_required"
+                      ? WarningIcon
+                      : n.type === "success"
+                      ? CheckCircleIcon
+                      : n.type === "error"
+                      ? ErrorIcon
+                      : n.type === "warning"
+                      ? WarningIcon
+                      : DescriptionIcon;
+
+                  return (
+                    <ListItem key={n.id}>
+                      <ListItemIcon>
+                        <Icon
+                          color={
+                            n.type === "success"
+                              ? "success"
+                              : n.type === "error"
+                              ? "error"
+                              : n.type === "warning" || n.type === "action_required"
+                              ? "warning"
+                              : "primary"
+                          }
+                        />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={n.title}
+                        secondary={
+                          <>
+                            {n.message}
+                            {isAuditReport && (
+                              <Typography
+                                component="span"
+                                variant="caption"
+                                color="textSecondary"
+                                sx={{ display: "block" }}
+                              >
+                                A report was generated after an audit closed.
+                              </Typography>
+                            )}
+                          </>
+                        }
+                      />
+                    </ListItem>
+                  );
+                })
+              ) : (
+                <ListItem>
+                  <ListItemText primary="No recent notifications" />
+                </ListItem>
+              )}
             </List>
           </CardContent>
         </Card>
@@ -1287,12 +1324,14 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       // const myFindings = allFindings.filter(f => f.assignedToId === user.id);
       const myFindings = Array.isArray(allFindings) ? allFindings : [];
 
+      const overdueActionPlans = await api.getOverdueActionPlans?.() || [];
+
       setFindings(myFindings);
 
       setStats({
         assignedFindings: myFindings.length,
         openActionPlans: 0, // Would need to fetch action plans count
-        overdueItems: 0, // Would calculate based on due dates
+        overdueItems: Array.isArray(overdueActionPlans) ? overdueActionPlans.length : 0,
       });
     } catch (error) {
       console.error("Failed to fetch process owner data", error);

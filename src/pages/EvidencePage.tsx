@@ -19,6 +19,8 @@ import {
   CircularProgress,
   Chip,
   Grid,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import SearchIcon from '@mui/icons-material/Search';
@@ -29,7 +31,12 @@ import RateReviewIcon from '@mui/icons-material/RateReview';
 import DescriptionIcon from '@mui/icons-material/Description';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DownloadIcon from '@mui/icons-material/Download';
+import HistoryIcon from '@mui/icons-material/History';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
+
+const MySwal = withReactContent(Swal);
 
 interface Audit {
   id: number;
@@ -41,6 +48,16 @@ interface AuditProgram {
   procedureName: string;
 }
 
+interface EvidenceVersion {
+  id: number;
+  version: number;
+  fileName: string;
+  fileType: string;
+  uploadedBy: { name: string };
+  uploadedAt: string;
+  changeDescription: string;
+}
+
 interface Evidence {
   id: number;
   fileName: string;
@@ -49,6 +66,7 @@ interface Evidence {
   uploadedBy: { name: string };
   uploadedAt: string;
   status: string;
+  versions?: EvidenceVersion[];
 }
 
 const EvidencePage: React.FC = () => {
@@ -61,6 +79,7 @@ const EvidencePage: React.FC = () => {
   const [evidenceList, setEvidenceList] = useState<Evidence[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState(0); // 0: By Program, 1: Review Queue
 
   // Upload Dialog State
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -72,6 +91,16 @@ const EvidencePage: React.FC = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<string | null>(null);
+
+  // Detail Dialog State
+  const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  // Version History Dialog State
+  const [versionDialogOpen, setVersionDialogOpen] = useState(false);
+  const [versionFile, setVersionFile] = useState<File | null>(null);
+  const [changeDescription, setChangeDescription] = useState('');
+  const [versionUploading, setVersionUploading] = useState(false);
 
   // User Role
   const userRole = localStorage.getItem('userRole');
@@ -144,6 +173,24 @@ const EvidencePage: React.FC = () => {
     fetchEvidence();
   }, [selectedProgramId]);
 
+  // 4. Fetch All Evidence for Queue
+  useEffect(() => {
+    if (activeTab === 1) {
+      const fetchQueue = async () => {
+        setLoading(true);
+        try {
+          const data = await api.getAllEvidence('Uploaded');
+          setEvidenceList(Array.isArray(data) ? data : []);
+        } catch (error) {
+          console.error("Failed to fetch evidence queue", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchQueue();
+    }
+  }, [activeTab]);
+
   // Upload Handlers
   const handleUpload = async () => {
     if (!selectedProgramId || !file) return;
@@ -155,14 +202,56 @@ const EvidencePage: React.FC = () => {
       setFile(null);
       setDescription('');
       
+      MySwal.fire('Success', 'Evidence uploaded successfully!', 'success');
+      
       // Refresh list
       const data = await api.getEvidenceList(Number(selectedProgramId));
       setEvidenceList(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to upload evidence", error);
-      alert("Failed to upload evidence");
+      MySwal.fire('Error', 'Failed to upload evidence', 'error');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleViewVersions = async (evidence: Evidence) => {
+    try {
+      const details = await api.getEvidenceDetails(evidence.id);
+      setSelectedEvidence(details);
+      setVersionDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch evidence versions", error);
+      MySwal.fire('Error', 'Failed to fetch version history', 'error');
+    }
+  };
+
+  const handleUploadVersion = async () => {
+    if (!selectedEvidence || !versionFile) return;
+
+    setVersionUploading(true);
+    try {
+      await api.uploadEvidenceVersion(selectedEvidence.id, versionFile, changeDescription);
+      
+      MySwal.fire('Success', 'New version uploaded successfully!', 'success');
+      
+      // Refresh versions
+      const details = await api.getEvidenceDetails(selectedEvidence.id);
+      setSelectedEvidence(details);
+      
+      setVersionFile(null);
+      setChangeDescription('');
+      
+      // Refresh main list
+      if (selectedProgramId) {
+        const data = await api.getEvidenceList(Number(selectedProgramId));
+        setEvidenceList(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error("Failed to upload version", error);
+      MySwal.fire('Error', 'Failed to upload version', 'error');
+    } finally {
+      setVersionUploading(false);
     }
   };
 
@@ -176,21 +265,35 @@ const EvidencePage: React.FC = () => {
   const handleTransition = async (id: number, status: string) => {
     try {
       await api.transitionEvidence(id, status);
+      MySwal.fire('Success', `Evidence status updated to ${status}`, 'success');
       // Refresh list
-      if (selectedProgramId) {
+      if (activeTab === 0 && selectedProgramId) {
         const data = await api.getEvidenceList(Number(selectedProgramId));
+        setEvidenceList(Array.isArray(data) ? data : []);
+      } else if (activeTab === 1) {
+        const data = await api.getAllEvidence('Uploaded');
         setEvidenceList(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error(`Failed to transition evidence to ${status}`, error);
-      alert(`Failed to update status: ${error}`);
+      MySwal.fire('Error', `Failed to update status: ${error}`, 'error');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this evidence?")) {
+    const result = await MySwal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'No, cancel'
+    });
+
+    if (result.isConfirmed) {
       try {
         await api.deleteEvidence(id);
+        MySwal.fire('Deleted!', 'Evidence has been deleted.', 'success');
         // Refresh
         if (selectedProgramId) {
           const data = await api.getEvidenceList(Number(selectedProgramId));
@@ -198,6 +301,7 @@ const EvidencePage: React.FC = () => {
         }
       } catch (error) {
         console.error("Failed to delete evidence", error);
+        MySwal.fire('Error', 'Failed to delete evidence', 'error');
       }
     }
   };
@@ -215,7 +319,7 @@ const EvidencePage: React.FC = () => {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
       console.error('Failed to download evidence', e);
-      alert('Failed to download evidence');
+      MySwal.fire('Error', 'Failed to download evidence', 'error');
     }
   };
 
@@ -228,7 +332,7 @@ const EvidencePage: React.FC = () => {
       setPreviewOpen(true);
     } catch (e) {
       console.error('Failed to preview evidence', e);
-      alert('Failed to preview evidence');
+      MySwal.fire('Error', 'Failed to preview evidence', 'error');
     }
   };
 
@@ -253,6 +357,12 @@ const EvidencePage: React.FC = () => {
 
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 70 },
+    { 
+      field: 'auditName', 
+      headerName: 'Audit', 
+      width: 150,
+      valueGetter: (params: any) => params.row?.auditProgram?.audit?.auditName || 'N/A'
+    },
     { field: 'fileName', headerName: 'File Name', flex: 1, minWidth: 200 },
     { field: 'description', headerName: 'Description', flex: 1, minWidth: 200 },
     { 
@@ -265,68 +375,55 @@ const EvidencePage: React.FC = () => {
       field: 'uploadedAt', 
       headerName: 'Date', 
       width: 150,
-      valueFormatter: (params: any) => new Date(params.value).toLocaleDateString()
+      valueFormatter: (params: any) => params.value ? new Date(params.value).toLocaleDateString() : 'N/A'
     },
     { 
       field: 'status', 
       headerName: 'Status', 
       width: 120,
-      renderCell: (params) => (
+      renderCell: (params: any) => (
         <Chip label={params.value} color={getStatusColor(params.value) as any} size="small" />
       )
     },
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 350,
+      width: 250,
       sortable: false,
-      renderCell: (params) => {
-        const status = params.row.status;
-        return (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title="Preview">
-              <IconButton size="small" color="primary" onClick={() => handlePreview(params.row)}>
-                <VisibilityIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Download">
-              <IconButton size="small" onClick={() => handleDownload(params.row.id, params.row.fileName)}>
-                <DownloadIcon />
-              </IconButton>
-            </Tooltip>
-            {/* Review Action: For Manager/Auditor when Uploaded */}
-            {status === 'Uploaded' && (isManager || isAuditor) && (
-                <Button size="small" variant="outlined" startIcon={<RateReviewIcon />} onClick={() => handleTransition(params.row.id, 'Reviewed')}>
-                    Review
-                </Button>
-            )}
-
-            {/* Approve Action: For Manager when Reviewed */}
-            {status === 'Reviewed' && isManager && (
-                <>
-                    <Button size="small" variant="contained" color="success" startIcon={<CheckCircleIcon />} onClick={() => handleTransition(params.row.id, 'Approved')}>
-                        Approve
-                    </Button>
-                    <Button size="small" variant="outlined" color="error" onClick={() => handleTransition(params.row.id, 'Uploaded')}>
-                        Reject
-                    </Button>
-                </>
-            )}
-             
-            {/* Archive Action: For Manager/Admin when Approved */}
-            {status === 'Approved' && isManager && (
-                 <Button size="small" variant="outlined" color="warning" onClick={() => handleTransition(params.row.id, 'Archived')}>
-                    Archive
-                </Button>
-            )}
-
-            <IconButton size="small" color="error" onClick={() => handleDelete(params.row.id)}>
-              <DeleteIcon />
+      renderCell: (params: any) => (
+        <Box>
+          <Tooltip title="Preview">
+            <IconButton size="small" onClick={() => handlePreview(params.row)}>
+              <VisibilityIcon />
             </IconButton>
-          </Box>
-        );
-      },
-    },
+          </Tooltip>
+          <Tooltip title="Download">
+            <IconButton size="small" onClick={() => handleDownload(params.row.id, params.row.fileName)}>
+              <DownloadIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Version History">
+            <IconButton size="small" onClick={() => handleViewVersions(params.row)}>
+              <HistoryIcon />
+            </IconButton>
+          </Tooltip>
+          {isAuditor && (
+            <Tooltip title="Delete">
+              <IconButton size="small" color="error" onClick={() => handleDelete(params.row.id)}>
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+          {isManager && params.row.status === 'Uploaded' && (
+            <Tooltip title="Mark as Reviewed">
+              <IconButton size="small" color="primary" onClick={() => handleTransition(params.row.id, 'Reviewed')}>
+                <RateReviewIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      )
+    }
   ];
 
   return (
@@ -335,6 +432,12 @@ const EvidencePage: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
           Evidence Management
         </Typography>
+        
+        <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ mb: 0 }}>
+          <Tab label="By Program" />
+          <Tab label="Review Queue" />
+        </Tabs>
+
         {/* Upload Button - Hidden for Managers */}
         {!isManager && (
           <Button 
@@ -349,59 +452,68 @@ const EvidencePage: React.FC = () => {
       </Box>
 
       {/* Filters */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid size={{ xs: 12, md: 4 } as any}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Select Audit</InputLabel>
-              <Select
-                value={selectedAuditId}
-                label="Select Audit"
-                onChange={(e) => setSelectedAuditId(e.target.value as number)}
-              >
-                {audits.map((audit) => (
-                  <MenuItem key={audit.id} value={audit.id}>
-                    {audit.auditName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+      {activeTab === 0 && (
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid size={{ xs: 12, md: 4 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Select Audit</InputLabel>
+                <Select
+                  value={selectedAuditId}
+                  label="Select Audit"
+                  onChange={(e) => setSelectedAuditId(e.target.value as number)}
+                >
+                  {audits.map((audit) => (
+                    <MenuItem key={audit.id} value={audit.id}>
+                      {audit.auditName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <FormControl fullWidth size="small" disabled={!selectedAuditId}>
+                <InputLabel>Select Audit Program</InputLabel>
+                <Select
+                  value={selectedProgramId}
+                  label="Select Audit Program"
+                  onChange={(e) => setSelectedProgramId(e.target.value as number)}
+                >
+                  {programs.map((prog) => (
+                    <MenuItem key={prog.id} value={prog.id}>
+                      {prog.procedureName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                size="small"
+                placeholder="Search evidence..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
           </Grid>
-          <Grid size={{ xs: 12, md: 4 } as any}>
-            <FormControl fullWidth size="small" disabled={!selectedAuditId}>
-              <InputLabel>Select Audit Program</InputLabel>
-              <Select
-                value={selectedProgramId}
-                label="Select Audit Program"
-                onChange={(e) => setSelectedProgramId(e.target.value as number)}
-              >
-                {programs.map((prog) => (
-                  <MenuItem key={prog.id} value={prog.id}>
-                    {prog.procedureName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 } as any}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              size="small"
-              placeholder="Search evidence..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
-        </Grid>
-      </Paper>
+        </Paper>
+      )}
+
+      {activeTab === 1 && (
+        <Paper sx={{ p: 2, mb: 3 }}>
+           <Typography variant="h6">Items Awaiting Review</Typography>
+           <Typography variant="body2" color="textSecondary">All evidence across the system with 'Uploaded' status.</Typography>
+        </Paper>
+      )}
 
       {/* Evidence List */}
       <Paper sx={{ width: '100%', height: 600 }}>
@@ -409,7 +521,7 @@ const EvidencePage: React.FC = () => {
           <Box display="flex" justifyContent="center" alignItems="center" height="100%">
             <CircularProgress />
           </Box>
-        ) : selectedProgramId ? (
+        ) : (activeTab === 1 || selectedProgramId) ? (
           <DataGrid
             rows={filteredEvidence}
             columns={columns}
@@ -420,7 +532,12 @@ const EvidencePage: React.FC = () => {
             }}
             pageSizeOptions={[10, 25, 50]}
             disableRowSelectionOnClick
+            onRowClick={(params) => {
+              setSelectedEvidence(params.row as Evidence);
+              setDetailOpen(true);
+            }}
             slots={{ toolbar: GridToolbar }}
+            sx={{ cursor: 'pointer' }}
           />
         ) : (
           <Box display="flex" justifyContent="center" alignItems="center" height="100%">
@@ -509,6 +626,137 @@ const EvidencePage: React.FC = () => {
             setPreviewUrl(null); 
             setPreviewType(null);
           }}>Close</Button>
+        </DialogActions>
+      </Dialog>
+      {/* Evidence Detail & Actions Dialog */}
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Evidence Details</DialogTitle>
+        <DialogContent dividers>
+          {selectedEvidence && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Typography variant="subtitle1"><strong>File Name:</strong> {selectedEvidence.fileName}</Typography>
+              <Typography variant="body2"><strong>Description:</strong> {selectedEvidence.description || 'No description'}</Typography>
+              <Typography variant="body2"><strong>Uploaded By:</strong> {selectedEvidence.uploadedBy?.name}</Typography>
+              <Typography variant="body2"><strong>Uploaded At:</strong> {new Date(selectedEvidence.uploadedAt).toLocaleString()}</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2"><strong>Status:</strong></Typography>
+                <Chip label={selectedEvidence.status} color={getStatusColor(selectedEvidence.status) as any} size="small" />
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ flexWrap: 'wrap', gap: 1, p: 2 }}>
+          {selectedEvidence && (
+            <>
+              <Button startIcon={<VisibilityIcon />} onClick={() => { setDetailOpen(false); handlePreview(selectedEvidence); }}>
+                Preview
+              </Button>
+              <Button startIcon={<DownloadIcon />} onClick={() => handleDownload(selectedEvidence.id, selectedEvidence.fileName)}>
+                Download
+              </Button>
+              
+              {selectedEvidence.status === 'Uploaded' && (isManager || isAuditor) && (
+                <Button variant="outlined" color="info" startIcon={<RateReviewIcon />} onClick={() => { setDetailOpen(false); handleTransition(selectedEvidence.id, 'Reviewed'); }}>
+                  Review
+                </Button>
+              )}
+
+              {selectedEvidence.status === 'Reviewed' && isManager && (
+                <>
+                  <Button variant="contained" color="success" startIcon={<CheckCircleIcon />} onClick={() => { setDetailOpen(false); handleTransition(selectedEvidence.id, 'Approved'); }}>
+                    Approve
+                  </Button>
+                  <Button variant="outlined" color="error" onClick={() => { setDetailOpen(false); handleTransition(selectedEvidence.id, 'Uploaded'); }}>
+                    Reject
+                  </Button>
+                </>
+              )}
+
+              {selectedEvidence.status === 'Approved' && isManager && (
+                <Button variant="outlined" color="warning" onClick={() => { setDetailOpen(false); handleTransition(selectedEvidence.id, 'Archived'); }}>
+                  Archive
+                </Button>
+              )}
+
+              <Box sx={{ flexGrow: 1 }} />
+              <IconButton color="error" onClick={() => { setDetailOpen(false); handleDelete(selectedEvidence.id); }}>
+                <DeleteIcon />
+              </IconButton>
+            </>
+          )}
+          <Button onClick={() => setDetailOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+      {/* Version History Dialog */}
+      <Dialog open={versionDialogOpen} onClose={() => setVersionDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Version History - {selectedEvidence?.fileName}</DialogTitle>
+        <DialogContent dividers>
+          {selectedEvidence?.versions && selectedEvidence.versions.length > 0 ? (
+            <DataGrid
+              rows={selectedEvidence.versions}
+              columns={[
+                { field: 'version', headerName: 'Ver', width: 70 },
+                { field: 'fileName', headerName: 'File Name', flex: 1 },
+                { field: 'changeDescription', headerName: 'Changes', flex: 1 },
+                { 
+                  field: 'uploadedBy', 
+                  headerName: 'By', 
+                  width: 150, 
+                  valueGetter: (params: any) => params.row?.uploadedBy?.name || 'Unknown' 
+                },
+                { 
+                  field: 'uploadedAt', 
+                  headerName: 'Date', 
+                  width: 150, 
+                  valueFormatter: (params: any) => params.value ? new Date(params.value).toLocaleString() : 'N/A'
+                },
+                {
+                  field: 'actions',
+                  headerName: 'Actions',
+                  width: 100,
+                  renderCell: (params: any) => (
+                    <IconButton size="small" onClick={() => handleDownload(params.row.id, params.row.fileName)}>
+                      <DownloadIcon />
+                    </IconButton>
+                  )
+                }
+              ]}
+              autoHeight
+              disableRowSelectionOnClick
+            />
+          ) : (
+            <Typography sx={{ py: 2 }}>No version history found.</Typography>
+          )}
+
+          {isAuditor && (
+            <Box sx={{ mt: 3, p: 2, border: '1px dashed grey', borderRadius: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>Upload New Version</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />}>
+                  {versionFile ? versionFile.name : "Select New Version File"}
+                  <input type="file" hidden onChange={(e) => e.target.files && setVersionFile(e.target.files[0])} />
+                </Button>
+                <TextField
+                  label="What changed in this version?"
+                  fullWidth
+                  size="small"
+                  value={changeDescription}
+                  onChange={(e) => setChangeDescription(e.target.value)}
+                />
+                <Button 
+                  variant="contained" 
+                  onClick={handleUploadVersion} 
+                  disabled={!versionFile || versionUploading}
+                  startIcon={versionUploading ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+                >
+                  {versionUploading ? 'Uploading...' : 'Upload Version'}
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setVersionDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

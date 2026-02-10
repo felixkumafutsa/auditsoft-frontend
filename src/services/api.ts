@@ -133,6 +133,23 @@ class ApiClient {
   createAudit = (data: any) => this.post('/audits', data); // Define a proper DTO later
   updateAudit = (id: number, data: any) => this.put(`/audits/${id}`, data);
   deleteAudit = (id: number) => this.delete(`/audits/${id}`);
+  
+  exportAuditsExcel = () => {
+    return fetch(`${BASE_URL}/audits/export/excel`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    }).then(response => {
+      if (!response.ok) throw new Error('Failed to export audits');
+      return response.blob();
+    });
+  };
+
+  importAudits = (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.upload('/audits/import', formData);
+  };
+
   assignAuditors = (id: number, auditorIds: number[]) => 
     this.post(`/audits/${id}/assign`, { auditorIds });
   transitionAudit = (id: number, toStatus: string, userRole?: string) => 
@@ -153,6 +170,7 @@ class ApiClient {
 
   // --- Evidence ---
   getEvidenceList = (programId: number) => this.get(`/audit-programs/${programId}/evidence`);
+  getAllEvidence = (status?: string) => this.get(`/evidence${status ? `?status=${status}` : ''}`);
   uploadEvidence = (programId: number, file: File, description?: string) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -160,6 +178,13 @@ class ApiClient {
     if (description) formData.append('description', description);
     return this.upload('/evidence', formData);
   };
+  uploadEvidenceVersion = (id: number, file: File, changeDescription?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (changeDescription) formData.append('changeDescription', changeDescription);
+    return this.upload(`/evidence/${id}/versions`, formData);
+  };
+  getEvidenceDetails = (id: number) => this.get(`/evidence/${id}`);
   deleteEvidence = (id: number) => this.delete(`/evidence/${id}`);
   transitionEvidence = (id: number, toStatus: string, userRole?: string) =>
     this.post(`/evidence/${id}/transition`, { toStatus, userRole });
@@ -194,6 +219,7 @@ class ApiClient {
 
   // --- Action Plans ---
   getActionPlans = (findingId: number) => this.get(`/findings/${findingId}/action-plans`);
+  getOverdueActionPlans = () => this.get('/action-plans/overdue');
   createActionPlan = (data: any) => this.post('/action-plans', data);
   updateActionPlan = (id: number, data: any) => this.put(`/action-plans/${id}`, data);
   deleteActionPlan = (id: number) => this.delete(`/action-plans/${id}`);
@@ -227,6 +253,7 @@ class ApiClient {
   // --- Reports & Analytics ---
   getDashboardStats = () => this.get('/reports/dashboard');
   getExecutiveReport = () => this.get('/reports/executive');
+  getOperationalReports = () => this.get('/reports/operational');
   getRiskHeatmap = () => this.get('/reports/risk-heatmap');
 
   downloadAuditReportPDF = (auditId: number) => {
@@ -313,8 +340,13 @@ class ApiClient {
   // --- Continuous Auditing ---
   getAutomatedControls = () => this.get('/continuous-audit/controls');
   createAutomatedControl = (data: any) => this.post('/continuous-audit/controls', data);
+  updateAutomatedControl = (id: number, data: any) => this.put(`/continuous-audit/controls/${id}`, data);
+  deleteAutomatedControl = (id: number) => this.delete(`/continuous-audit/controls/${id}`);
   getControlRuns = (id: number) => this.get(`/continuous-audit/controls/${id}/runs`);
   runControl = (id: number) => this.post(`/continuous-audit/controls/${id}/run`, {});
+
+  // --- Workflow ---
+  getWorkflowConfig = () => this.get('/workflow/audit/config');
 
   // --- Helper to handle PATCH requests ---
   private async patch(endpoint: string, body: any): Promise<any> {

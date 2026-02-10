@@ -34,7 +34,11 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Link
+  Link,
+  Tooltip,
+  Alert,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -44,11 +48,20 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import FolderIcon from '@mui/icons-material/Folder';
-import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import EditIcon from "@mui/icons-material/Edit";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import DescriptionIcon from "@mui/icons-material/Description";
+import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
+
+const MySwal = withReactContent(Swal);
 
 interface Audit {
   id: number;
@@ -57,6 +70,8 @@ interface Audit {
   status: string;
   startDate?: string;
   endDate?: string;
+  assignedTo?: string;
+  assignedAuditors?: { id: number; name: string }[];
 }
 
 interface AuditProgram {
@@ -72,23 +87,63 @@ interface AuditProgram {
 interface AuditExecutionModuleProps {
   initialAudit?: Audit | null;
   onBack?: () => void;
+  onEdit?: (audit: Audit) => void;
+  onDelete?: (id: number) => void;
+  onAssign?: (audit: Audit) => void;
+  onApprove?: (id: number) => void;
+  onManagePrograms?: (audit: Audit) => void;
+  onFinalize?: (audit: Audit) => void;
+  onClose?: (audit: Audit) => void;
+  onPreview?: (id: number) => void;
+  onDownload?: (id: number) => void;
 }
 
-const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudit, onBack }) => {
+const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ 
+  initialAudit, 
+  onBack,
+  onEdit,
+  onDelete,
+  onAssign,
+  onApprove,
+  onManagePrograms,
+  onFinalize,
+  onClose,
+  onPreview,
+  onDownload
+}) => {
   const [audits, setAudits] = useState<Audit[]>([]);
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(initialAudit || null);
   const [programs, setPrograms] = useState<AuditProgram[]>([]);
   const [evidenceMap, setEvidenceMap] = useState<{[key: number]: any[]}>({});
   const [loading, setLoading] = useState(false);
+  const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
   const [uploading, setUploading] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(0); // 0: Programs, 1: Fieldwork, 2: Working Papers
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   
   // Finding Dialog State
   const [findingDialogOpen, setFindingDialogOpen] = useState(false);
   const [currentProgramId, setCurrentProgramId] = useState<number | null>(null);
   const [newFinding, setNewFinding] = useState({ description: "", severity: "Low" });
 
-  const userRole = localStorage.getItem('userRole');
+  const userStr = localStorage.getItem('user');
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const isAuditor = currentUser?.role === 'Auditor' || currentUser?.role === 'auditor';
+  const isCAE = currentUser?.role === 'CAE' || currentUser?.role === 'Chief Audit Executive' || currentUser?.role === 'Chief Audit Executive (CAE)';
+  const isManager = currentUser?.role === 'Manager' || currentUser?.role === 'Audit Manager' || currentUser?.role === 'manager';
+  const isProcessOwner = currentUser?.role === 'Process Owner' || currentUser?.role === 'process_owner';
 
   useEffect(() => {
     if (initialAudit) {
@@ -104,8 +159,8 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
       const data = await api.getAudits();
       // Filter for audits that are ready for execution
       const active = Array.isArray(data) ? data.filter((a: Audit) => {
-        if (userRole === 'Manager') {
-           return ['In Progress', 'Approved', 'Review'].includes(a.status);
+        if (isManager) {
+           return ['In Progress', 'Approved', 'Under Review'].includes(a.status);
         }
         return ['In Progress', 'Approved'].includes(a.status);
       }) : [];
@@ -115,14 +170,45 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
     }
   };
 
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!selectedAudit) return;
+    
+    const result = await MySwal.fire({
+      title: `Transition to ${newStatus}?`,
+      text: "Are you sure you want to change the audit status?",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, proceed',
+      cancelButtonText: 'No, cancel'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await api.updateAudit(selectedAudit.id, { status: newStatus });
+        MySwal.fire('Success', `Audit status transitioned to ${newStatus} successfully!`, 'success');
+        setSelectedAudit({ ...selectedAudit, status: newStatus });
+        fetchActiveAudits();
+      } catch (e) {
+        console.error(e);
+        MySwal.fire('Error', `Failed to update status to ${newStatus}.`, 'error');
+      }
+    }
+  };
+
   const handleSelectAudit = async (audit: Audit) => {
     setSelectedAudit(audit);
     setLoading(true);
     try {
       const data = await api.getAuditPrograms(audit.id);
-      setPrograms(Array.isArray(data) ? data.map((p: any) => ({ ...p, expanded: false })) : []);
+      const mappedPrograms = Array.isArray(data) ? data.map((p: any) => ({ ...p, expanded: false })) : [];
+      setPrograms(mappedPrograms);
+      localStorage.setItem(`cached_programs_${audit.id}`, JSON.stringify(mappedPrograms));
     } catch (error) {
       console.error('Failed to fetch audit programs', error);
+      const cached = localStorage.getItem(`cached_programs_${audit.id}`);
+      if (cached) {
+        setPrograms(JSON.parse(cached));
+      }
     } finally {
       setLoading(false);
     }
@@ -155,18 +241,30 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
 
   const handleResultChange = async (id: number, result: string) => {
     // Optimistic update
-    setPrograms(programs.map(p => p.id === id ? { ...p, actualResult: result } : p));
+    const updatedPrograms = programs.map(p => p.id === id ? { ...p, actualResult: result } : p);
+    setPrograms(updatedPrograms);
+    
+    if (selectedAudit) {
+      localStorage.setItem(`cached_programs_${selectedAudit.id}`, JSON.stringify(updatedPrograms));
+    }
+
     try {
       await api.updateAuditProgram(id, { actualResult: result });
     } catch (error) {
       console.error('Failed to save result', error);
-      alert('Failed to save result. Please try again.');
+      if (!isOffline) {
+        MySwal.fire('Error', 'Failed to save result. It is saved locally.', 'error');
+      }
     }
   };
 
   const handleCommentChange = async (id: number, comment: string) => {
     // Optimistic update
-    setPrograms(programs.map(p => p.id === id ? { ...p, reviewerComment: comment } : p));
+    const updatedPrograms = programs.map(p => p.id === id ? { ...p, reviewerComment: comment } : p);
+    setPrograms(updatedPrograms);
+    if (selectedAudit) {
+      localStorage.setItem(`cached_programs_${selectedAudit.id}`, JSON.stringify(updatedPrograms));
+    }
   };
 
   const saveComment = async (id: number, comment: string) => {
@@ -184,24 +282,35 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
     setUploading(programId);
     try {
       await api.uploadEvidence(programId, file, `Evidence for program #${programId}`);
-      alert('Evidence uploaded successfully!');
+      MySwal.fire('Success', 'Evidence uploaded successfully!', 'success');
       fetchEvidence(programId);
     } catch (error) {
       console.error('Upload failed', error);
-      alert('Upload failed.');
+      MySwal.fire('Error', 'Upload failed.', 'error');
     } finally {
       setUploading(null);
     }
   };
 
   const handleDeleteEvidence = async (programId: number, evidenceId: number) => {
-    if (!window.confirm('Are you sure you want to delete this evidence?')) return;
-    try {
-      await api.deleteEvidence(evidenceId);
-      await fetchEvidence(programId);
-    } catch (error) {
-      console.error('Failed to delete evidence', error);
-      alert('Failed to delete evidence.');
+    const result = await MySwal.fire({
+      title: 'Delete evidence?',
+      text: "This action cannot be undone.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await api.deleteEvidence(evidenceId);
+        await fetchEvidence(programId);
+        MySwal.fire('Deleted', 'Evidence has been removed.', 'success');
+      } catch (error) {
+        console.error('Failed to delete evidence', error);
+        MySwal.fire('Error', 'Failed to delete evidence.', 'error');
+      }
     }
   };
 
@@ -221,26 +330,11 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
         severity: newFinding.severity,
         status: 'Identified'
       });
-      alert('Finding raised successfully!');
+      MySwal.fire('Success', 'Finding raised successfully!', 'success');
       setFindingDialogOpen(false);
     } catch (error) {
       console.error('Failed to create finding', error);
-      alert('Failed to create finding.');
-    }
-  };
-
-  const handleApproveAudit = async () => {
-    if (!selectedAudit) return;
-    if (window.confirm('Are you sure you want to approve the fieldwork and finalize this audit?')) {
-      try {
-        await api.updateAudit(selectedAudit.id, { status: 'Finalized' });
-        alert('Audit finalized successfully!');
-        setSelectedAudit(null);
-        fetchActiveAudits();
-      } catch (e) {
-        console.error(e);
-        alert('Failed to finalize audit.');
-      }
+      MySwal.fire('Error', 'Failed to create finding.', 'error');
     }
   };
 
@@ -311,6 +405,13 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
       >
         {onBack ? 'Back' : 'Back to Active Audits'}
       </Button>
+      
+      {isOffline && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          You are currently offline. Changes are saved locally and will sync when you are back online.
+        </Alert>
+      )}
+
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Box>
           <Typography variant="h5" sx={{ color: '#0F1A2B', fontWeight: 'bold' }}>
@@ -320,15 +421,120 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
             {selectedAudit.auditType} • {selectedAudit.startDate ? new Date(selectedAudit.startDate).toLocaleDateString() : 'No Start Date'} - {selectedAudit.endDate ? new Date(selectedAudit.endDate).toLocaleDateString() : 'No End Date'}
           </Typography>
         </Box>
-        {userRole === 'Manager' && selectedAudit.status === 'Review' && (
-          <Button 
-            variant="contained" 
-            color="success" 
-            onClick={handleApproveAudit}
-          >
-            Approve & Finalize
-          </Button>
-        )}
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          {/* Actions from Table */}
+          {!isAuditor && onEdit && (
+            <Tooltip title="Edit Audit">
+              <IconButton size="small" onClick={() => onEdit(selectedAudit)}>
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {(isManager || isCAE) && onDelete && (
+            <Tooltip title="Delete Audit">
+              <IconButton size="small" onClick={() => onDelete(selectedAudit.id)} color="error">
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {((isManager || isCAE) && selectedAudit.status === 'Planned') && onManagePrograms && (
+            <Tooltip title="Manage Audit Programs">
+              <IconButton size="small" onClick={() => onManagePrograms(selectedAudit)} color="primary">
+                <PlaylistAddIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          
+          {isManager && onAssign && (
+            <Tooltip title={selectedAudit.status === 'Approved' ? "Assign Auditor" : "Audit must be approved first"}>
+              <span>
+                <IconButton 
+                  size="small" 
+                  onClick={() => onAssign(selectedAudit)}
+                  disabled={selectedAudit.status !== 'Approved'}
+                >
+                  <PersonAddIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+
+          {isCAE && selectedAudit.status === 'Planned' && onApprove && (
+            <Tooltip title="Approve Audit">
+              <IconButton size="small" onClick={() => onApprove(selectedAudit.id)} color="success">
+                <CheckCircleIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {isCAE && selectedAudit.status === 'Execution Finished' && onFinalize && (
+            <Tooltip title="Finalize Audit">
+              <IconButton size="small" onClick={() => onFinalize(selectedAudit)} color="success">
+                <CheckCircleIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {isCAE && selectedAudit.status === 'Reviewed by Owner' && onClose && (
+            <Tooltip title="Close Audit">
+              <IconButton size="small" onClick={() => onClose(selectedAudit)} color="warning">
+                <CheckCircleOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {isManager && selectedAudit.status === 'Closed' && onPreview && (
+            <Tooltip title="Preview Audit Report">
+              <IconButton size="small" onClick={() => onPreview(selectedAudit.id)}>
+                <PictureAsPdfIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {isCAE && selectedAudit.status === 'Closed' && onDownload && (
+            <Tooltip title="Download Audit Report">
+              <IconButton size="small" onClick={() => onDownload(selectedAudit.id)}>
+                <DescriptionIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+
+          {/* Workflow Status Transitions */}
+          {isAuditor && selectedAudit.status === 'In Progress' && (
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={() => handleUpdateStatus('Under Review')}
+              size="small"
+            >
+              Submit for Review
+            </Button>
+          )}
+          {isManager && selectedAudit.status === 'Under Review' && (
+            <Button 
+              variant="contained" 
+              color="success" 
+              onClick={() => handleUpdateStatus('Execution Finished')}
+              size="small"
+            >
+              Confirm Execution Finished
+            </Button>
+          )}
+          {isProcessOwner && selectedAudit.status === 'Finalized' && (
+            <Button 
+              variant="contained" 
+              color="info" 
+              onClick={() => handleUpdateStatus('Reviewed by Owner')}
+              size="small"
+            >
+              Mark as Viewed
+            </Button>
+          )}
+        </Stack>
       </Box>
 
       <Paper sx={{ mb: 3 }}>
@@ -423,18 +629,21 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ initialAudi
                            </ToggleButton>
                         </ToggleButtonGroup>
 
-                        <TextField
-                          label="Reviewer Comments"
-                          multiline
-                          minRows={2}
-                          fullWidth
-                          value={program.reviewerComment || ''}
-                          onChange={(e) => handleCommentChange(program.id, e.target.value)}
-                          onBlur={(e) => saveComment(program.id, e.target.value)}
-                          placeholder="Add comments..."
-                          variant="outlined"
-                          sx={{ mb: 2, bgcolor: 'white' }}
-                        />
+                        {/* Reviewer Comments - Manager Only */}
+                        {isManager && (
+                          <TextField
+                            label="Reviewer Comments"
+                            multiline
+                            minRows={2}
+                            fullWidth
+                            value={program.reviewerComment || ''}
+                            onChange={(e) => handleCommentChange(program.id, e.target.value)}
+                            onBlur={(e) => saveComment(program.id, e.target.value)}
+                            placeholder="Add comments..."
+                            variant="outlined"
+                            sx={{ mb: 2, bgcolor: 'white' }}
+                          />
+                        )}
                         
                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
                           <Button

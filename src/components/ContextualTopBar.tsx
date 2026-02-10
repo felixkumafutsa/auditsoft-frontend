@@ -65,6 +65,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   const isSystemAdmin = userRole === 'System Administrator' || userRole === 'Admin';
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
   const isAuditor = userRole === 'Auditor';
+  const isManager = userRole === 'Manager' || userRole === 'Audit Manager';
   const isProcessOwner = userRole === 'ProcessOwner';
 
   if (isMobile) return null; // Hide on mobile
@@ -377,10 +378,13 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             open={Boolean(auditsAnchor)}
             onClose={() => setAuditsAnchor(null)}
           >
-            <MenuItem onClick={() => { onNavigate('my-audits'); setAuditsAnchor(null); }}>
-              <ListItemIcon><AssignmentIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>My Audits</ListItemText>
-            </MenuItem>
+            {/* "My Audits" for Auditors and Managers */}
+            {(isAuditor || isManager) && (
+              <MenuItem onClick={() => { onNavigate('my-audits'); setAuditsAnchor(null); }}>
+                <ListItemIcon><AssignmentIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>My Audits</ListItemText>
+              </MenuItem>
+            )}
             <MenuItem onClick={() => { onNavigate('audit-plans'); setAuditsAnchor(null); }}>
               <ListItemIcon><DescriptionIcon fontSize="small" /></ListItemIcon>
               <ListItemText>Audit Plans</ListItemText>

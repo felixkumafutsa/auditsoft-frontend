@@ -52,21 +52,24 @@ import SendIcon from "@mui/icons-material/Send";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
-
+import FileUploadIcon from "@mui/icons-material/FileUpload";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content'
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import AuditForm from "../components/AuditForm";
 import AuditExecutionModule from "../components/AuditExecutionModule";
-
 import AuditProgramsModule from "../components/AuditProgramsModule";
 import api from "../services/api";
 
+const MySwal = withReactContent(Swal);
 interface Audit {
   id: number;
   auditName: string;
-  auditType: string;
+  auditType?: string;
   status: string;
-  startDate?: Date;
-  endDate?: Date;
+  startDate?: string;
+  endDate?: string;
   assignedTo?: string;
   assignedAuditors?: { id: number; name: string }[];
 }
@@ -85,6 +88,21 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [auditToEdit, setAuditToEdit] = useState<any | null>(null);
+  const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Assignment State
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -113,7 +131,46 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       a.remove();
     } catch (err) {
       console.error('Failed to download PDF:', err);
-      setError('Failed to download PDF report.');
+      MySwal.fire('Error', 'Failed to download PDF report.', 'error');
+    }
+  };
+
+  const handleExportAuditsExcel = async () => {
+    try {
+      const blob = await api.exportAuditsExcel();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Audit_Plans_${new Date().toLocaleDateString()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      MySwal.fire('Success', 'Audits exported successfully to Excel.', 'success');
+    } catch (err) {
+      console.error('Failed to export audits:', err);
+      MySwal.fire('Error', 'Failed to export audits to Excel.', 'error');
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setLoading(true);
+      await api.importAudits(file);
+      MySwal.fire('Success', 'Audits imported successfully.', 'success');
+      fetchAudits();
+    } catch (err) {
+      console.error('Failed to import audits:', err);
+      MySwal.fire('Error', 'Failed to import audits. Please check the file format.', 'error');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setLoading(false);
     }
   };
 
@@ -129,7 +186,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       a.remove();
     } catch (err) {
       console.error('Failed to download Word doc:', err);
-      setError('Failed to download Word report.');
+      MySwal.fire('Error', 'Failed to download Word report.', 'error');
     }
   };
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -142,7 +199,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       setPreviewOpen(true);
     } catch (err) {
       console.error('Failed to preview audit report', err);
-      setError('Failed to preview audit report.');
+      MySwal.fire('Error', 'Failed to preview audit report.', 'error');
     }
   };
   const handleDownloadStoredReport = async (auditId: number) => {
@@ -157,7 +214,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       a.remove();
     } catch (err) {
       console.error('Failed to download stored report', err);
-      setError('Failed to download stored report.');
+      MySwal.fire('Error', 'Failed to download stored report.', 'error');
     }
   };
 
@@ -184,14 +241,13 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     { id: 3, description: "Outdated software version", severity: "Low", status: "Open" },
   ]);
 
-  const workflowSteps = ['Planned', 'Approved', 'In Progress', 'Under Review', 'Finalized', 'Closed'];
+  const workflowSteps = ['Planned', 'Approved', 'In Progress', 'Under Review', 'Execution Finished', 'Finalized', 'Reviewed by Owner', 'Closed'];
 
   const fetchAudits = async () => {
     setLoading(true);
     try {
       const data = await api.getAudits();
-      setAudits(Array.isArray(data) ? data : []);
-      // Map snake_case to camelCase to ensure DataGrid columns match
+      // Map snake_case to camelCase
       const mappedData = Array.isArray(data) ? data.map((a: any) => ({
         ...a,
         auditName: a.auditName || a.audit_name,
@@ -200,11 +256,19 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         endDate: a.endDate || a.end_date,
         assignedTo: a.assignedManager ? a.assignedManager.name : (a.assignedTo || a.assigned_to)
       })) : [];
+      
       setAudits(mappedData);
+      localStorage.setItem('cached_audits', JSON.stringify(mappedData));
       setError(null);
     } catch (err) {
       console.error("Failed to fetch audits", err);
-      setError("Failed to load audits.");
+      const cached = localStorage.getItem('cached_audits');
+      if (cached) {
+        setAudits(JSON.parse(cached));
+        setError("Working offline. Showing cached data.");
+      } else {
+        MySwal.fire('Error', 'Failed to load audits and no cached data available.', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -287,39 +351,32 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     if (isAuditor) {
       const userName = currentUser.name || currentUser.username || '';
       // Auditors ONLY see their own audits
-      const myAudits = audits.filter((a) => {
-        // Trust backend filtering if available, but also check client side for safety/consistency
-        if (a.assignedAuditors && a.assignedAuditors.length > 0) {
-           if (currentUser.id) {
-               return a.assignedAuditors.some(u => u.id === currentUser.id);
-           }
-           return a.assignedAuditors.some(u => u.name.toLowerCase() === userName.toLowerCase());
+      return audits.filter((a) => {
+        const isAssigned = (a.assignedAuditors && a.assignedAuditors.length > 0) ? (
+            currentUser.id ? a.assignedAuditors.some(u => u.id === currentUser.id) : a.assignedAuditors.some(u => u.name.toLowerCase() === userName.toLowerCase())
+        ) : (a.assignedTo && a.assignedTo.toLowerCase().includes(userName.toLowerCase()));
+
+        if (!isAssigned) return false;
+
+        if (filterType === 'new') {
+          return ['Planned', 'Approved', 'In Progress'].includes(a.status);
         }
-        // Fallback for string-based assignment
-        return a.assignedTo && a.assignedTo.toLowerCase().includes(userName.toLowerCase());
+
+        if (filterType === 'executed') {
+          return ['Completed', 'Finalized', 'Under Review'].includes(a.status);
+        }
+
+        return true;
       });
-
-      if (filterType === 'new') {
-        return myAudits.filter((a) => ['Planned', 'Approved', 'In Progress'].includes(a.status));
-      }
-
-      if (filterType === 'executed') {
-        return myAudits.filter((a) => ['Completed', 'Finalized', 'Under Review'].includes(a.status));
-      }
-
-      return myAudits;
     }
 
     if (filterMode === 'my' || filterType === 'my') {
       const userName = currentUser.name || currentUser.username || '';
       return audits.filter((a) => {
-         if (a.assignedAuditors && a.assignedAuditors.length > 0) {
-             if (currentUser.id) {
-                 return a.assignedAuditors.some(u => u.id === currentUser.id);
-             }
-             return a.assignedAuditors.some(u => u.name.toLowerCase() === userName.toLowerCase());
-         }
-         return a.assignedTo && a.assignedTo.toLowerCase().includes(userName.toLowerCase());
+         // For Managers, check if they are the assigned manager or if they are in the assignedAuditors (though usually they are the manager)
+         const isAssigned = (a.assignedTo && a.assignedTo.toLowerCase().includes(userName.toLowerCase())) ||
+                           (a.assignedAuditors && a.assignedAuditors.some(u => u.id === currentUser.id || u.name.toLowerCase() === userName.toLowerCase()));
+         return isAssigned;
       });
     }
     
@@ -372,7 +429,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       setAssignDialogOpen(false);
     } catch (err) {
       console.error("Failed to assign auditor", err);
-      setError("Failed to assign auditor.");
+      MySwal.fire('Error', "Failed to assign auditor.", 'error');
     }
   };
 
@@ -415,7 +472,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         }
       } catch (err) {
         console.error("Failed to approve audit", err);
-        setError("Failed to approve audit.");
+        MySwal.fire('Error', "Failed to approve audit.", 'error');
       }
     }
     setApproveDialogOpen(false);
@@ -431,7 +488,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       handleReviewFindings(updatedAudit);
     } catch (err) {
       console.error("Failed to start audit", err);
-      setError("Failed to start audit.");
+      MySwal.fire('Error', "Failed to start audit.", 'error');
     }
   }, [handleReviewFindings]);
 
@@ -470,7 +527,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         setView("list");
       } catch (err) {
         console.error("Failed to submit for review", err);
-        setError("Failed to submit audit for review.");
+        MySwal.fire('Error', "Failed to submit audit for review.", 'error');
       }
     }
   };
@@ -485,7 +542,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         setView("list");
       } catch (err) {
         console.error("Failed to finalize audit", err);
-        setError("Failed to finalize audit.");
+        MySwal.fire('Error', "Failed to finalize audit.", 'error');
       }
     }
   };
@@ -501,19 +558,34 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         setView("list");
       } catch (err) {
         console.error("Failed to close audit", err);
-        setError("Failed to close audit.");
+        MySwal.fire('Error', "Failed to close audit.", 'error');
       }
     }
   };
 
   const handleDeleteAudit = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this audit? This action cannot be undone.")) {
+    const result = await MySwal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
       try {
         await api.deleteAudit(id);
         setAudits(audits.filter((a) => a.id !== id));
+        MySwal.fire(
+          'Deleted!',
+          'Audit has been deleted.',
+          'success'
+        );
       } catch (err) {
         console.error("Failed to delete audit", err);
-        setError("Failed to delete audit.");
+        MySwal.fire('Error', 'Failed to delete audit.', 'error');
       }
     }
   };
@@ -574,61 +646,6 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
             />
           ),
         },
-        {
-          field: "actions",
-          headerName: "",
-          width: 100,
-          sortable: false,
-          renderCell: (params) => (
-            <Stack direction="row" spacing={0}>
-              {!isAuditor && (
-                <IconButton size="small" onClick={() => handleEdit(params.row)}>
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              )}
-              {(isManager || isCAE) && (
-                <IconButton size="small" onClick={() => handleDeleteAudit(params.row.id)} color="error">
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              )}
-              {isCAE && params.row.status === "Planned" && (
-                <IconButton size="small" onClick={() => handleApproveClick(params.row.id)} color="success">
-                  <CheckCircleIcon fontSize="small" />
-                </IconButton>
-              )}
-              {isAuditor && params.row.status === 'In Progress' && (
-                <IconButton size="small" onClick={() => handleReviewFindings(params.row)} color="primary">
-                  <PlayArrowIcon fontSize="small" />
-                </IconButton>
-              )}
-              {isAuditor && (params.row.status === 'Planned' || params.row.status === 'Approved') && (
-                <IconButton size="small" onClick={() => handleStartAudit(params.row)} color="primary">
-                  <PlayArrowIcon fontSize="small" />
-                </IconButton>
-              )}
-              {isCAE && params.row.status === 'Under Review' && (
-                <IconButton size="small" onClick={() => { setAuditToEdit(params.row); handleFinalizeAudit(); }} color="success">
-                  <CheckCircleIcon fontSize="small" />
-                </IconButton>
-              )}
-              {isCAE && params.row.status === 'Finalized' && (
-                <IconButton size="small" onClick={() => handleCloseAudit(params.row)} color="warning">
-                  <CheckCircleOutlineIcon fontSize="small" />
-                </IconButton>
-              )}
-              {isManager && params.row.status === 'Closed' && (
-                <IconButton size="small" onClick={() => handlePreviewReport(params.row.id)}>
-                  <PictureAsPdfIcon fontSize="small" />
-                </IconButton>
-              )}
-              {isCAE && params.row.status === 'Closed' && (
-                <IconButton size="small" onClick={() => handleDownloadStoredReport(params.row.id)}>
-                  <DescriptionIcon fontSize="small" />
-                </IconButton>
-              )}
-            </Stack>
-          ),
-        },
       ];
     }
 
@@ -647,41 +664,6 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               size="small"
               color={params.value === "In Progress" ? "primary" : "default"}
             />
-          ),
-        },
-        {
-          field: "actions",
-          headerName: "Actions",
-          width: 120,
-          sortable: false,
-          renderCell: (params) => (
-            <Stack direction="row" spacing={1}>
-              {!isAuditor && (
-                <IconButton size="small" onClick={() => handleEdit(params.row)}>
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              )}
-              {(isManager || isCAE) && (
-                <IconButton size="small" onClick={() => handleDeleteAudit(params.row.id)} color="error">
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              )}
-              {isCAE && params.row.status === "Planned" && (
-                <IconButton size="small" onClick={() => handleApproveClick(params.row.id)} color="success">
-                  <CheckCircleIcon fontSize="small" />
-                </IconButton>
-              )}
-              {isAuditor && params.row.status === 'In Progress' && (
-                <IconButton size="small" onClick={() => handleReviewFindings(params.row)} color="primary">
-                  <PlayArrowIcon fontSize="small" />
-                </IconButton>
-              )}
-              {isAuditor && (params.row.status === 'Planned' || params.row.status === 'Approved') && (
-                <IconButton size="small" onClick={() => handleStartAudit(params.row)} color="primary">
-                  <PlayArrowIcon fontSize="small" />
-                </IconButton>
-              )}
-            </Stack>
           ),
         },
       ];
@@ -725,121 +707,8 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           return new Date(value).toLocaleDateString();
         }
       },
-      {
-        field: "actions",
-        headerName: "Actions",
-        width: 200,
-        sortable: false,
-        renderCell: (params) => (
-          <Stack direction="row" spacing={1}>
-            {!isAuditor && (
-              <Tooltip title="Edit Audit">
-                <IconButton size="small" onClick={() => handleEdit(params.row)}>
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-
-            {/* Delete Audit - Manager/CAE */}
-            {(isManager || isCAE) && (
-              <Tooltip title="Delete Audit">
-                <IconButton size="small" onClick={() => handleDeleteAudit(params.row.id)} color="error">
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-
-            {/* Manage Programs - Manager/CAE, Status = Planned */}
-            {((isManager || isCAE) && params.row.status === 'Planned') && (
-              <Tooltip title="Manage Audit Programs">
-                <IconButton size="small" onClick={() => {
-                  setAuditToEdit(params.row);
-                  setView("programs");
-                }} color="primary">
-                  <PlaylistAddIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-            
-            {/* Assign Auditor - Only Manager, Only if Approved */}
-            {isManager && (
-              <Tooltip title={params.row.status === 'Approved' ? "Assign Auditor" : "Audit must be approved first"}>
-                <span>
-                  <IconButton 
-                    size="small" 
-                    onClick={() => handleAssignClick(params.row)}
-                    disabled={params.row.status !== 'Approved'}
-                  >
-                    <PersonAddIcon fontSize="small" />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            )}
-
-            {/* Approve Audit - Only CAE, Only if Planned */}
-            {isCAE && params.row.status === 'Planned' && (
-              <Tooltip title="Approve Audit">
-                <IconButton size="small" onClick={() => handleApproveClick(params.row.id)} color="success">
-                  <CheckCircleIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-
-            {/* Execute Audit - Only Auditor, Only if In Progress */}
-            {isAuditor && params.row.status === 'In Progress' && (
-               <Button 
-                 variant="contained" 
-                 size="small" 
-                 startIcon={<PlayArrowIcon />}
-                 onClick={() => {
-                   setAuditToEdit(params.row);
-                   setView("execution");
-                 }}
-                 sx={{ fontSize: '0.75rem', py: 0.5, minWidth: '100px' }}
-               >
-                 Execute
-               </Button>
-            )}
-
-            {isAuditor && (params.row.status === 'Planned' || params.row.status === 'Approved') && (
-               <Button 
-                 variant="outlined" 
-                 size="small" 
-                 startIcon={<PlayArrowIcon />}
-                 onClick={() => handleStartAudit(params.row)}
-                 sx={{ fontSize: '0.75rem', py: 0.5, minWidth: '100px' }}
-               >
-                 Start
-               </Button>
-            )}
-
-            {/* Review Findings - For Managers/CAE or if not in progress for auditor */}
-            {(!isAuditor || params.row.status !== 'In Progress') && (
-              <Tooltip title="Review Findings">
-                <IconButton size="small" onClick={() => handleReviewFindings(params.row)}>
-                  <FactCheckIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-            {isManager && params.row.status === 'Closed' && (
-              <Tooltip title="Preview Audit Report">
-                <IconButton size="small" onClick={() => handlePreviewReport(params.row.id)}>
-                  <PictureAsPdfIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-            {isCAE && params.row.status === 'Closed' && (
-              <Tooltip title="Download Audit Report">
-                <IconButton size="small" onClick={() => handleDownloadStoredReport(params.row.id)}>
-                  <DescriptionIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Stack>
-        ),
-      },
     ];
-  }, [isMobile, isTablet, currentUser, handleApproveClick, handleReviewFindings, handleStartAudit, isAuditor, isManager, isCAE, handleDeleteAudit, handleEdit, handleAssignClick]);
+  }, [isMobile, isTablet, currentUser, isAuditor, isManager, isCAE]);
 
   return (
     <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, height: "100%" }}>
@@ -856,7 +725,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           sx={{ color: "#0F1A2B", fontWeight: "bold" }}
         >
           {view === "list"
-            ? "Audit Universe & Planning"
+            ? (isManager || isAuditor ? "My Audits" : "Audit Universe & Planning")
             : view === "create"
               ? "Create New Audit"
               : view === "edit"
@@ -879,30 +748,50 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               onChange={(e) => setSearchQuery(e.target.value)}
               sx={{ bgcolor: 'white', minWidth: 200 }}
             />
-            {/* Filter Toggle - Visible to auditors and managers */}
-            {currentUser && ['Manager', 'manager'].includes(currentUser.role) && (
-              <ToggleButtonGroup
-                value={filterMode}
-                exclusive
-                onChange={(e, newMode) => { if (newMode) setFilterMode(newMode); }}
-                size="small"
-                sx={{ bgcolor: 'white' }}
-              >
-                <ToggleButton value="all">All Audits</ToggleButton>
-                <ToggleButton value="my">My Audits</ToggleButton>
-              </ToggleButtonGroup>
-            )}
-            {/* New Audit Button - Only Manager and CAE */}
+            
+            {/* Hidden Input for Import */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+              onChange={handleFileChange}
+            />
+
             {(isManager || isCAE) && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setView("create")}
-                sx={{ bgcolor: "#0F1A2B" }}
-                fullWidth={isMobile}
-              >
-                New Audit
-              </Button>
+              <>
+                <Tooltip title="Import Audit Plans (CSV/Excel)">
+                  <Button
+                    variant="outlined"
+                    startIcon={<FileUploadIcon />}
+                    onClick={handleImportClick}
+                    sx={{ color: "#0F1A2B", borderColor: "#0F1A2B" }}
+                  >
+                    Import
+                  </Button>
+                </Tooltip>
+
+                <Tooltip title="Export Audits to Excel">
+                  <Button
+                    variant="outlined"
+                    startIcon={<FileDownloadIcon />}
+                    onClick={handleExportAuditsExcel}
+                    sx={{ color: "#0F1A2B", borderColor: "#0F1A2B" }}
+                  >
+                    Export
+                  </Button>
+                </Tooltip>
+
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => setView("create")}
+                  sx={{ bgcolor: "#0F1A2B" }}
+                  fullWidth={isMobile}
+                >
+                  New Audit
+                </Button>
+              </>
             )}
           </Box>
         )}
@@ -918,8 +807,14 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity={error.includes("offline") ? "warning" : "error"} sx={{ mb: 2 }}>
           {error}
+        </Alert>
+      )}
+
+      {isOffline && !error && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          You are currently offline. Some actions may be limited and data might be out of date.
         </Alert>
       )}
 
@@ -972,7 +867,23 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               // Mobile card view
               <Stack spacing={2} sx={{ p: 2 }}>
                 {filteredAudits.map((audit) => (
-                  <Card key={audit.id} variant="outlined">
+                  <Card 
+                    key={audit.id} 
+                    variant="outlined"
+                    onClick={() => {
+                        setAuditToEdit(audit);
+                        if (isAuditor) {
+                          if (audit.status === 'Planned' || audit.status === 'Approved') {
+                              handleStartAudit(audit);
+                          } else {
+                              setView("execution");
+                          }
+                        } else {
+                          setView("execution");
+                        }
+                    }}
+                    sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f9f9f9' } }}
+                  >
                     <CardContent>
                       <Box
                         sx={{
@@ -993,12 +904,6 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                             ID: {audit.id} • {audit.auditType}
                           </Typography>
                         </Box>
-                        <Button
-                          size="small"
-                          variant="text"
-                          startIcon={<EditIcon />}
-                          onClick={() => handleEdit(audit)}
-                        />
                       </Box>
                       <Box
                         sx={{
@@ -1046,6 +951,18 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                 pageSizeOptions={isMobile ? [5] : [5, 10, 20]}
                 checkboxSelection={!isMobile}
                 disableRowSelectionOnClick
+                onRowClick={(params) => {
+                  setAuditToEdit(params.row);
+                  if (isAuditor) {
+                    if (params.row.status === 'Planned' || params.row.status === 'Approved') {
+                        handleStartAudit(params.row);
+                    } else {
+                        setView("execution");
+                    }
+                  } else {
+                    setView("execution");
+                  }
+                }}
                 density={isMobile ? "compact" : "standard"}
                 sx={{
                   "& .MuiDataGrid-columnHeaders": {
@@ -1221,6 +1138,15 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         <AuditExecutionModule 
            initialAudit={auditToEdit} 
            onBack={() => setView("list")} 
+           onEdit={handleEdit}
+           onDelete={handleDeleteAudit}
+           onAssign={handleAssignClick}
+           onApprove={handleApproveClick}
+           onManagePrograms={(audit) => { setAuditToEdit(audit); setView("programs"); }}
+           onFinalize={handleFinalizeAudit}
+           onClose={handleCloseAudit}
+           onPreview={handlePreviewReport}
+           onDownload={handleDownloadStoredReport}
         />
       ) : (
         // Create/Edit Form

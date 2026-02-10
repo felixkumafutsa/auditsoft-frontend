@@ -62,6 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
 
   const isSystemAdmin = userRole === 'System Administrator' || userRole === 'Admin';
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
+  const isManager = userRole === 'Manager' || userRole === 'Audit Manager' || userRole === 'manager';
   const isAuditor = userRole === 'Auditor';
 
   const drawerContent = (
@@ -149,14 +150,18 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                   <ListItemIcon><LibraryBooksIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Audit Programs" />
                 </ListItemButton>
-                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audit-universe'} onClick={() => onNavigate('audit-universe')}>
-                  <ListItemIcon><HubIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
-                  <ListItemText primary="Audit Universe" />
-                </ListItemButton>
-                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'continuous-audits'} onClick={() => onNavigate('continuous-audits')}>
-                  <ListItemIcon><HistoryIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
-                  <ListItemText primary="Continuous Audits" />
-                </ListItemButton>
+                {(isCAE || isManager) && (
+                  <>
+                    <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audit-universe'} onClick={() => onNavigate('audit-universe')}>
+                      <ListItemIcon><HubIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                      <ListItemText primary="Audit Universe" />
+                    </ListItemButton>
+                    <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'continuous-audits'} onClick={() => onNavigate('continuous-audits')}>
+                      <ListItemIcon><HistoryIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                      <ListItemText primary="Continuous Audits" />
+                    </ListItemButton>
+                  </>
+                )}
               </List>
             </Collapse>
 
@@ -261,14 +266,18 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                   <ListItemIcon><LibraryBooksIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Audit Programs" />
                 </ListItemButton>
-                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audit-universe'} onClick={() => onNavigate('audit-universe')}>
-                  <ListItemIcon><HubIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
-                  <ListItemText primary="Audit Universe" />
-                </ListItemButton>
-                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'continuous-audits'} onClick={() => onNavigate('continuous-audits')}>
-                  <ListItemIcon><HistoryIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
-                  <ListItemText primary="Continuous Audits" />
-                </ListItemButton>
+                {(isCAE || isManager) && (
+                  <>
+                    <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audit-universe'} onClick={() => onNavigate('audit-universe')}>
+                      <ListItemIcon><HubIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                      <ListItemText primary="Audit Universe" />
+                    </ListItemButton>
+                    <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'continuous-audits'} onClick={() => onNavigate('continuous-audits')}>
+                      <ListItemIcon><HistoryIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                      <ListItemText primary="Continuous Audits" />
+                    </ListItemButton>
+                  </>
+                )}
               </List>
             </Collapse>
 

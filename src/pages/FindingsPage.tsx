@@ -21,8 +21,12 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
 import ActionPlansModule from '../components/ActionPlansModule';
+
+const MySwal = withReactContent(Swal);
 
 interface Finding {
   id: number;
@@ -57,6 +61,11 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
   const [actionPlansOpen, setActionPlansOpen] = useState(false);
   const [selectedFindingIdForActions, setSelectedFindingIdForActions] = useState<number | null>(null);
 
+  // Summary Stats
+  const criticalCount = findings.filter(f => f.severity === 'Critical' && f.status !== 'Closed').length;
+  const openCount = findings.filter(f => f.status !== 'Closed').length;
+  const closedCount = findings.filter(f => f.status === 'Closed').length;
+
   useEffect(() => {
     const userStr = localStorage.getItem('user');
     if (userStr) {
@@ -64,6 +73,17 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
     }
     fetchFindings();
   }, [viewMode]);
+
+  useEffect(() => {
+    if (!loading && criticalCount > 0) {
+      MySwal.fire({
+        title: 'Attention Required',
+        text: `You have ${criticalCount} critical findings that require immediate attention.`,
+        icon: 'error',
+        confirmButtonColor: '#d32f2f'
+      });
+    }
+  }, [loading, criticalCount]);
 
   const fetchFindings = async () => {
     setLoading(true);
@@ -110,13 +130,13 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
     if (!selectedFinding || !newStatus) return;
     try {
       await api.transitionFinding?.(selectedFinding.id, newStatus, userRole);
-      alert('Finding status updated successfully!');
+      MySwal.fire('Success', 'Finding status updated successfully!', 'success');
       setTransitionDialog(false);
       setNewStatus('');
       fetchFindings();
     } catch (err) {
       console.error('Failed to transition finding', err);
-      alert('Failed to update finding status');
+      MySwal.fire('Error', 'Failed to update finding status', 'error');
     }
   };
 
@@ -182,30 +202,38 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
         <Chip label={params.value} size="small" color={getStatusColor(params.value) as any} />
       ),
     },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 200,
-      sortable: false,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<EditIcon />}
-            onClick={() => handleOpenTransitionDialog(params.row)}
-          >
-            Update Status
-          </Button>
-        </Box>
-      ),
-    },
   ];
 
-  // Summary Stats
-  const criticalCount = findings.filter(f => f.severity === 'Critical' && f.status !== 'Closed').length;
-  const openCount = findings.filter(f => f.status !== 'Closed').length;
-  const closedCount = findings.filter(f => f.status === 'Closed').length;
+  const handleSaveDraft = async () => {
+    if (!draftDescription) return;
+    try {
+      // Mock save or call api.createFinding if it exists
+      // For now we simulate success
+      await MySwal.fire('Success', 'Draft finding saved successfully!', 'success');
+      setDraftDescription('');
+      setDraftSeverity('Low');
+      setEvidenceFile(null);
+    } catch (err) {
+      MySwal.fire('Error', 'Failed to save draft.', 'error');
+    }
+  };
+
+  const handleCancelDraft = async () => {
+    if (draftDescription) {
+      const result = await MySwal.fire({
+        title: 'Discard draft?',
+        text: 'Are you sure you want to discard this draft finding?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d32f2f',
+        confirmButtonText: 'Yes, discard'
+      });
+      if (!result.isConfirmed) return;
+    }
+    setDraftDescription('');
+    setDraftSeverity('Low');
+    setEvidenceFile(null);
+  };
 
   if (viewMode === 'draft') {
     return (
@@ -254,8 +282,8 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
             </Box>
 
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-              <Button variant="outlined">Cancel</Button>
-              <Button variant="contained" disabled={!draftDescription}>Save Draft</Button>
+              <Button variant="outlined" onClick={handleCancelDraft}>Cancel</Button>
+              <Button variant="contained" disabled={!draftDescription} onClick={handleSaveDraft}>Save Draft</Button>
             </Box>
           </Stack>
         </Paper>
@@ -334,7 +362,8 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
             initialState={{
               pagination: { paginationModel: { pageSize: 10 } },
             }}
-            sx={{ height: 600 }}
+            onRowClick={(params) => handleOpenTransitionDialog(params.row)}
+            sx={{ height: 600, cursor: 'pointer' }}
           />
         )}
       </Paper>

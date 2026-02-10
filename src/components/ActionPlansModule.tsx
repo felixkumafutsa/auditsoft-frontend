@@ -22,7 +22,12 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
+
+const MySwal = withReactContent(Swal);
+
 
 interface ActionPlan {
   id: number;
@@ -82,13 +87,24 @@ const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, 
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this action plan?')) return;
-    try {
-      await api.deleteActionPlan(id);
-      fetchActionPlans();
-    } catch (error) {
-      console.error('Failed to delete action plan', error);
-      alert('Failed to delete action plan.');
+    const result = await MySwal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'No, cancel'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await api.deleteActionPlan(id);
+        MySwal.fire('Deleted!', 'Action plan has been deleted.', 'success');
+        fetchActionPlans();
+      } catch (error) {
+        console.error('Failed to delete action plan', error);
+        MySwal.fire('Error', 'Failed to delete action plan.', 'error');
+      }
     }
   };
 
@@ -102,11 +118,12 @@ const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, 
           findingId: findingId
         });
       }
+      MySwal.fire('Success', 'Action plan saved successfully!', 'success');
       setEditDialogOpen(false);
       fetchActionPlans();
     } catch (error) {
       console.error('Failed to save action plan', error);
-      alert('Failed to save action plan.');
+      MySwal.fire('Error', 'Failed to save action plan.', 'error');
     }
   };
 

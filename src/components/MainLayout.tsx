@@ -22,6 +22,7 @@ import CommentsPage from '../pages/CommentsPage';
 import UsersPage from '../pages/UsersPage';
 import RolesPage from '../pages/RolesPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
+import WorkflowConfigPage from '../pages/WorkflowConfigPage';
 import ProfilePage from '../pages/ProfilePage';
 import AuditExecutionModule from './AuditExecutionModule';
 import NotificationsPage from '../pages/NotificationsPage';
@@ -35,6 +36,8 @@ import IntegrationsPage from '../pages/IntegrationsPage';
 import MessagingPage from '../pages/MessagingPage';
 import ProcessOwnerPage from '../pages/ProcessOwnerPage';
 import BoardViewerPage from '../pages/BoardViewerPage';
+import OperationalReportsPage from '../pages/OperationalReportsPage';
+import CustomReportsPage from '../pages/CustomReportsPage';
 import GlobalTopBar from './GlobalTopBar';
 import ContextualTopBar from './ContextualTopBar';
 import api from '../services/api';
@@ -132,7 +135,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             case 'audit-logs':
                 return <AuditLogsPage />;
             case 'workflow-config':
-                return <Box sx={{ p: 3 }}><Typography variant="h4">Workflow Configuration</Typography><Typography>Module coming soon...</Typography></Box>;
+                return <WorkflowConfigPage />;
             case 'system-settings':
                 return <IntegrationsPage />;
 
@@ -141,9 +144,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             case 'reports-executive':
                 return <ExecutiveReportsPage />;
             case 'reports-operational':
-                return <Box sx={{ p: 3 }}><Typography variant="h4">Operational Reports</Typography><Typography>Module coming soon...</Typography></Box>;
+                return <OperationalReportsPage />;
             case 'reports-custom':
-                return <Box sx={{ p: 3 }}><Typography variant="h4">Custom Reports</Typography><Typography>Module coming soon...</Typography></Box>;
+                return <CustomReportsPage />;
 
             // Risk Management
             case 'risk-register':

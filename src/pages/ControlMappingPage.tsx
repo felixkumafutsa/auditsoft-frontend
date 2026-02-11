@@ -29,17 +29,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import LinkIcon from '@mui/icons-material/Link';
 import api from '../services/api';
-
-interface Audit {
-  id: number;
-  auditName: string;
-}
-
-interface AuditProgram {
-  id: number;
-  procedureName: string;
-  controlReference: string;
-}
+import { Audit, AuditProgram } from '../types/audit';
 
 interface ComplianceFramework {
   id: number;
@@ -83,7 +73,8 @@ const ControlMappingPage: React.FC = () => {
         
         const mappedAudits = Array.isArray(auditsData) ? auditsData.map((a: any) => ({
           id: a.id,
-          auditName: a.auditName || a.audit_name
+          auditName: a.auditName || a.audit_name,
+          status: a.status || 'Planned'
         })) : [];
         setAudits(mappedAudits);
         

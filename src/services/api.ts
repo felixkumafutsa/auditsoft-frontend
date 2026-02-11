@@ -19,7 +19,7 @@ class ApiClient {
     console.log('AuditSoft API Client Initialized. Base URL:', BASE_URL);
 
     // You could load the token from localStorage here if persisting
-    const storedToken = localStorage.getItem('authToken');
+    const storedToken = localStorage.getItem('token');
     if (storedToken) {
       this.token = storedToken;
     }
@@ -97,7 +97,7 @@ class ApiClient {
     const user = await this.post('/auth/login', { email, pass });
     if (user && user.token) { // Assuming backend sends a token
       this.token = user.token;
-      localStorage.setItem('authToken', user.token);
+      localStorage.setItem('token', user.token);
     }
     return user;
   }

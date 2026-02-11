@@ -57,22 +57,17 @@ import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content'
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import LockIcon from "@mui/icons-material/Lock";
+import CloseIcon from "@mui/icons-material/Close";
+import HistoryIcon from "@mui/icons-material/History";
 import AuditForm from "../components/AuditForm";
 import AuditExecutionModule from "../components/AuditExecutionModule";
 import AuditProgramsModule from "../components/AuditProgramsModule";
 import api from "../services/api";
+import { Audit } from "../types/audit";
 
 const MySwal = withReactContent(Swal);
-interface Audit {
-  id: number;
-  auditName: string;
-  auditType?: string;
-  status: string;
-  startDate?: string;
-  endDate?: string;
-  assignedTo?: string;
-  assignedAuditors?: { id: number; name: string }[];
-}
 
 interface AuditsPageProps {
   filterType?: 'all' | 'new' | 'executed' | 'my';
@@ -84,6 +79,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
 
   const [view, setView] = useState<"list" | "create" | "edit" | "findings" | "execution" | "programs">("list");
+  const [actionsModalOpen, setActionsModalOpen] = useState(false);
   const [audits, setAudits] = useState<Audit[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -223,9 +219,10 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const [auditToApprove, setAuditToApprove] = useState<number | null>(null);
 
   // Check roles
-  const isAuditor = currentUser?.role === 'Auditor' || currentUser?.role === 'auditor';
-  const isCAE = currentUser?.role === 'CAE' || currentUser?.role === 'Chief Audit Executive' || currentUser?.role === 'Chief Audit Executive (CAE)';
-  const isManager = currentUser?.role === 'Manager' || currentUser?.role === 'Audit Manager' || currentUser?.role === 'manager';
+  const isAuditor = currentUser?.role?.toLowerCase().includes('auditor');
+  const isCAE = currentUser?.role?.toLowerCase().includes('cae') || currentUser?.role?.toLowerCase().includes('chief');
+  const isManager = currentUser?.role?.toLowerCase().includes('manager');
+  const isProcessOwner = currentUser?.role?.toLowerCase().includes('owner');
 
   // Finding Creation State
   const [addFindingDialogOpen, setAddFindingDialogOpen] = useState(false);
@@ -254,7 +251,8 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         auditType: a.auditType || a.audit_type,
         startDate: a.startDate || a.start_date,
         endDate: a.endDate || a.end_date,
-        assignedTo: a.assignedManager ? a.assignedManager.name : (a.assignedTo || a.assigned_to)
+        assignedTo: a.assignedManager ? a.assignedManager.name : (a.assignedTo || a.assigned_to),
+        entityName: a.auditUniverse?.entityName || a.entityName || 'General'
       })) : [];
       
       setAudits(mappedData);
@@ -347,6 +345,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     if (!currentUser) return audits;
     
     const isAuditor = currentUser.role === 'Auditor' || currentUser.role === 'auditor';
+    const isProcessOwner = currentUser.role === 'Process Owner' || currentUser.role === 'process_owner';
 
     if (isAuditor) {
       const userName = currentUser.name || currentUser.username || '';
@@ -367,6 +366,14 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         }
 
         return true;
+      });
+    }
+
+    if (isProcessOwner) {
+      // Process Owners ONLY see audits for their entities
+      return audits.filter((a: any) => {
+        // The audit Universe ownerId should match the currentUser id
+        return a.auditUniverse?.ownerId === currentUser.id;
       });
     }
 
@@ -707,8 +714,41 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           return new Date(value).toLocaleDateString();
         }
       },
+      ...(!isAuditor ? [{
+        field: "actions",
+        headerName: "Actions",
+        width: 150,
+        sortable: false,
+        renderCell: (params: any) => (
+          <Stack direction="row" spacing={1}>
+            {!isProcessOwner && (
+              <Tooltip title="Edit Audit">
+                <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleEdit(params.row); }}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            
+            {isCAE && (params.row.status === 'Finalized' || params.row.status === 'Process Owner Review') && (
+              <Tooltip title="Close Audit">
+                <IconButton size="small" color="warning" onClick={(e) => { e.stopPropagation(); handleCloseAudit(params.row); }}>
+                  <CheckCircleOutlineIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            {(isManager || isCAE) && (
+              <Tooltip title="Delete Audit">
+                <IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); handleDeleteAudit(params.row.id); }}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Stack>
+        )
+      }] : []),
     ];
-  }, [isMobile, isTablet, currentUser, isAuditor, isManager, isCAE]);
+  }, [isMobile, isTablet, currentUser, isAuditor, isManager, isCAE, isProcessOwner]);
 
   return (
     <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, height: "100%" }}>
@@ -872,15 +912,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                     variant="outlined"
                     onClick={() => {
                         setAuditToEdit(audit);
-                        if (isAuditor) {
-                          if (audit.status === 'Planned' || audit.status === 'Approved') {
-                              handleStartAudit(audit);
-                          } else {
-                              setView("execution");
-                          }
-                        } else {
-                          setView("execution");
-                        }
+                        setActionsModalOpen(true);
                     }}
                     sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f9f9f9' } }}
                   >
@@ -953,15 +985,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                 disableRowSelectionOnClick
                 onRowClick={(params) => {
                   setAuditToEdit(params.row);
-                  if (isAuditor) {
-                    if (params.row.status === 'Planned' || params.row.status === 'Approved') {
-                        handleStartAudit(params.row);
-                    } else {
-                        setView("execution");
-                    }
-                  } else {
-                    setView("execution");
-                  }
+                  setActionsModalOpen(true);
                 }}
                 density={isMobile ? "compact" : "standard"}
                 sx={{
@@ -1131,7 +1155,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         </Paper>
       ) : view === "programs" ? (
           <AuditProgramsModule 
-            audit={auditToEdit} 
+            audit={auditToEdit!} 
             onBack={() => setView("list")} 
           />
         ) : view === "execution" ? (
@@ -1253,6 +1277,148 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           <Button onClick={() => setAddFindingDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleSaveFinding} variant="contained" disabled={!newFinding.description}>Save Draft</Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Audit Contextual Actions Modal */}
+      <Dialog 
+        open={actionsModalOpen} 
+        onClose={() => setActionsModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">Audit Actions</Typography>
+          <IconButton onClick={() => setActionsModalOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {auditToEdit && (
+            <Box>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight="bold">{auditToEdit.auditName}</Typography>
+                <Typography variant="body2" color="text.secondary">Status: <Chip label={auditToEdit.status} size="small" color="primary" sx={{ ml: 1 }} /></Typography>
+              </Box>
+              
+              <Stack spacing={1.5}>
+                {/* Execute/View Audit - Always available if selected */}
+                <Button 
+                  fullWidth 
+                  variant="contained" 
+                  startIcon={<VisibilityIcon />} 
+                  sx={{ bgcolor: '#0F1A2B', '&:hover': { bgcolor: '#1a2b45' } }}
+                  onClick={() => {
+                    setActionsModalOpen(false);
+                    if (isAuditor && (auditToEdit.status === 'Planned' || auditToEdit.status === 'Approved')) {
+                        handleStartAudit(auditToEdit);
+                    } else {
+                        setView("execution");
+                    }
+                  }}
+                >
+                  {isAuditor && (auditToEdit.status === 'Planned' || auditToEdit.status === 'Approved') 
+                    ? "Start & Execute Audit" 
+                    : (auditToEdit.status === 'Under Review' || auditToEdit.status === 'Execution Finished' ? "Review Audit" : "View / Execute Audit")
+                  }
+                </Button>
+
+                {/* Assign Auditor - Managers/CAE when Approved/Planned */}
+                {(isManager || isCAE) && (auditToEdit.status === 'Approved' || auditToEdit.status === 'Planned') && (
+                  <Button 
+                    fullWidth 
+                    variant="outlined" 
+                    color="primary"
+                    startIcon={<PersonAddIcon />} 
+                    onClick={() => {
+                      setActionsModalOpen(false);
+                      handleAssignClick(auditToEdit);
+                    }}
+                  >
+                    Assign Auditor
+                  </Button>
+                )}
+
+                {/* Approve Plan - CAE when Planned */}
+                {isCAE && auditToEdit.status === 'Planned' && (
+                  <Button 
+                    fullWidth 
+                    variant="outlined" 
+                    color="success"
+                    startIcon={<CheckCircleIcon />} 
+                    onClick={() => {
+                      setActionsModalOpen(false);
+                      handleApproveClick(auditToEdit.id);
+                    }}
+                  >
+                    Approve Audit Plan
+                  </Button>
+                )}
+
+                {/* Finalize Audit - CAE when Under Review / Execution Finished */}
+                {isCAE && (auditToEdit.status === 'Under Review' || auditToEdit.status === 'Execution Finished') && (
+                  <Button 
+                    fullWidth 
+                    variant="outlined" 
+                    color="success"
+                    startIcon={<FactCheckIcon />} 
+                    onClick={() => {
+                      setActionsModalOpen(false);
+                      handleFinalizeAudit();
+                    }}
+                  >
+                    Finalize Audit
+                  </Button>
+                )}
+
+                {/* Close Audit - CAE when Finalized */}
+                {isCAE && (auditToEdit.status === 'Finalized' || auditToEdit.status === 'Process Owner Review') && (
+                  <Button 
+                    fullWidth 
+                    variant="outlined" 
+                    color="warning"
+                    startIcon={<LockIcon />} 
+                    onClick={() => {
+                      setActionsModalOpen(false);
+                      handleCloseAudit(auditToEdit);
+                    }}
+                  >
+                    Close Audit
+                  </Button>
+                )}
+                
+                {/* Programs - Managers when Planned */}
+                {isManager && auditToEdit.status === 'Planned' && (
+                  <Button 
+                    fullWidth 
+                    variant="outlined" 
+                    startIcon={<PlaylistAddIcon />} 
+                    onClick={() => {
+                      setActionsModalOpen(false);
+                      setView("programs");
+                    }}
+                  >
+                    Manage Programs
+                  </Button>
+                )}
+
+                {/* Edit Plan - Managers when not closed */}
+                {isManager && auditToEdit.status !== 'Closed' && (
+                  <Button 
+                    fullWidth 
+                    variant="outlined" 
+                    startIcon={<EditIcon />} 
+                    onClick={() => {
+                      setActionsModalOpen(false);
+                      handleEdit(auditToEdit);
+                    }}
+                  >
+                    Edit Audit Details
+                  </Button>
+                )}
+              </Stack>
+            </Box>
+          )}
+        </DialogContent>
       </Dialog>
     </Box>
   );

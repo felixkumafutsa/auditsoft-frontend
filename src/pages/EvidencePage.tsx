@@ -35,18 +35,9 @@ import HistoryIcon from '@mui/icons-material/History';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
+import { Audit, AuditProgram } from '../types/audit';
 
 const MySwal = withReactContent(Swal);
-
-interface Audit {
-  id: number;
-  auditName: string;
-}
-
-interface AuditProgram {
-  id: number;
-  procedureName: string;
-}
 
 interface EvidenceVersion {
   id: number;
@@ -114,7 +105,8 @@ const EvidencePage: React.FC = () => {
         const data = await api.getAudits();
         const mappedAudits = Array.isArray(data) ? data.map((a: any) => ({
           id: a.id,
-          auditName: a.auditName || a.audit_name
+          auditName: a.auditName || a.audit_name,
+          status: a.status || 'Planned'
         })) : [];
         setAudits(mappedAudits);
       } catch (error) {
@@ -137,7 +129,11 @@ const EvidencePage: React.FC = () => {
         const data = await api.getAuditPrograms(Number(selectedAuditId));
         const mappedPrograms = Array.isArray(data) ? data.map((p: any) => ({
           id: p.id,
-          procedureName: p.procedureName
+          procedureName: p.procedureName,
+          controlReference: p.controlReference || null,
+          expectedOutcome: p.expectedOutcome || null,
+          actualResult: p.actualResult || null,
+          reviewerComment: p.reviewerComment || null
         })) : [];
         setPrograms(mappedPrograms);
         
@@ -711,7 +707,7 @@ renderCell: ({ row }) => (
               columns={[
                 { field: 'version', headerName: 'Ver', width: 70 },
                 { field: 'fileName', headerName: 'File Name', flex: 1 },
-                { field: 'changeDescription', headerName: 'Changes', flex: 1 },
+                { field: 'description', headerName: 'Changes', flex: 1 },
                 { 
                   field: 'uploadedBy', 
                   headerName: 'By', 
@@ -724,9 +720,8 @@ renderCell: ({ row }) => (
                   field: 'uploadedAt', 
                   headerName: 'Date', 
                   width: 150, 
-                  valueGetter: (_value, row) =>
-  row?.uploadedBy?.name ?? 'Unknown'
-
+                  valueFormatter: (value) =>
+                    value ? new Date(value as string).toLocaleString() : 'N/A'
                 },
                 {
                   field: 'actions',

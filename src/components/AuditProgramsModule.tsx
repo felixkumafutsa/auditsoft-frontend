@@ -22,23 +22,10 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import api from '../services/api';
-
-interface Audit {
-  id: number;
-  auditName: string;
-  status: string;
-}
-
-interface AuditProgram {
-  id: number;
-  auditId: number;
-  procedureName: string;
-  controlReference: string;
-  expectedOutcome: string;
-}
+import { Audit, AuditProgram } from '../types/audit';
 
 interface AuditProgramsModuleProps {
-  audit: Audit;
+  audit: any;
   onBack: () => void;
 }
 

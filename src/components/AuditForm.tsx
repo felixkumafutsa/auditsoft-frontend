@@ -18,11 +18,12 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
 import Swal from 'sweetalert2';
 import api from '../services/api';
+import { Audit } from '../types/audit';
 
 interface AuditFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
-  auditToEdit?: any;
+  auditToEdit?: Audit | null;
   auditors?: { id: number; name: string; role: string }[];
   managers?: { id: number; name: string; role: string }[];
   auditUniverseItems?: { id: number; entityName: string; entityType: string }[];

@@ -57,32 +57,15 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import HistoryIcon from "@mui/icons-material/History";
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
+import { Audit, AuditProgram } from '../types/audit';
 
 const MySwal = withReactContent(Swal);
-
-interface Audit {
-  id: number;
-  auditName: string;
-  auditType?: string;
-  status: string;
-  startDate?: string;
-  endDate?: string;
-  assignedTo?: string;
-  assignedAuditors?: { id: number; name: string }[];
-}
-
-interface AuditProgram {
-  id: number;
-  procedureName: string;
-  controlReference: string | null;
-  expectedOutcome: string | null;
-  actualResult: string | null;
-  reviewerComment: string | null;
-  expanded?: boolean; // UI state for accordion
-}
 
 interface AuditExecutionModuleProps {
   initialAudit?: Audit | null;
@@ -118,7 +101,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
   const [loading, setLoading] = useState(false);
   const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
   const [uploading, setUploading] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState(0); // 0: Programs, 1: Fieldwork, 2: Working Papers
+  const [activeTab, setActiveTab] = useState(0); // 0: Programs, 1: Fieldwork, 2: Working Papers, 3: Comments
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -140,10 +123,10 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
 
   const userStr = localStorage.getItem('user');
   const currentUser = userStr ? JSON.parse(userStr) : null;
-  const isAuditor = currentUser?.role === 'Auditor' || currentUser?.role === 'auditor';
-  const isCAE = currentUser?.role === 'CAE' || currentUser?.role === 'Chief Audit Executive' || currentUser?.role === 'Chief Audit Executive (CAE)';
-  const isManager = currentUser?.role === 'Manager' || currentUser?.role === 'Audit Manager' || currentUser?.role === 'manager';
-  const isProcessOwner = currentUser?.role === 'Process Owner' || currentUser?.role === 'process_owner';
+  const isAuditor = currentUser?.role?.toLowerCase().includes('auditor');
+  const isCAE = currentUser?.role?.toLowerCase().includes('cae') || currentUser?.role?.toLowerCase().includes('chief');
+  const isManager = currentUser?.role?.toLowerCase().includes('manager');
+  const isProcessOwner = currentUser?.role?.toLowerCase().includes('owner');
 
   useEffect(() => {
     if (initialAudit) {
@@ -384,6 +367,60 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
     }
   }, [activeTab, selectedAudit, loadAllEvidence]);
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewType, setPreviewType] = useState<string | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+
+  const handleDownloadEvidence = async (evidenceId: number, fileName: string) => {
+    try {
+      const blob = await api.downloadEvidence(evidenceId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed', error);
+      MySwal.fire('Error', 'Failed to download evidence.', 'error');
+    }
+  };
+
+  const handlePreviewEvidence = async (evidenceId: number) => {
+    try {
+      // Find the evidence to get its file type
+      let foundEv: any = null;
+      Object.values(evidenceMap).forEach(list => {
+        const match = list.find(e => e.id === evidenceId);
+        if (match) foundEv = match;
+      });
+
+      const blob = await api.downloadEvidence(evidenceId);
+      const url = window.URL.createObjectURL(blob);
+      setPreviewUrl(url);
+      setPreviewType(foundEv?.fileType || null);
+      setPreviewDialogOpen(true);
+    } catch (error) {
+      console.error('Preview failed', error);
+      MySwal.fire('Error', 'Failed to preview evidence.', 'error');
+    }
+  };
+
+  const handleEvidenceHistory = async (evidenceId: number) => {
+    try {
+      const data = await api.getEvidenceDetails(evidenceId);
+      setHistoryData(data.versions || []);
+      setHistoryDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch history', error);
+      MySwal.fire('Error', 'Failed to fetch evidence history.', 'error');
+    }
+  };
+
   if (!selectedAudit) {
     return (
       <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -514,7 +551,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </Button>
           )}
 
-          {isCAE && (selectedAudit.status === 'Reviewed by Owner' || selectedAudit.status === 'Finalized') && onClose && (
+          {isCAE && (selectedAudit.status === 'Process Owner Review' || selectedAudit.status === 'Finalized') && onClose && (
             <Button 
               variant="contained" 
               size="small" 
@@ -571,7 +608,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             <Button 
               variant="contained" 
               color="info" 
-              onClick={() => handleUpdateStatus('Reviewed by Owner')}
+              onClick={() => handleUpdateStatus('Process Owner Review')}
               size="small"
             >
               Mark as Viewed
@@ -585,6 +622,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           <Tab icon={<AssignmentIcon />} label="Audit Programs" />
           <Tab icon={<FactCheckIcon />} label="Fieldwork & Testing" />
           <Tab icon={<FolderIcon />} label="Working Papers" />
+          <Tab icon={<PlaylistAddIcon />} label="Comments" />
         </Tabs>
       </Paper>
       
@@ -721,9 +759,26 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                                 <ListItem
                                   key={ev.id}
                                   secondaryAction={
-                                    <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteEvidence(program.id, ev.id)}>
-                                      <DeleteIcon color="error" />
-                                    </IconButton>
+                                    <Stack direction="row" spacing={1}>
+                                      <Tooltip title="Preview">
+                                        <IconButton size="small" onClick={() => handlePreviewEvidence(ev.id)} color="primary">
+                                          <VisibilityIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                      <Tooltip title="Download">
+                                        <IconButton size="small" onClick={() => handleDownloadEvidence(ev.id, ev.fileName)} color="primary">
+                                          <FileDownloadIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                      <Tooltip title="History">
+                                        <IconButton size="small" onClick={() => handleEvidenceHistory(ev.id)} color="info">
+                                          <HistoryIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                      <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteEvidence(program.id, ev.id)}>
+                                        <DeleteIcon color="error" fontSize="small" />
+                                      </IconButton>
+                                    </Stack>
                                   }
                                 >
                                   <ListItemIcon>
@@ -778,9 +833,26 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                                         <TableCell>{prog?.procedureName || `Program #${progId}`}</TableCell>
                                         <TableCell>{new Date(ev.createdAt).toLocaleDateString()}</TableCell>
                                         <TableCell align="right">
-                                            <IconButton size="small" onClick={() => handleDeleteEvidence(Number(progId), ev.id)} color="error">
-                                                <DeleteIcon fontSize="small" />
-                                            </IconButton>
+                                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                                <Tooltip title="Preview">
+                                                    <IconButton size="small" onClick={() => handlePreviewEvidence(ev.id)} color="primary">
+                                                        <VisibilityIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Download">
+                                                    <IconButton size="small" onClick={() => handleDownloadEvidence(ev.id, ev.fileName)} color="primary">
+                                                        <FileDownloadIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Version History">
+                                                    <IconButton size="small" onClick={() => handleEvidenceHistory(ev.id)} color="info">
+                                                        <HistoryIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <IconButton size="small" onClick={() => handleDeleteEvidence(Number(progId), ev.id)} color="error">
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </Stack>
                                         </TableCell>
                                     </TableRow>
                                 ));
@@ -789,6 +861,46 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                     </TableBody>
                 </Table>
              </TableContainer>
+          )}
+
+          {/* Tab 3: Comments & Feedback */}
+          {activeTab === 3 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Reviewer Comments & Audit Feedback</Typography>
+              <Paper variant="outlined">
+                <List>
+                  {programs.filter(p => p.reviewerComment).length === 0 ? (
+                    <ListItem>
+                      <ListItemText primary="No comments have been left on this audit yet." />
+                    </ListItem>
+                  ) : (
+                    programs.filter(p => p.reviewerComment).map(p => (
+                      <React.Fragment key={p.id}>
+                        <ListItem alignItems="flex-start">
+                          <ListItemText
+                            primary={`Procedure: ${p.procedureName}`}
+                            secondary={
+                              <React.Fragment>
+                                <Typography
+                                  sx={{ display: 'inline' }}
+                                  component="span"
+                                  variant="body2"
+                                  color="text.primary"
+                                >
+                                  Comment:
+                                </Typography>
+                                {` — ${p.reviewerComment}`}
+                              </React.Fragment>
+                            }
+                          />
+                        </ListItem>
+                        <Divider variant="inset" component="li" />
+                      </React.Fragment>
+                    ))
+                  )}
+                </List>
+              </Paper>
+            </Box>
           )}
 
         </Box>
@@ -827,6 +939,97 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           <Button onClick={handleSaveFinding} variant="contained" color="error" disabled={!newFinding.description}>
             Raise Finding
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Evidence Preview Dialog */}
+      <Dialog 
+        open={previewDialogOpen} 
+        onClose={() => { 
+          if (previewUrl) window.URL.revokeObjectURL(previewUrl); 
+          setPreviewDialogOpen(false); 
+          setPreviewUrl(null); 
+          setPreviewType(null);
+        }} 
+        maxWidth="lg" 
+        fullWidth
+      >
+        <DialogTitle>Evidence Preview</DialogTitle>
+        <DialogContent dividers>
+          {previewUrl ? (
+            <Box sx={{ height: 600, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              {previewType?.startsWith('image/') ? (
+                <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+              ) : previewType === 'application/pdf' ? (
+                <iframe title="Evidence Preview" src={previewUrl} style={{ width: '100%', height: '100%', border: 'none' }} />
+              ) : (
+                <Box textAlign="center">
+                  <Typography variant="h6" gutterBottom>Preview not available for this file type</Typography>
+                  <Typography variant="body2" color="text.secondary">Please download the file to view its contents.</Typography>
+                  <Button 
+                    variant="contained" 
+                    sx={{ mt: 2 }} 
+                    onClick={() => {
+                      const a = document.createElement('a');
+                      a.href = previewUrl;
+                      a.download = 'evidence'; // Fallback name
+                      a.click();
+                    }}
+                  >
+                    Download Now
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          ) : (
+            <Typography>Loading preview...</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { 
+            if (previewUrl) window.URL.revokeObjectURL(previewUrl); 
+            setPreviewDialogOpen(false); 
+            setPreviewUrl(null); 
+            setPreviewType(null);
+          }}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Evidence History Dialog */}
+      <Dialog open={historyDialogOpen} onClose={() => setHistoryDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Evidence Version History</DialogTitle>
+        <DialogContent dividers>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Version</TableCell>
+                  <TableCell>File Name</TableCell>
+                  <TableCell>Changes</TableCell>
+                  <TableCell>Date</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {historyData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">No previous versions found.</TableCell>
+                  </TableRow>
+                ) : (
+                  historyData.map((v, idx) => (
+                    <TableRow key={v.id}>
+                      <TableCell>{historyData.length - idx}</TableCell>
+                      <TableCell>{v.fileName}</TableCell>
+                      <TableCell>{v.description || 'Initial Version'}</TableCell>
+                      <TableCell>{new Date(v.uploadedAt).toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHistoryDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

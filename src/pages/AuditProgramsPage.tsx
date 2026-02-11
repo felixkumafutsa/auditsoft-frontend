@@ -25,19 +25,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../services/api';
-
-interface Audit {
-  id: number;
-  auditName: string;
-}
-
-interface AuditProgram {
-  id: number;
-  auditId: number;
-  procedureName: string;
-  controlReference: string;
-  expectedOutcome: string;
-}
+import { Audit, AuditProgram } from '../types/audit';
 
 const AuditProgramsPage: React.FC = () => {
   const [audits, setAudits] = useState<Audit[]>([]);
@@ -62,7 +50,8 @@ const AuditProgramsPage: React.FC = () => {
         const data = await api.getAudits();
         const mappedAudits = Array.isArray(data) ? data.map((a: any) => ({
           id: a.id,
-          auditName: a.auditName || a.audit_name
+          auditName: a.auditName || a.audit_name,
+          status: a.status || 'Planned'
         })) : [];
         setAudits(mappedAudits);
         

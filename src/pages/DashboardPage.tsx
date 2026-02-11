@@ -1316,13 +1316,22 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // In a real app, we would filter by the logged-in user's ID
-      // const user = await api.getProfile();
-      const allFindings = (await api.getFindings?.()) || [];
+      const userStr = localStorage.getItem('user');
+      const currentUser = userStr ? JSON.parse(userStr) : null;
+      
+      const [allFindings, allAudits] = await Promise.all([
+        (api as any).getFindings?.() || Promise.resolve([]),
+        api.getAudits()
+      ]);
 
-      // For demo, assuming all findings are relevant or filtering client-side would happen here
-      // const myFindings = allFindings.filter(f => f.assignedToId === user.id);
-      const myFindings = Array.isArray(allFindings) ? allFindings : [];
+      // Filter findings where the user is assigned or related to their entity's audits
+      const myFindings = Array.isArray(allFindings) ? allFindings.filter((f: any) => {
+          // If the finding is assigned to this user
+          if (f.assignedToId === currentUser?.id) return true;
+          // Or if the finding belongs to an audit that is owned by this process owner
+          const relatedAudit = allAudits.find((a: any) => a.id === f.auditId);
+          return relatedAudit?.auditUniverse?.ownerId === currentUser?.id;
+      }) : [];
 
       const overdueActionPlans = await api.getOverdueActionPlans?.() || [];
 
@@ -1471,7 +1480,9 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
 // ========== MAIN DASHBOARD COMPONENT ==========
 const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
-  const userRole = (localStorage.getItem("userRole") || "Auditor") as UserRole;
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const userRole = (user?.role || "Auditor") as UserRole;
 
   const renderDashboard = () => {
     switch (userRole) {

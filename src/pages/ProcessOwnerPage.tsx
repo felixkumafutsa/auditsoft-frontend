@@ -3,17 +3,7 @@ import { Box, Typography, Paper, Grid, Button, Chip } from '@mui/material';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
-
-interface Audit {
-  id: number;
-  auditName: string;
-  status: string;
-  startDate?: string;
-  endDate?: string;
-  assignedManager?: { name: string };
-  auditPrograms?: { id: number }[];
-  findings?: { id: number }[];
-}
+import { Audit } from '../types/audit';
 
 const ProcessOwnerPage: React.FC = () => {
   const [audits, setAudits] = useState<Audit[]>([]);

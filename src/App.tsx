@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import LoginPage from './pages/LoginPage';
 import MainLayout from './components/MainLayout';
+import ReportsFilesPage from './pages/ReportsFilesPage';
 
 const App: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);

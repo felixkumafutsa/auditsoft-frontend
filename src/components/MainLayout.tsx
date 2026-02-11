@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-    Box, 
-    CircularProgress, 
+import {
+    Box,
+    CircularProgress,
     CssBaseline,
     Drawer,
     Typography
@@ -38,6 +38,7 @@ import ProcessOwnerPage from '../pages/ProcessOwnerPage';
 import BoardViewerPage from '../pages/BoardViewerPage';
 import OperationalReportsPage from '../pages/OperationalReportsPage';
 import CustomReportsPage from '../pages/CustomReportsPage';
+import ReportsFilesPage from '../pages/ReportsFilesPage';
 import GlobalTopBar from './GlobalTopBar';
 import ContextualTopBar from './ContextualTopBar';
 import api from '../services/api';
@@ -90,7 +91,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
         switch (currentPage) {
             case 'dashboard':
                 return <DashboardPage onNavigate={handleNavigate} />;
-            
+
             // Audits
             case 'audits':
                 return <AuditsPage filterType="all" />;
@@ -108,7 +109,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 return <AuditUniversePage />;
             case 'continuous-audits':
                 return <ContinuousAuditsPage />;
-            
+
             // Findings
             case 'findings':
                 return <FindingsPage viewMode="all" />;
@@ -116,13 +117,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 return <FindingsPage viewMode="draft" />;
             case 'my-findings':
                 return <FindingsPage viewMode="my" />;
-            
+
             // Process Owner
             case 'remediation':
                 return <RemediationPage />;
             case 'comments':
                 return <CommentsPage />;
-            
+
             // Evidence
             case 'evidence':
                 return <EvidencePage />;
@@ -147,6 +148,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 return <OperationalReportsPage />;
             case 'reports-custom':
                 return <CustomReportsPage />;
+            case 'reports-files':
+                return <ReportsFilesPage />;
 
             // Risk Management
             case 'risk-register':
@@ -163,7 +166,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 return <ControlMappingPage />;
             case 'compliance-coverage':
                 return <CoverageAnalysisPage />;
-            
+
             // Others
             case 'profile':
                 return <ProfilePage />;
@@ -193,21 +196,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
             <CssBaseline />
-            
+
             {/* Global Top Bar */}
-            <GlobalTopBar 
+            <GlobalTopBar
                 user={currentUser}
                 onDrawerToggle={handleDrawerToggle}
                 onLogout={handleLogout}
                 onNavigate={handleNavigate}
                 unreadCount={unreadCount}
             />
-            
+
             {/* Spacer for fixed GlobalTopBar */}
             <Box sx={{ height: 64 }} />
 
             {/* Contextual Top Bar (Hidden on Mobile) */}
-            <ContextualTopBar 
+            <ContextualTopBar
                 userRole={currentUser.role}
                 currentPage={currentPage}
                 onNavigate={handleNavigate}
@@ -227,7 +230,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                         '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
                     }}
                 >
-                    <Sidebar 
+                    <Sidebar
                         userRole={currentUser.role}
                         currentPage={currentPage}
                         onNavigate={handleNavigate}

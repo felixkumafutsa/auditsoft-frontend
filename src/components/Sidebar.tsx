@@ -71,12 +71,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 64, bgcolor: '#0a121e' }}>
         {/* System Logo */}
         <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-           <Box component="span" sx={{ bgcolor: '#1976d2', width: 32, height: 32, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>A</Box>
-           AuditSoft
+          <Box component="span" sx={{ bgcolor: '#1976d2', width: 32, height: 32, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>A</Box>
+          AuditSoft
         </Typography>
       </Box>
       <Divider sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
-      
+
       <List component="nav">
         {/* Dashboard - Common */}
         <ListItemButton selected={currentPage === 'dashboard'} onClick={() => onNavigate('dashboard')}>
@@ -109,7 +109,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
         {isSystemAdmin && (
           <>
             <Divider sx={{ my: 1, bgcolor: 'rgba(255,255,255,0.1)' }} />
-            
+
             {/* Users & Roles */}
             <ListItemButton onClick={() => setAdminOpen(!adminOpen)}>
               <ListItemIcon><GroupIcon sx={{ color: 'white' }} /></ListItemIcon>
@@ -202,6 +202,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                   <ListItemIcon><TuneIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Custom Builder" />
                 </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'reports-files'} onClick={() => onNavigate('reports-files')}>
+                  <ListItemIcon><FolderIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Stored Files" />
+                </ListItemButton>
               </List>
             </Collapse>
 
@@ -267,7 +271,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
         {!isSystemAdmin && !isCAE && !isAuditor && (
           <>
             <Divider sx={{ my: 1, bgcolor: 'rgba(255,255,255,0.1)' }} />
-            
+
             <ListItemButton onClick={() => setAuditsOpen(!auditsOpen)}>
               <ListItemIcon><AssignmentIcon sx={{ color: 'white' }} /></ListItemIcon>
               <ListItemText primary="Audits" />
@@ -295,6 +299,35 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                     </ListItemButton>
                   </>
                 )}
+              </List>
+            </Collapse>
+
+
+
+            {/* Reports */}
+            <ListItemButton onClick={() => setReportsOpen(!reportsOpen)}>
+              <ListItemIcon><BarChartIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="View Reports" />
+              {reportsOpen ? <ExpandLess /> : <ExpandMore />}
+            </ListItemButton>
+            <Collapse in={reportsOpen} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'reports-executive'} onClick={() => onNavigate('reports-executive')}>
+                  <ListItemIcon><PieChartIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Executive" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'reports-operational'} onClick={() => onNavigate('reports-operational')}>
+                  <ListItemIcon><BarChartIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Operational" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'reports-custom'} onClick={() => onNavigate('reports-custom')}>
+                  <ListItemIcon><TuneIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Custom Builder" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'reports-files'} onClick={() => onNavigate('reports-files')}>
+                  <ListItemIcon><FolderIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Stored Files" />
+                </ListItemButton>
               </List>
             </Collapse>
 

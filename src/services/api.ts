@@ -133,7 +133,7 @@ class ApiClient {
   createAudit = (data: any) => this.post('/audits', data); // Define a proper DTO later
   updateAudit = (id: number, data: any) => this.put(`/audits/${id}`, data);
   deleteAudit = (id: number) => this.delete(`/audits/${id}`);
-  
+
   exportAuditsExcel = () => {
     return fetch(`${BASE_URL}/audits/export/excel`, {
       method: 'GET',
@@ -150,13 +150,13 @@ class ApiClient {
     return this.upload('/audits/import', formData);
   };
 
-  assignAuditors = (id: number, auditorIds: number[]) => 
+  assignAuditors = (id: number, auditorIds: number[]) =>
     this.post(`/audits/${id}/assign`, { auditorIds });
-  transitionAudit = (id: number, toStatus: string, userRole?: string) => 
+  transitionAudit = (id: number, toStatus: string, userRole?: string) =>
     this.post(`/audits/${id}/transition`, { toStatus, userRole });
-  getAllowedTransitionsAudit = (id: number) => 
+  getAllowedTransitionsAudit = (id: number) =>
     this.get(`/audits/${id}/allowed-transitions`);
-  
+
   // --- Audit Comments ---
   getAuditComments = (auditId: number) => this.get(`/audits/${auditId}/comments`);
   addAuditComment = (auditId: number, data: any) => this.post(`/audits/${auditId}/comments`, data);
@@ -208,11 +208,11 @@ class ApiClient {
   createFinding = (data: any) => this.post('/findings', data);
   updateFinding = (id: number, data: any) => this.put(`/findings/${id}`, data);
   deleteFinding = (id: number) => this.delete(`/findings/${id}`);
-  transitionFinding = (id: number, toStatus: string, userRole?: string) => 
+  transitionFinding = (id: number, toStatus: string, userRole?: string) =>
     this.post(`/findings/${id}/transition`, { toStatus, userRole });
-  getAllowedTransitions = (id: number) => 
+  getAllowedTransitions = (id: number) =>
     this.get(`/findings/${id}/allowed-transitions`);
-  escalateFinding = (id: number, reason: string, escalatedTo: string) => 
+  escalateFinding = (id: number, reason: string, escalatedTo: string) =>
     this.post(`/findings/${id}/escalate`, { reason, escalatedTo });
   getCriticalFindings = () => this.get('/findings/critical');
   getOverdueFindings = () => this.get('/findings/overdue');
@@ -254,6 +254,7 @@ class ApiClient {
   getDashboardStats = () => this.get('/reports/dashboard');
   getExecutiveReport = () => this.get('/reports/executive');
   getOperationalReports = () => this.get('/reports/operational');
+  getReportsList = () => this.get('/reports/list');
   getRiskHeatmap = () => this.get('/reports/risk-heatmap');
 
   downloadAuditReportPDF = (auditId: number) => {
@@ -261,10 +262,10 @@ class ApiClient {
       method: 'GET',
       headers: this.getAuthHeaders(),
     })
-    .then(response => {
-      if (!response.ok) throw new Error('Network response was not ok');
-      return response.blob();
-    });
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.blob();
+      });
   };
 
   downloadAuditReportWord = (auditId: number) => {
@@ -272,10 +273,10 @@ class ApiClient {
       method: 'GET',
       headers: this.getAuthHeaders(),
     })
-    .then(response => {
-      if (!response.ok) throw new Error('Network response was not ok');
-      return response.blob();
-    });
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.blob();
+      });
   };
 
   previewAuditReport = (auditId: number) => {

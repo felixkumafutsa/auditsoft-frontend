@@ -52,7 +52,7 @@ interface ContextualTopBarProps {
 const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPage, onNavigate }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+
   // Menu States
   const [auditsAnchor, setAuditsAnchor] = React.useState<null | HTMLElement>(null);
   const [reportsAnchor, setReportsAnchor] = React.useState<null | HTMLElement>(null);
@@ -156,7 +156,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
         <Toolbar variant="dense" sx={{ minHeight: 48 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
             {/* 1. Dashboard */}
-            <Button 
+            <Button
               startIcon={<DashboardIcon />}
               color={currentPage === 'dashboard' ? 'primary' : 'inherit'}
               onClick={() => onNavigate('dashboard')}
@@ -189,7 +189,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             </Menu>
 
             {/* 3. Workflow Configuration */}
-            <Button 
+            <Button
               startIcon={<TuneIcon />}
               color={currentPage === 'workflow-config' ? 'primary' : 'inherit'}
               onClick={() => onNavigate('workflow-config')}
@@ -198,7 +198,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             </Button>
 
             {/* 4. Audit Logs */}
-            <Button 
+            <Button
               startIcon={<HistoryIcon />}
               color={currentPage === 'audit-logs' ? 'primary' : 'inherit'}
               onClick={() => onNavigate('audit-logs')}
@@ -207,7 +207,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             </Button>
 
             {/* 5. System Settings */}
-            <Button 
+            <Button
               startIcon={<SystemSettingsIcon />}
               color={currentPage === 'system-settings' ? 'primary' : 'inherit'}
               onClick={() => onNavigate('system-settings')}
@@ -236,7 +236,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
         <Toolbar variant="dense" sx={{ minHeight: 48 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
             {/* 1. Dashboard */}
-            <Button 
+            <Button
               startIcon={<DashboardIcon />}
               color={currentPage === 'dashboard' ? 'primary' : 'inherit'}
               onClick={() => onNavigate('dashboard')}
@@ -301,6 +301,10 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
               <MenuItem onClick={() => { onNavigate('reports-custom'); setReportsAnchor(null); }}>
                 <ListItemIcon><TuneIcon fontSize="small" /></ListItemIcon>
                 <ListItemText>Custom Report Builder</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={() => { onNavigate('reports-files'); setReportsAnchor(null); }}>
+                <ListItemIcon><FolderIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>Stored Files</ListItemText>
               </MenuItem>
             </Menu>
 
@@ -405,7 +409,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
       <Toolbar variant="dense" sx={{ minHeight: 48 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {/* 1. Dashboard */}
-          <Button 
+          <Button
             startIcon={<DashboardIcon />}
             color={currentPage === 'dashboard' ? 'primary' : 'inherit'}
             onClick={() => onNavigate('dashboard')}
@@ -452,7 +456,39 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             </MenuItem>
           </Menu>
 
-          {/* 3. Field Work */}
+          {/* 3. Reports (New for Managers) */}
+          <Button
+            startIcon={<BarChartIcon />}
+            endIcon={<KeyboardArrowDownIcon />}
+            color={['reports-executive', 'reports-operational', 'reports-custom', 'reports-files'].includes(currentPage) ? 'primary' : 'inherit'}
+            onClick={(e) => setReportsAnchor(e.currentTarget)}
+          >
+            Reports
+          </Button>
+          <Menu
+            anchorEl={reportsAnchor}
+            open={Boolean(reportsAnchor)}
+            onClose={() => setReportsAnchor(null)}
+          >
+            <MenuItem onClick={() => { onNavigate('reports-executive'); setReportsAnchor(null); }}>
+              <ListItemIcon><PieChartIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Executive</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { onNavigate('reports-operational'); setReportsAnchor(null); }}>
+              <ListItemIcon><BarChartIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Operational</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { onNavigate('reports-custom'); setReportsAnchor(null); }}>
+              <ListItemIcon><TuneIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Custom Builder</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { onNavigate('reports-files'); setReportsAnchor(null); }}>
+              <ListItemIcon><FolderIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Stored Files</ListItemText>
+            </MenuItem>
+          </Menu>
+
+          {/* 4. Field Work */}
           <Button
             startIcon={<WorkIcon />}
             endIcon={<KeyboardArrowDownIcon />}
@@ -485,7 +521,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
           </Button>
         </Box>
       </Toolbar>
-    </AppBar>
+    </AppBar >
   );
 };
 

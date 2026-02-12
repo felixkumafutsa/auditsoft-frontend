@@ -25,6 +25,10 @@ class ApiClient {
     }
   }
 
+  get baseURL() {
+    return BASE_URL;
+  }
+
   private getAuthHeaders(): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',

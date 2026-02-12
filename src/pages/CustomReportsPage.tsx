@@ -31,68 +31,82 @@ const AVAILABLE_FIELDS = [
 
 const CustomReportsPage: React.FC = () => {
   const [selectedFields, setSelectedFields] = useState<string[]>(['auditName', 'status', 'entityName']);
+  const [availableFields, setAvailableFields] = useState<any[]>(AVAILABLE_FIELDS.filter(f => !['auditName', 'status', 'entityName'].includes(f.id)));
   const [auditType, setAuditType] = useState<string>('All');
-  const [audits, setAudits] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    const fetchAudits = async () => {
-      try {
-        const data = await api.getAudits();
-        setAudits(data);
-      } catch (error) {
-        console.error('Failed to fetch audits for report builder', error);
-      }
-    };
-    fetchAudits();
-  }, []);
+  // Drag State
+  const [draggedField, setDraggedField] = useState<string | null>(null);
 
-  const handleFieldToggle = (fieldId: string) => {
-    setSelectedFields((prev) =>
-      prev.includes(fieldId)
-        ? prev.filter((id) => id !== fieldId)
-        : [...prev, fieldId]
-    );
+  const handleDragStart = (e: React.DragEvent, fieldId: string) => {
+    setDraggedField(fieldId);
+    e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleExport = () => {
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDropToSelected = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggedField && !selectedFields.includes(draggedField)) {
+      setSelectedFields([...selectedFields, draggedField]);
+      setAvailableFields(prev => prev.filter(f => f.id !== draggedField));
+    }
+    setDraggedField(null);
+  };
+
+  const handleDropToAvailable = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggedField && selectedFields.includes(draggedField)) {
+      setSelectedFields(prev => prev.filter(id => id !== draggedField));
+      const field = AVAILABLE_FIELDS.find(f => f.id === draggedField);
+      if (field) setAvailableFields(prev => [...prev, field]);
+    }
+    setDraggedField(null);
+  };
+
+  const handleRemoveField = (fieldId: string) => {
+    setSelectedFields(prev => prev.filter(id => id !== fieldId));
+    const field = AVAILABLE_FIELDS.find(f => f.id === fieldId);
+    if (field) setAvailableFields(prev => [...prev, field]);
+  };
+
+  const handleExport = async (format: 'pdf' | 'csv') => {
     setLoading(true);
     try {
-      // Filter audits by type
-      const filtered = auditType === 'All' 
-        ? audits 
-        : audits.filter(a => (a.auditType || a.audit_type) === auditType);
-
-      // Create CSV header
-      const headers = selectedFields.map(f => AVAILABLE_FIELDS.find(af => af.id === f)?.label).join(',');
-      
-      // Create CSV rows
-      const rows = filtered.map(audit => {
-        return selectedFields.map(field => {
-          let value = audit[field];
-          if (field === 'assignedTo') value = audit.assignedManager?.name || 'N/A';
-          if (field === 'entityName') value = audit.auditUniverse?.entityName || 'N/A';
-          
-          // Escape commas in values
-          const stringValue = String(value || '').replace(/"/g, '""');
-          return `"${stringValue}"`;
-        }).join(',');
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${api.baseURL}/reports/custom`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fields: selectedFields,
+          filters: { auditType },
+          format
+        })
       });
 
-      const csvContent = [headers, ...rows].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `custom_audit_report_${new Date().toISOString().split('T')[0]}.csv`);
+      link.href = url;
+      link.setAttribute('download', `Custom_Report.${format}`);
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      link.parentNode?.removeChild(link);
+
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
       console.error('Export failed', error);
+      alert('Failed to generate report');
     } finally {
       setLoading(false);
     }
@@ -101,41 +115,54 @@ const CustomReportsPage: React.FC = () => {
   return (
     <Box p={3}>
       <Typography variant="h4" gutterBottom fontWeight="bold" color="primary">
-        Custom Report Builder
+        Advanced Report Builder
       </Typography>
       <Typography variant="subtitle1" color="textSecondary" mb={4}>
-        Select the fields and filters to generate your custom audit data export.
+        Drag and drop fields to build your custom report layout.
       </Typography>
 
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">
-              1. Select Data Fields
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {AVAILABLE_FIELDS.map((field) => (
-                <FormControlLabel
+        {/* Left Panel: Available Fields */}
+        <Grid size={{ xs: 12, md: 3 }}>
+          <Paper
+            sx={{ p: 2, minHeight: 400, bgcolor: '#f5f5f5' }}
+            onDragOver={handleDragOver}
+            onDrop={handleDropToAvailable}
+          >
+            <Typography variant="h6" gutterBottom fontWeight="bold">Available Fields</Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {availableFields.map((field) => (
+                <Paper
                   key={field.id}
-                  control={
-                    <Checkbox
-                      checked={selectedFields.includes(field.id)}
-                      onChange={() => handleFieldToggle(field.id)}
-                    />
-                  }
-                  label={field.label}
-                />
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, field.id)}
+                  sx={{
+                    p: 1.5,
+                    cursor: 'grab',
+                    bgcolor: 'white',
+                    border: '1px solid #e0e0e0',
+                    '&:hover': { bgcolor: '#e3f2fd' }
+                  }}
+                >
+                  <Typography>{field.label}</Typography>
+                </Paper>
               ))}
+              {availableFields.length === 0 && (
+                <Typography variant="body2" color="textSecondary" align="center" mt={2}>
+                  All fields selected
+                </Typography>
+              )}
             </Box>
           </Paper>
+        </Grid>
 
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">
-              2. Apply Filters
-            </Typography>
+        {/* Middle Panel: Report Preview / Selection */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Paper sx={{ p: 2, mb: 2 }}>
+            <Typography variant="h6" gutterBottom>Filters</Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth>
+                <FormControl fullWidth size="small">
                   <InputLabel>Audit Type</InputLabel>
                   <Select
                     value={auditType}
@@ -152,29 +179,61 @@ const CustomReportsPage: React.FC = () => {
               </Grid>
             </Grid>
           </Paper>
-        </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Paper sx={{ p: 3, bgcolor: '#f8f9fa' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">
-              Report Summary
-            </Typography>
-            <Box mb={2}>
-              <Typography variant="body2" color="textSecondary">Selected Fields:</Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                {selectedFields.map(f => (
-                  <Chip key={f} label={AVAILABLE_FIELDS.find(af => af.id === f)?.label} size="small" />
+          <Paper
+            sx={{ p: 2, minHeight: 400, border: '2px dashed #1976d2', bgcolor: '#f8fbff' }}
+            onDragOver={handleDragOver}
+            onDrop={handleDropToSelected}
+          >
+            <Typography variant="h6" gutterBottom fontWeight="bold">Report Canvas (Drag Here)</Typography>
+
+            {/* Table Header Preview */}
+            <Box sx={{ display: 'flex', borderBottom: '2px solid #333', mb: 2, pb: 1, overflowX: 'auto' }}>
+              {selectedFields.map((fieldId, index) => (
+                <Box key={fieldId} sx={{ minWidth: 100, flex: 1, p: 1, borderRight: '1px solid #eee', position: 'relative', '&:hover .remove-btn': { display: 'block' } }}>
+                  <Typography variant="subtitle2" fontWeight="bold">
+                    {AVAILABLE_FIELDS.find(f => f.id === fieldId)?.label}
+                  </Typography>
+                  <Button
+                    className="remove-btn"
+                    size="small"
+                    color="error"
+                    sx={{ display: 'none', position: 'absolute', top: -5, right: -5, minWidth: 'auto', p: 0.5 }}
+                    onClick={() => handleRemoveField(fieldId)}
+                  >
+                    x
+                  </Button>
+                </Box>
+              ))}
+            </Box>
+
+            {/* Dummy Data Rows Preview */}
+            {[1, 2, 3].map(row => (
+              <Box key={row} sx={{ display: 'flex', borderBottom: '1px solid #eee', py: 1 }}>
+                {selectedFields.map(fieldId => (
+                  <Box key={fieldId} sx={{ minWidth: 100, flex: 1, px: 1 }}>
+                    <Box sx={{ height: 12, width: '80%', bgcolor: '#e0e0e0', borderRadius: 1 }} />
+                  </Box>
                 ))}
               </Box>
-            </Box>
-            <Box mb={3}>
-              <Typography variant="body2" color="textSecondary">Format:</Typography>
-              <Typography variant="body1">CSV (Excel Compatible)</Typography>
-            </Box>
+            ))}
+
+            {selectedFields.length === 0 && (
+              <Typography variant="body1" color="textSecondary" align="center" mt={5}>
+                Drag fields from the left panel to build your report.
+              </Typography>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Right Panel: Actions */}
+        <Grid size={{ xs: 12, md: 3 }}>
+          <Paper sx={{ p: 3, position: 'sticky', top: 20 }}>
+            <Typography variant="h6" gutterBottom fontWeight="bold">Export Actions</Typography>
 
             {success && (
               <Alert severity="success" sx={{ mb: 2 }}>
-                Report generated successfully!
+                Report generated!
               </Alert>
             )}
 
@@ -184,11 +243,26 @@ const CustomReportsPage: React.FC = () => {
               size="large"
               startIcon={<FileDownloadIcon />}
               disabled={selectedFields.length === 0 || loading}
-              onClick={handleExport}
-              sx={{ bgcolor: '#0F1A2B' }}
+              onClick={() => handleExport('pdf')}
+              sx={{ bgcolor: '#0F1A2B', mb: 2 }}
             >
-              {loading ? 'Generating...' : 'Generate Report'}
+              {loading ? 'Processing...' : 'Export as PDF'}
             </Button>
+
+            <Button
+              variant="outlined"
+              fullWidth
+              size="large"
+              startIcon={<FileDownloadIcon />}
+              disabled={selectedFields.length === 0 || loading}
+              onClick={() => handleExport('csv')}
+            >
+              Export as CSV
+            </Button>
+
+            <Typography variant="caption" display="block" color="textSecondary" mt={2}>
+              * PDF layout will adjust column widths automatically based on your selection.
+            </Typography>
           </Paper>
         </Grid>
       </Grid>

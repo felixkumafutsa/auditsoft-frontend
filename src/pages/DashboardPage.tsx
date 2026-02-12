@@ -79,9 +79,9 @@ const StatCard: React.FC<{
       transition: "transform 0.3s ease, box-shadow 0.3s ease",
       "&:hover": onClick
         ? {
-            transform: "translateY(-4px)",
-            boxShadow: 4,
-          }
+          transform: "translateY(-4px)",
+          boxShadow: 4,
+        }
         : {},
     }}
     onClick={onClick}
@@ -302,12 +302,12 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     n.type === "action_required"
                       ? WarningIcon
                       : n.type === "success"
-                      ? CheckCircleIcon
-                      : n.type === "error"
-                      ? ErrorIcon
-                      : n.type === "warning"
-                      ? WarningIcon
-                      : DescriptionIcon;
+                        ? CheckCircleIcon
+                        : n.type === "error"
+                          ? ErrorIcon
+                          : n.type === "warning"
+                            ? WarningIcon
+                            : DescriptionIcon;
 
                   return (
                     <ListItem key={n.id}>
@@ -317,10 +317,10 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                             n.type === "success"
                               ? "success"
                               : n.type === "error"
-                              ? "error"
-                              : n.type === "warning" || n.type === "action_required"
-                              ? "warning"
-                              : "primary"
+                                ? "error"
+                                : n.type === "warning" || n.type === "action_required"
+                                  ? "warning"
+                                  : "primary"
                           }
                         />
                       </ListItemIcon>
@@ -1318,7 +1318,7 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     try {
       const userStr = localStorage.getItem('user');
       const currentUser = userStr ? JSON.parse(userStr) : null;
-      
+
       const [allFindings, allAudits] = await Promise.all([
         (api as any).getFindings?.() || Promise.resolve([]),
         api.getAudits()
@@ -1326,11 +1326,11 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
       // Filter findings where the user is assigned or related to their entity's audits
       const myFindings = Array.isArray(allFindings) ? allFindings.filter((f: any) => {
-          // If the finding is assigned to this user
-          if (f.assignedToId === currentUser?.id) return true;
-          // Or if the finding belongs to an audit that is owned by this process owner
-          const relatedAudit = allAudits.find((a: any) => a.id === f.auditId);
-          return relatedAudit?.auditUniverse?.ownerId === currentUser?.id;
+        // If the finding is assigned to this user
+        if (f.assignedToId === currentUser?.id) return true;
+        // Or if the finding belongs to an audit that is owned by this process owner
+        const relatedAudit = allAudits.find((a: any) => a.id === f.auditId);
+        return relatedAudit?.auditUniverse?.ownerId === currentUser?.id;
       }) : [];
 
       const overdueActionPlans = await api.getOverdueActionPlans?.() || [];
@@ -1478,7 +1478,191 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   );
 };
 
-// ========== MAIN DASHBOARD COMPONENT ==========
+// ========== BOARD VIEWER DASHBOARD ==========
+const BoardDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    audits: [] as any[],
+    programs: [] as any[],
+    findings: [] as any[],
+    risks: [] as any[],
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [audits, programs, findings, risks] = await Promise.all([
+          api.getAudits(),
+          api.getAllAuditPrograms(),
+          api.getFindings(),
+          api.getRisks(),
+        ]);
+
+        setStats({
+          audits: Array.isArray(audits) ? audits : [],
+          programs: Array.isArray(programs) ? programs : [],
+          findings: Array.isArray(findings) ? findings : [],
+          risks: Array.isArray(risks) ? risks : [],
+        });
+      } catch (error) {
+        console.error("Failed to fetch board data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Aggregations
+  const auditStatusData = React.useMemo(() => {
+    const statusCounts: Record<string, number> = {};
+    stats.audits.forEach((a) => {
+      const status = a.status || "Unknown";
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+    return Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
+  }, [stats.audits]);
+
+  const findingSeverityData = React.useMemo(() => {
+    const severityCounts: Record<string, number> = {};
+    stats.findings.forEach((f) => {
+      const severity = f.severity || "Unknown";
+      severityCounts[severity] = (severityCounts[severity] || 0) + 1;
+    });
+    return Object.entries(severityCounts).map(([name, value]) => ({ name, value }));
+  }, [stats.findings]);
+
+  const riskLevelData = React.useMemo(() => {
+    const levelCounts: Record<string, number> = {};
+    stats.risks.forEach(r => {
+      // Assuming risk calculation or field exists, e.g., inherentRiskScore or just a level field
+      // If not, we can rely on 'impact' or 'likelihood' or a combined score
+      const level = r.riskLevel || r.rating || "Unknown";
+      levelCounts[level] = (levelCounts[level] || 0) + 1;
+    });
+    return Object.entries(levelCounts).map(([name, value]) => ({ name, value }));
+  }, [stats.risks]);
+
+  const programData = React.useMemo(() => {
+    // Maybe visualize programs by area or simply total count vs items
+    return [
+      { name: 'Total Programs', value: stats.programs.length },
+      { name: 'Active Programs', value: stats.programs.filter(p => p.status === 'Active').length }
+    ];
+  }, [stats.programs]);
+
+
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Typography
+        variant="h4"
+        sx={{ color: "#0F1A2B", fontWeight: "bold", mb: 3 }}
+      >
+        Executive Board Dashboard
+      </Typography>
+
+      <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 3 }}>
+        <StatCard title="Total Audits" value={stats.audits.length} icon={<AssignmentIcon fontSize="large" />} color="#1976d2" onClick={() => onNavigate('audits')} />
+        <StatCard title="Total Risks" value={stats.risks.length} icon={<WarningIcon fontSize="large" />} color="#d32f2f" onClick={() => onNavigate('risk-register')} />
+        <StatCard title="Open Findings" value={stats.findings.filter(f => f.status !== 'Closed').length} icon={<WarningIcon fontSize="large" />} color="#ed6c02" onClick={() => onNavigate('findings')} />
+        <StatCard title="Audit Programs" value={stats.programs.length} icon={<DescriptionIcon fontSize="large" />} color="#2e7d32" onClick={() => onNavigate('audit-programs')} />
+      </Box>
+
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+
+        {/* Audit Status Chart */}
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>Audit Status Overview</Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={auditStatusData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {auditStatusData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </Paper>
+
+        {/* Findings Severity Chart */}
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>Findings by Severity</Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={findingSeverityData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="value" fill="#8884d8" name="Findings" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Paper>
+
+        {/* Risk Distribution Chart */}
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>Risk Distribution</Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={riskLevelData}
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                fill="#82ca9d"
+                label={({ name, value }) => `${name}: ${value}`}
+                dataKey="value"
+              >
+                {riskLevelData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </Paper>
+
+        {/* Audit Programs Chart */}
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>Audit Programs Status</Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={programData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" fill="#82ca9d" name="Count" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Paper>
+
+      </Box>
+    </Box>
+  );
+};
+
 const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
@@ -1496,7 +1680,7 @@ const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
       case "CAE":
         return <CAEDashboard onNavigate={onNavigate} />;
       case "Executive":
-        return <CAEDashboard onNavigate={onNavigate} />;
+        return <BoardDashboard onNavigate={onNavigate} />;
       case "ProcessOwner":
         return <ProcessOwnerDashboard onNavigate={onNavigate} />;
       default:

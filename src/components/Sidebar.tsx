@@ -65,6 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
   const isManager = userRole === 'Manager' || userRole === 'Audit Manager' || userRole === 'manager';
   const isAuditor = userRole === 'Auditor';
+  const isExecutive = userRole === 'Executive' || userRole === 'BoardViewer' || userRole === 'Board Viewer';
 
   const drawerContent = (
     <>
@@ -84,15 +85,33 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
           <ListItemText primary="Dashboard" />
         </ListItemButton>
 
-        <ListItemButton selected={currentPage === 'messaging'} onClick={() => onNavigate('messaging')}>
-          <ListItemIcon><ChatIcon sx={{ color: 'white' }} /></ListItemIcon>
-          <ListItemText primary="Messages" />
-        </ListItemButton>
+        {isExecutive && (
+          <>
+            <ListItemButton selected={currentPage === 'reports-executive'} onClick={() => onNavigate('reports-executive')}>
+              <ListItemIcon><PieChartIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="Executive Reports" />
+            </ListItemButton>
 
-        <ListItemButton selected={currentPage === 'comments'} onClick={() => onNavigate('comments')}>
-          <ListItemIcon><QuestionAnswerIcon sx={{ color: 'white' }} /></ListItemIcon>
-          <ListItemText primary="Comments" />
-        </ListItemButton>
+            <ListItemButton selected={currentPage === 'comments'} onClick={() => onNavigate('comments')}>
+              <ListItemIcon><QuestionAnswerIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="Comments" />
+            </ListItemButton>
+          </>
+        )}
+
+        {!isExecutive && (
+          <>
+            <ListItemButton selected={currentPage === 'messaging'} onClick={() => onNavigate('messaging')}>
+              <ListItemIcon><ChatIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="Messages" />
+            </ListItemButton>
+
+            <ListItemButton selected={currentPage === 'comments'} onClick={() => onNavigate('comments')}>
+              <ListItemIcon><QuestionAnswerIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="Comments" />
+            </ListItemButton>
+          </>
+        )}
 
         {/* Auditor Specific Menu */}
         {isAuditor && (

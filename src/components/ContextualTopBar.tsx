@@ -38,7 +38,8 @@ import {
   PieChart as PieChartIcon,
   Hub as HubIcon,
   Work as WorkIcon,
-  RateReview as RateReviewIcon
+  RateReview as RateReviewIcon,
+  QuestionAnswer as QuestionAnswerIcon
 } from '@mui/icons-material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { Page } from '../types/navigation';
@@ -67,8 +68,41 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   const isAuditor = userRole === 'Auditor';
   const isManager = userRole === 'Manager' || userRole === 'Audit Manager';
   const isProcessOwner = userRole === 'ProcessOwner';
+  const isExecutive = userRole === 'Executive' || userRole === 'BoardViewer' || userRole === 'Board Viewer';
 
   if (isMobile) return null; // Hide on mobile
+
+  if (isExecutive) {
+    return (
+      <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
+        <Toolbar variant="dense" sx={{ minHeight: 48 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              startIcon={<DashboardIcon />}
+              color={currentPage === 'dashboard' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('dashboard')}
+            >
+              Dashboard
+            </Button>
+            <Button
+              startIcon={<PieChartIcon />}
+              color={currentPage === 'reports-executive' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('reports-executive')}
+            >
+              Executive Reports
+            </Button>
+            <Button
+              startIcon={<QuestionAnswerIcon />} // Ensure QuestionAnswerIcon is imported or use another icon
+              color={currentPage === 'comments' ? 'primary' : 'inherit'}
+              onClick={() => onNavigate('comments')}
+            >
+              Comments
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
+    );
+  }
 
   // =========================================================================
   // PROCESS OWNER VIEW

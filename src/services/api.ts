@@ -162,6 +162,7 @@ class ApiClient {
   addAuditComment = (auditId: number, data: any) => this.post(`/audits/${auditId}/comments`, data);
 
   // --- Audit Programs ---
+  getAllAuditPrograms = () => this.get('/audit-programs');
   getAuditPrograms = (auditId: number) => this.get(`/audits/${auditId}/programs`);
   getAuditProgram = (id: number) => this.get(`/audit-programs/${id}`);
   createAuditProgram = (data: any) => this.post('/audit-programs', data);

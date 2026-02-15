@@ -52,6 +52,7 @@ import api from "../services/api";
 import { Page } from "../types/navigation";
 import ActionPlansModule from "../components/ActionPlansModule";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
+import { getStatusColor, getStatusHexColor } from "../utils/statusColors";
 
 type UserRole =
   | "Admin"
@@ -670,7 +671,7 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             title="In Progress"
             value={audits.filter((a) => a.status === "In Progress").length}
             icon={<ScheduleIcon fontSize="large" />}
-            color="#ed6c02"
+            color={getStatusHexColor("In Progress")}
           />
         </Box>
         <Box>
@@ -682,7 +683,7 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               ).length
             }
             icon={<CheckCircleIcon fontSize="large" />}
-            color="#2e7d32"
+            color={getStatusHexColor("Completed")}
           />
         </Box>
       </Box>
@@ -791,9 +792,7 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                           <Chip
                             label={audit.status}
                             size="small"
-                            color={
-                              audit.status === "Closed" ? "success" : "default"
-                            }
+                            color={getStatusColor(audit.status)}
                           />
                         </Box>
                       }
@@ -874,7 +873,7 @@ const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             title="In Progress"
             value={activeAudits}
             icon={<ScheduleIcon fontSize="large" />}
-            color="#ed6c02"
+            color={getStatusHexColor("In Progress")}
           />
         </Box>
         <Box>
@@ -882,15 +881,15 @@ const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             title="Completed"
             value={completedAudits}
             icon={<CheckCircleIcon fontSize="large" />}
-            color="#2e7d32"
+            color={getStatusHexColor("Completed")}
           />
         </Box>
         <Box>
           <StatCard
             title="Pending Review"
-            value={myAudits.filter((a) => a.status === "Review").length}
+            value={myAudits.filter((a) => a.status === "Under Review").length}
             icon={<TrendingUpIcon fontSize="large" />}
-            color="#9c27b0"
+            color={getStatusHexColor("Under Review")}
           />
         </Box>
       </Box>

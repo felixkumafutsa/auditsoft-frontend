@@ -29,12 +29,15 @@ import {
   FormControl,
   InputLabel,
   SelectChangeEvent,
-  ToggleButton,
-  ToggleButtonGroup,
   Stepper,
   Step,
   StepLabel,
   Grid,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -54,18 +57,21 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import WarningIcon from "@mui/icons-material/Warning";
+import ErrorIcon from "@mui/icons-material/Error";
+import HistoryIcon from "@mui/icons-material/History";
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content'
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import LockIcon from "@mui/icons-material/Lock";
 import CloseIcon from "@mui/icons-material/Close";
-import HistoryIcon from "@mui/icons-material/History";
 import AuditForm from "../components/AuditForm";
 import AuditExecutionModule from "../components/AuditExecutionModule";
 import AuditProgramsModule from "../components/AuditProgramsModule";
 import api from "../services/api";
 import { Audit } from "../types/audit";
+import { getStatusColor, getStatusHexColor } from "../utils/statusColors";
 
 const MySwal = withReactContent(Swal);
 
@@ -85,6 +91,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const [error, setError] = useState<string | null>(null);
   const [auditToEdit, setAuditToEdit] = useState<any | null>(null);
   const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -106,7 +113,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const [auditors, setAuditors] = useState<{ id: number; name: string; role: string }[]>([]);
   const [managers, setManagers] = useState<{ id: number; name: string; role: string }[]>([]);
   const [auditUniverseItems, setAuditUniverseItems] = useState<{ id: number; entityName: string; entityType: string }[]>([]);
-  
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentUser, setCurrentUser] = useState<{ id?: number; name?: string; username?: string; role: string } | null>(null);
   const [filterMode, setFilterMode] = useState<'all' | 'my'>('all');
@@ -238,7 +245,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     { id: 3, description: "Outdated software version", severity: "Low", status: "Open" },
   ]);
 
-  const workflowSteps = ['Planned', 'Approved', 'In Progress', 'Under Review', 'Execution Finished', 'Finalized', 'Reviewed by Owner', 'Closed'];
+  const workflowSteps = ['Planned', 'Approved', 'In Progress', 'Under Review', 'Execution Finished', 'Pending CAE Approval', 'Finalized', 'Reviewed by Owner', 'Closed'];
 
   const fetchAudits = async () => {
     setLoading(true);
@@ -254,8 +261,18 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         assignedTo: a.assignedManager ? a.assignedManager.name : (a.assignedTo || a.assigned_to),
         entityName: a.auditUniverse?.entityName || a.entityName || 'General'
       })) : [];
-      
+
       setAudits(mappedData);
+
+      // Fetch notifications if auditor
+      if (isAuditor) {
+        try {
+          const notifs = await (api as any).getNotifications();
+          setNotifications(Array.isArray(notifs) ? notifs : []);
+        } catch (e) {
+          console.error("Failed to fetch notifications", e);
+        }
+      }
       localStorage.setItem('cached_audits', JSON.stringify(mappedData));
       setError(null);
     } catch (err) {
@@ -301,7 +318,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         const usersData = await (api as any).getUsers();
         if (Array.isArray(usersData)) {
           // Filter Auditors - Check nested userRoles from backend
-          const validAuditors = usersData.filter((u: any) => 
+          const validAuditors = usersData.filter((u: any) =>
             u.userRoles?.some((ur: any) => ur.role?.roleName === "Auditor")
           ).map((u: any) => ({
             id: u.id,
@@ -311,7 +328,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           setAuditors(validAuditors);
 
           // Filter Managers - Check nested userRoles from backend
-          const validManagers = usersData.filter((u: any) => 
+          const validManagers = usersData.filter((u: any) =>
             u.userRoles?.some((ur: any) => ur.role?.roleName === "Audit Manager" || ur.role?.roleName === "Manager" || ur.role?.roleName === "Chief Audit Executive")
           ).map((u: any) => ({
             id: u.id,
@@ -343,7 +360,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
   const filteredAudits = useMemo(() => {
     if (!currentUser) return audits;
-    
+
     const isAuditor = currentUser.role === 'Auditor' || currentUser.role === 'auditor';
     const isProcessOwner = currentUser.role === 'Process Owner' || currentUser.role === 'process_owner';
 
@@ -352,7 +369,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       // Auditors ONLY see their own audits
       return audits.filter((a) => {
         const isAssigned = (a.assignedAuditors && a.assignedAuditors.length > 0) ? (
-            currentUser.id ? a.assignedAuditors.some(u => u.id === currentUser.id) : a.assignedAuditors.some(u => u.name.toLowerCase() === userName.toLowerCase())
+          currentUser.id ? a.assignedAuditors.some(u => u.id === currentUser.id) : a.assignedAuditors.some(u => u.name.toLowerCase() === userName.toLowerCase())
         ) : (a.assignedTo && a.assignedTo.toLowerCase().includes(userName.toLowerCase()));
 
         if (!isAssigned) return false;
@@ -380,21 +397,21 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     if (filterMode === 'my' || filterType === 'my') {
       const userName = currentUser.name || currentUser.username || '';
       return audits.filter((a) => {
-         // For Managers, check if they are the assigned manager or if they are in the assignedAuditors (though usually they are the manager)
-         const isAssigned = (a.assignedTo && a.assignedTo.toLowerCase().includes(userName.toLowerCase())) ||
-                           (a.assignedAuditors && a.assignedAuditors.some(u => u.id === currentUser.id || u.name.toLowerCase() === userName.toLowerCase()));
-         return isAssigned;
+        // For Managers, check if they are the assigned manager or if they are in the assignedAuditors (though usually they are the manager)
+        const isAssigned = (a.assignedTo && a.assignedTo.toLowerCase().includes(userName.toLowerCase())) ||
+          (a.assignedAuditors && a.assignedAuditors.some(u => u.id === currentUser.id || u.name.toLowerCase() === userName.toLowerCase()));
+        return isAssigned;
       });
     }
-    
+
     if (filterType === 'new') {
-       const userName = currentUser.name || currentUser.username || '';
-       return audits.filter((a) => a.assignedTo && a.assignedTo.toLowerCase() === userName.toLowerCase() && (a.status === 'Planned' || a.status === 'In Progress'));
+      const userName = currentUser.name || currentUser.username || '';
+      return audits.filter((a) => a.assignedTo && a.assignedTo.toLowerCase() === userName.toLowerCase() && (a.status === 'Planned' || a.status === 'In Progress'));
     }
 
     if (filterType === 'executed') {
-       const userName = currentUser.name || currentUser.username || '';
-       return audits.filter((a) => a.assignedTo && a.assignedTo.toLowerCase() === userName.toLowerCase() && (a.status === 'Completed' || a.status === 'Finalized' || a.status === 'Under Review'));
+      const userName = currentUser.name || currentUser.username || '';
+      return audits.filter((a) => a.assignedTo && a.assignedTo.toLowerCase() === userName.toLowerCase() && (a.status === 'Completed' || a.status === 'Finalized' || a.status === 'Under Review'));
     }
 
     return audits;
@@ -413,25 +430,25 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
   const handleAssignConfirm = async () => {
     if (!auditToEdit) return;
-    
+
     // Logic: Assigning an auditor keeps it 'Approved' so they can see it as "New" and Start it.
     const newStatus = auditToEdit.status;
-    
+
     try {
       // Find the auditor ID based on the selected name
       const selectedAuditor = auditors.find(u => u.name === auditorName);
-      
+
       if (selectedAuditor) {
-          await api.assignAuditors(auditToEdit.id, [selectedAuditor.id]);
-          
-          const updatedAudit = { 
-              ...auditToEdit, 
-              assignedTo: auditorName, 
-              status: newStatus,
-              assignedAuditors: [{ id: selectedAuditor.id, name: selectedAuditor.name }]
-          };
-          
-          setAudits(audits.map((a) => (a.id === auditToEdit.id ? updatedAudit : a)));
+        await api.assignAuditors(auditToEdit.id, [selectedAuditor.id]);
+
+        const updatedAudit = {
+          ...auditToEdit,
+          assignedTo: auditorName,
+          status: newStatus,
+          assignedAuditors: [{ id: selectedAuditor.id, name: selectedAuditor.name }]
+        };
+
+        setAudits(audits.map((a) => (a.id === auditToEdit.id ? updatedAudit : a)));
       }
       setAssignDialogOpen(false);
     } catch (err) {
@@ -443,20 +460,20 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const handleReviewFindings = useCallback(async (audit: Audit) => {
     setAuditToEdit(audit);
     setEvidenceFiles([]);
-    
+
     // Load findings and programs from the audit object or fetch fresh
     try {
-        const freshAudit = await (api as any).getAudit(audit.id);
-        setAuditToEdit(freshAudit);
-        setFindings(freshAudit.findings || []);
-        // setAuditPrograms(freshAudit.auditPrograms || []);
+      const freshAudit = await (api as any).getAudit(audit.id);
+      setAuditToEdit(freshAudit);
+      setFindings(freshAudit.findings || []);
+      // setAuditPrograms(freshAudit.auditPrograms || []);
     } catch (e) {
-        console.error("Failed to load audit details", e);
-        // Fallback to existing data if fetch fails
-        setFindings((audit as any).findings || []);
-        // setAuditPrograms((audit as any).auditPrograms || []);
+      console.error("Failed to load audit details", e);
+      // Fallback to existing data if fetch fails
+      setFindings((audit as any).findings || []);
+      // setAuditPrograms((audit as any).auditPrograms || []);
     }
-    
+
     setView("execution");
   }, []);
 
@@ -507,12 +524,12 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const handleSaveFinding = () => {
     const nextId = findings.length > 0 ? Math.max(...findings.map(f => f.id)) + 1 : 1;
     setFindings([
-      ...findings, 
-      { 
-        id: nextId, 
-        description: newFinding.description, 
-        severity: newFinding.severity, 
-        status: "Draft" 
+      ...findings,
+      {
+        id: nextId,
+        description: newFinding.description,
+        severity: newFinding.severity,
+        status: "Draft"
       }
     ]);
     setAddFindingDialogOpen(false);
@@ -542,15 +559,27 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const handleFinalizeAudit = async () => {
     if (auditToEdit) {
       try {
-        const toStatus = "Finalized";
+        const toStatus = "Pending CAE Approval";
         await api.transitionAudit(auditToEdit.id, toStatus, currentUser?.role);
         const updatedAudit = { ...auditToEdit, status: toStatus };
         setAudits(audits.map(a => a.id === auditToEdit.id ? updatedAudit : a));
         setView("list");
       } catch (err) {
-        console.error("Failed to finalize audit", err);
-        MySwal.fire('Error', "Failed to finalize audit.", 'error');
+        console.error("Failed to submit for CAE approval", err);
+        MySwal.fire('Error', "Failed to submit audit for CAE approval.", 'error');
       }
+    }
+  };
+
+  const handleApproveReport = async (auditId: number) => {
+    try {
+      const toStatus = "Finalized";
+      await api.transitionAudit(auditId, toStatus, currentUser?.role);
+      setAudits(audits.map(a => a.id === auditId ? { ...a, status: toStatus } : a));
+      MySwal.fire('Approved', 'Report has been approved and finalized.', 'success');
+    } catch (err) {
+      console.error("Failed to approve report", err);
+      MySwal.fire('Error', "Failed to approve report.", 'error');
     }
   };
 
@@ -599,40 +628,71 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
   // Dashboard KPI Stats
   const kpiStats = useMemo(
-    () => [
-      {
-        label: "Total Audits",
-        value: filteredAudits.length,
-        icon: <AssessmentIcon fontSize="large" />,
-        color: "#1976d2",
-      },
-      {
-        label: "In Progress",
-        value: filteredAudits.filter((a) => a.status === "In Progress").length,
-        icon: <TrendingUpIcon fontSize="large" />,
-        color: "#ed6c02",
-      },
-      {
-        label: "Planned",
-        value: filteredAudits.filter((a) => a.status === "Planned").length,
-        icon: <ScheduleIcon fontSize="large" />,
-        color: "#9c27b0",
-      },
-      {
-        label: "Completed",
-        value: filteredAudits.filter((a) => a.status === "Completed").length,
-        icon: <CheckCircleOutlineIcon fontSize="large" />,
-        color: "#2e7d32",
-      },
-    ],
-    [filteredAudits],
+    () => {
+      if (isAuditor) {
+        return [
+          {
+            label: "Total Audits",
+            value: filteredAudits.length,
+            icon: <AssessmentIcon fontSize="large" />,
+            color: "#1976d2",
+          },
+          {
+            label: "Newly Assigned",
+            value: filteredAudits.filter((a) => a.status === "Planned" || a.status === "Approved").length,
+            icon: <ScheduleIcon fontSize="large" />,
+            color: getStatusHexColor("Planned"),
+          },
+          {
+            label: "In Progress",
+            value: filteredAudits.filter((a) => a.status === "In Progress").length,
+            icon: <TrendingUpIcon fontSize="large" />,
+            color: getStatusHexColor("In Progress"),
+          },
+          {
+            label: "Under Review",
+            value: filteredAudits.filter((a) => a.status === "Under Review").length,
+            icon: <FactCheckIcon fontSize="large" />,
+            color: getStatusHexColor("Under Review"),
+          },
+        ];
+      }
+
+      return [
+        {
+          label: "Total Audits",
+          value: filteredAudits.length,
+          icon: <AssessmentIcon fontSize="large" />,
+          color: "#1976d2",
+        },
+        {
+          label: "In Progress",
+          value: filteredAudits.filter((a) => a.status === "In Progress").length,
+          icon: <TrendingUpIcon fontSize="large" />,
+          color: getStatusHexColor("In Progress"),
+        },
+        {
+          label: "Planned",
+          value: filteredAudits.filter((a) => a.status === "Planned").length,
+          icon: <ScheduleIcon fontSize="large" />,
+          color: getStatusHexColor("Planned"),
+        },
+        {
+          label: "Completed",
+          value: filteredAudits.filter((a) => a.status === "Completed" || a.status === "Finalized").length,
+          icon: <CheckCircleOutlineIcon fontSize="large" />,
+          color: getStatusHexColor("Completed"),
+        },
+      ];
+    },
+    [filteredAudits, isAuditor],
   );
 
   // Responsive columns based on screen size
   const columns: GridColDef<Audit>[] = useMemo(() => {
     // Re-use role checks from outer scope if possible, or re-calculate
     // Note: useMemo dependency array must include currentUser
-    
+
     if (isMobile) {
       return [
         {
@@ -649,7 +709,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
             <Chip
               label={params.value}
               size="small"
-              color={params.value === "In Progress" ? "primary" : "default"}
+              color={getStatusColor(params.value)}
             />
           ),
         },
@@ -669,7 +729,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
             <Chip
               label={params.value}
               size="small"
-              color={params.value === "In Progress" ? "primary" : "default"}
+              color={getStatusColor(params.value)}
             />
           ),
         },
@@ -689,25 +749,25 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           <Chip
             label={params.value}
             size="small"
-            color={params.value === "In Progress" ? "primary" : "default"}
+            color={getStatusColor(params.value)}
           />
         ),
       },
       // Hide Assigned To for Auditors as they only see their own audits
       ...(!isAuditor ? [{ field: "assignedTo", headerName: "Assigned To", width: 150 }] : []),
       { field: "entityName", headerName: "Entity", width: 150 },
-      { 
-        field: "startDate", 
-        headerName: "Start Date", 
+      {
+        field: "startDate",
+        headerName: "Start Date",
         width: 150,
         valueFormatter: (value: any) => {
           if (!value) return '';
           return new Date(value).toLocaleDateString();
         }
       },
-      { 
-        field: "endDate", 
-        headerName: "End Date", 
+      {
+        field: "endDate",
+        headerName: "End Date",
         width: 150,
         valueFormatter: (value: any) => {
           if (!value) return '';
@@ -728,7 +788,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                 </IconButton>
               </Tooltip>
             )}
-            
+
             {isCAE && (params.row.status === 'Finalized' || params.row.status === 'Process Owner Review') && (
               <Tooltip title="Close Audit">
                 <IconButton size="small" color="warning" onClick={(e) => { e.stopPropagation(); handleCloseAudit(params.row); }}>
@@ -737,7 +797,15 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               </Tooltip>
             )}
 
-            {(isManager || isCAE) && (
+            {isCAE && params.row.status === 'Pending CAE Approval' && (
+              <Tooltip title="Approve Report">
+                <IconButton size="small" color="success" onClick={(e) => { e.stopPropagation(); handleApproveReport(params.row.id); }}>
+                  <CheckCircleIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            {isManager && (
               <Tooltip title="Delete Audit">
                 <IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); handleDeleteAudit(params.row.id); }}>
                   <DeleteIcon fontSize="small" />
@@ -771,14 +839,14 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               : view === "edit"
                 ? "Edit Audit"
                 : filterType === 'new'
-                ? "New Audits (Pending Execution)"
-                : filterType === 'executed'
-                ? "Executed Audits"
-                : view === "execution"
-                ? `Executing: ${auditToEdit?.auditName || ''}`
-                : `Findings Review: ${auditToEdit?.auditName || ''}`}
+                  ? "New Audits (Pending Execution)"
+                  : filterType === 'executed'
+                    ? "Executed Audits"
+                    : view === "execution"
+                      ? `Executing: ${auditToEdit?.auditName || ''}`
+                      : `Findings Review: ${auditToEdit?.auditName || ''}`}
         </Typography>
-        
+
         {view === "list" && (
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexDirection: { xs: 'column', sm: 'row' }, width: { xs: '100%', sm: 'auto' } }}>
             <TextField
@@ -788,7 +856,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               onChange={(e) => setSearchQuery(e.target.value)}
               sx={{ bgcolor: 'white', minWidth: 200 }}
             />
-            
+
             {/* Hidden Input for Import */}
             <input
               type="file"
@@ -860,38 +928,82 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
       {view === "list" ? (
         <>
-          {/* Dashboard KPI Tiles */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
+          {/* Dashboard KPI Tiles - Restyled to match StatCard */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
             {kpiStats.map((stat, index) => (
-              <Box key={index}>
-                <Paper
-                  elevation={1}
-                  sx={{
-                    p: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    borderLeft: `4px solid ${stat.color}`,
-                  }}
-                >
-                  <Box>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      {stat.label}
-                    </Typography>
-                    <Typography
-                      variant="h4"
-                      sx={{ fontWeight: "bold", color: "#0F1A2B" }}
-                    >
-                      {stat.value}
-                    </Typography>
+              <Card
+                key={index}
+                elevation={2}
+                sx={{
+                  height: "100%",
+                  borderLeft: `5px solid ${stat.color}`,
+                  transition: "transform 0.3s ease, box-shadow 0.3s ease",
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: 4,
+                  },
+                }}
+              >
+                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Box>
+                      <Typography color="textSecondary" variant="subtitle2" gutterBottom>
+                        {stat.label}
+                      </Typography>
+                      <Typography variant="h4" component="div" fontWeight="bold" sx={{ color: "#0F1A2B" }}>
+                        {stat.value}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ color: stat.color, opacity: 0.8 }}>
+                      {stat.icon}
+                    </Box>
                   </Box>
-                  <Box sx={{ color: stat.color, opacity: 0.8 }}>
-                    {stat.icon}
-                  </Box>
-                </Paper>
-              </Box>
+                </CardContent>
+              </Card>
             ))}
           </Box>
+
+          {/* Recent Notifications for Auditors */}
+          {isAuditor && (
+            <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
+              <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+                <HistoryIcon color="primary" />
+                <Typography variant="h6" fontWeight="bold">Recent Notifications</Typography>
+              </Box>
+              <Divider sx={{ mb: 1 }} />
+              {notifications.length > 0 ? (
+                <List dense>
+                  {notifications.slice(0, 5).map((n: any) => {
+                    const Icon = n.type === "action_required" ? WarningIcon
+                      : n.type === "success" ? CheckCircleIcon
+                        : n.type === "error" ? ErrorIcon
+                          : n.type === "warning" ? WarningIcon
+                            : DescriptionIcon;
+                    return (
+                      <React.Fragment key={n.id}>
+                        <ListItem>
+                          <ListItemIcon sx={{ minWidth: 40 }}>
+                            <Icon color={n.type === "success" ? "success" : n.type === "error" ? "error" : n.type === "warning" || n.type === "action_required" ? "warning" : "primary"} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={n.title}
+                            secondary={n.message}
+                            primaryTypographyProps={{ variant: 'body2', fontWeight: n.read ? 'normal' : 'bold' }}
+                            secondaryTypographyProps={{ variant: 'caption' }}
+                          />
+                        </ListItem>
+                        <Divider variant="inset" component="li" />
+                      </React.Fragment>
+                    );
+                  })}
+                </List>
+              ) : (
+                <Typography variant="body2" color="textSecondary" sx={{ py: 2, textAlign: 'center' }}>
+                  No recent notifications.
+                </Typography>
+              )}
+            </Paper>
+          )}
 
           <Box
             sx={{
@@ -907,12 +1019,12 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               // Mobile card view
               <Stack spacing={2} sx={{ p: 2 }}>
                 {filteredAudits.map((audit) => (
-                  <Card 
-                    key={audit.id} 
+                  <Card
+                    key={audit.id}
                     variant="outlined"
                     onClick={() => {
-                        setAuditToEdit(audit);
-                        setActionsModalOpen(true);
+                      setAuditToEdit(audit);
+                      setActionsModalOpen(true);
                     }}
                     sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f9f9f9' } }}
                   >
@@ -948,11 +1060,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                         <Chip
                           label={audit.status}
                           size="small"
-                          color={
-                            audit.status === "In Progress"
-                              ? "primary"
-                              : "default"
-                          }
+                          color={getStatusColor(audit.status)}
                         />
                       </Box>
                     </CardContent>
@@ -968,36 +1076,36 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                   )}
                 </Box>
               ) : (
-              // DataGrid view for tablet and desktop
-              <DataGrid
-                rows={filteredAudits}
-                columns={columns}
-                loading={loading}
-                initialState={{
-                  pagination: {
-                    paginationModel: {
-                      pageSize: isMobile ? 5 : 10,
+                // DataGrid view for tablet and desktop
+                <DataGrid
+                  rows={filteredAudits}
+                  columns={columns}
+                  loading={loading}
+                  initialState={{
+                    pagination: {
+                      paginationModel: {
+                        pageSize: isMobile ? 5 : 10,
+                      },
                     },
-                  },
-                }}
-                pageSizeOptions={isMobile ? [5] : [5, 10, 20]}
-                checkboxSelection={!isMobile}
-                disableRowSelectionOnClick
-                onRowClick={(params) => {
-                  setAuditToEdit(params.row);
-                  setActionsModalOpen(true);
-                }}
-                density={isMobile ? "compact" : "standard"}
-                sx={{
-                  "& .MuiDataGrid-columnHeaders": {
-                    backgroundColor: "#f5f5f5",
-                    fontWeight: "bold",
-                  },
-                  "& .MuiDataGrid-root": {
-                    fontSize: isMobile ? "0.75rem" : "inherit",
-                  },
-                }}
-              />
+                  }}
+                  pageSizeOptions={isMobile ? [5] : [5, 10, 20]}
+                  checkboxSelection={!isMobile}
+                  disableRowSelectionOnClick
+                  onRowClick={(params) => {
+                    setAuditToEdit(params.row);
+                    setActionsModalOpen(true);
+                  }}
+                  density={isMobile ? "compact" : "standard"}
+                  sx={{
+                    "& .MuiDataGrid-columnHeaders": {
+                      backgroundColor: "#f5f5f5",
+                      fontWeight: "bold",
+                    },
+                    "& .MuiDataGrid-root": {
+                      fontSize: isMobile ? "0.75rem" : "inherit",
+                    },
+                  }}
+                />
               )
             )}
           </Box>
@@ -1008,11 +1116,11 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Box>
               <Typography variant="h6">
-                {(currentUser?.role === 'Auditor' || currentUser?.role === 'auditor') 
-                  ? "Audit Execution" 
+                {(currentUser?.role === 'Auditor' || currentUser?.role === 'auditor')
+                  ? "Audit Execution"
                   : "Audit Review"}: {auditToEdit?.auditName}
               </Typography>
-              <Chip label={auditToEdit?.status} color="primary" size="small" sx={{ mt: 0.5 }} />
+              <Chip label={auditToEdit?.status} color={getStatusColor(auditToEdit?.status || 'default')} size="small" sx={{ mt: 0.5 }} />
             </Box>
             {/* Only show Add Finding if In Progress (Auditor) */}
             {auditToEdit?.status === 'In Progress' && <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddFindingClick}>Add Finding</Button>}
@@ -1068,26 +1176,26 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                   <TableRow key={finding.id}>
                     <TableCell>{finding.description}</TableCell>
                     <TableCell>
-                      <Chip 
-                        label={finding.severity} 
-                        size="small" 
-                        color={finding.severity === "High" ? "error" : finding.severity === "Medium" ? "warning" : "default"} 
+                      <Chip
+                        label={finding.severity}
+                        size="small"
+                        color={finding.severity === "High" ? "error" : finding.severity === "Medium" ? "warning" : "default"}
                       />
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={finding.status} 
-                        size="small" 
+                      <Chip
+                        label={finding.status}
+                        size="small"
                         variant="outlined"
                         color={finding.status === "Approved" ? "success" : finding.status === "Draft" ? "info" : "default"}
                       />
                     </TableCell>
                     <TableCell align="right">
                       {finding.status !== "Approved" && (isManager || isCAE) && (
-                        <Button 
-                          size="small" 
-                          variant="contained" 
-                          color="success" 
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
                           startIcon={<CheckCircleIcon />}
                           onClick={() => handleApproveFinding(finding.id)}
                         >
@@ -1104,7 +1212,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           {/* Evidence Section */}
           <Box sx={{ mt: 4, p: 2, bgcolor: '#f8f9fa', borderRadius: 1 }}>
             <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Audit Evidence</Typography>
-            
+
             {evidenceFiles.length > 0 ? (
               <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
                 {evidenceFiles.map((file, idx) => (
@@ -1117,9 +1225,9 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
             {/* Upload Button - Only for Auditor when In Progress */}
             {auditToEdit?.status === 'In Progress' && (
-              <Button 
-                variant="outlined" 
-                startIcon={<CloudUploadIcon />} 
+              <Button
+                variant="outlined"
+                startIcon={<CloudUploadIcon />}
                 onClick={handleUploadEvidence}
               >
                 Upload Evidence
@@ -1130,12 +1238,12 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           {/* Workflow Actions */}
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
             <Button onClick={() => setView("list")}>Close</Button>
-            
+
             {/* Auditor: Submit for Review */}
             {auditToEdit?.status === 'In Progress' && (currentUser?.role === 'Auditor' || currentUser?.role === 'auditor') && (
-              <Button 
-                variant="contained" 
-                color="primary" 
+              <Button
+                variant="contained"
+                color="primary"
                 endIcon={<SendIcon />}
                 onClick={handleSubmitForReview}
               >
@@ -1154,23 +1262,23 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           </Box>
         </Paper>
       ) : view === "programs" ? (
-          <AuditProgramsModule 
-            audit={auditToEdit!} 
-            onBack={() => setView("list")} 
-          />
-        ) : view === "execution" ? (
-        <AuditExecutionModule 
-           initialAudit={auditToEdit} 
-           onBack={() => setView("list")} 
-           onEdit={handleEdit}
-           onDelete={handleDeleteAudit}
-           onAssign={handleAssignClick}
-           onApprove={handleApproveClick}
-           onManagePrograms={(audit) => { setAuditToEdit(audit); setView("programs"); }}
-           onFinalize={handleFinalizeAudit}
-           onClose={handleCloseAudit}
-           onPreview={handlePreviewReport}
-           onDownload={handleDownloadStoredReport}
+        <AuditProgramsModule
+          audit={auditToEdit!}
+          onBack={() => setView("list")}
+        />
+      ) : view === "execution" ? (
+        <AuditExecutionModule
+          initialAudit={auditToEdit}
+          onBack={() => setView("list")}
+          onEdit={handleEdit}
+          onDelete={handleDeleteAudit}
+          onAssign={handleAssignClick}
+          onApprove={handleApproveClick}
+          onManagePrograms={(audit) => { setAuditToEdit(audit); setView("programs"); }}
+          onFinalize={handleFinalizeAudit}
+          onClose={handleCloseAudit}
+          onPreview={handlePreviewReport}
+          onDownload={handleDownloadStoredReport}
         />
       ) : (
         // Create/Edit Form
@@ -1280,8 +1388,8 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       </Dialog>
 
       {/* Audit Contextual Actions Modal */}
-      <Dialog 
-        open={actionsModalOpen} 
+      <Dialog
+        open={actionsModalOpen}
         onClose={() => setActionsModalOpen(false)}
         maxWidth="xs"
         fullWidth
@@ -1297,38 +1405,38 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
             <Box>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle1" fontWeight="bold">{auditToEdit.auditName}</Typography>
-                <Typography variant="body2" color="text.secondary">Status: <Chip label={auditToEdit.status} size="small" color="primary" sx={{ ml: 1 }} /></Typography>
+                <Typography variant="body2" color="text.secondary">Status: <Chip label={auditToEdit.status} size="small" color={getStatusColor(auditToEdit.status)} sx={{ ml: 1 }} /></Typography>
               </Box>
-              
+
               <Stack spacing={1.5}>
                 {/* Execute/View Audit - Always available if selected */}
-                <Button 
-                  fullWidth 
-                  variant="contained" 
-                  startIcon={<VisibilityIcon />} 
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<VisibilityIcon />}
                   sx={{ bgcolor: '#0F1A2B', '&:hover': { bgcolor: '#1a2b45' } }}
                   onClick={() => {
                     setActionsModalOpen(false);
                     if (isAuditor && (auditToEdit.status === 'Planned' || auditToEdit.status === 'Approved')) {
-                        handleStartAudit(auditToEdit);
+                      handleStartAudit(auditToEdit);
                     } else {
-                        setView("execution");
+                      setView("execution");
                     }
                   }}
                 >
-                  {isAuditor && (auditToEdit.status === 'Planned' || auditToEdit.status === 'Approved') 
-                    ? "Start & Execute Audit" 
+                  {isAuditor && (auditToEdit.status === 'Planned' || auditToEdit.status === 'Approved')
+                    ? "Start & Execute Audit"
                     : (auditToEdit.status === 'Under Review' || auditToEdit.status === 'Execution Finished' ? "Review Audit" : "View / Execute Audit")
                   }
                 </Button>
 
                 {/* Assign Auditor - Managers/CAE when Approved/Planned */}
                 {(isManager || isCAE) && (auditToEdit.status === 'Approved' || auditToEdit.status === 'Planned') && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
+                  <Button
+                    fullWidth
+                    variant="outlined"
                     color="primary"
-                    startIcon={<PersonAddIcon />} 
+                    startIcon={<PersonAddIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       handleAssignClick(auditToEdit);
@@ -1340,11 +1448,11 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
                 {/* Approve Plan - CAE when Planned */}
                 {isCAE && auditToEdit.status === 'Planned' && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
+                  <Button
+                    fullWidth
+                    variant="outlined"
                     color="success"
-                    startIcon={<CheckCircleIcon />} 
+                    startIcon={<CheckCircleIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       handleApproveClick(auditToEdit.id);
@@ -1354,13 +1462,13 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                   </Button>
                 )}
 
-                {/* Finalize Audit - CAE when Under Review / Execution Finished */}
-                {isCAE && (auditToEdit.status === 'Under Review' || auditToEdit.status === 'Execution Finished') && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
+                {/* Finalize Audit - Managers when Under Review / Execution Finished */}
+                {isManager && (auditToEdit.status === 'Under Review' || auditToEdit.status === 'Execution Finished') && (
+                  <Button
+                    fullWidth
+                    variant="outlined"
                     color="success"
-                    startIcon={<FactCheckIcon />} 
+                    startIcon={<FactCheckIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       handleFinalizeAudit();
@@ -1372,11 +1480,11 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
                 {/* Close Audit - CAE when Finalized */}
                 {isCAE && (auditToEdit.status === 'Finalized' || auditToEdit.status === 'Process Owner Review') && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
+                  <Button
+                    fullWidth
+                    variant="outlined"
                     color="warning"
-                    startIcon={<LockIcon />} 
+                    startIcon={<LockIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       handleCloseAudit(auditToEdit);
@@ -1385,13 +1493,13 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                     Close Audit
                   </Button>
                 )}
-                
+
                 {/* Programs - Managers when Planned */}
                 {isManager && auditToEdit.status === 'Planned' && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
-                    startIcon={<PlaylistAddIcon />} 
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    startIcon={<PlaylistAddIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       setView("programs");
@@ -1403,16 +1511,32 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
                 {/* Edit Plan - Managers when not closed */}
                 {isManager && auditToEdit.status !== 'Closed' && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
-                    startIcon={<EditIcon />} 
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    startIcon={<EditIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       handleEdit(auditToEdit);
                     }}
                   >
                     Edit Audit Details
+                  </Button>
+                )}
+
+                {/* Delete Audit - CAE Only */}
+                {isCAE && (
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => {
+                      setActionsModalOpen(false);
+                      handleDeleteAudit(auditToEdit.id);
+                    }}
+                  >
+                    Delete Audit
                   </Button>
                 )}
               </Stack>

@@ -67,12 +67,13 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
   const isAuditor = userRole === 'Auditor';
   const isManager = userRole === 'Manager' || userRole === 'Audit Manager';
-  const isProcessOwner = userRole === 'ProcessOwner';
-  const isExecutive = userRole === 'Executive' || userRole === 'BoardViewer' || userRole === 'Board Viewer';
+  const isProcessOwner = userRole === 'ProcessOwner' || userRole === 'Process Owner';
+  const isBoardViewer = userRole === 'BoardViewer' || userRole === 'Board Viewer' || userRole === 'Executive' || userRole === 'Executive / Board Viewer';
+  const isRestricted = isProcessOwner || isBoardViewer;
 
   if (isMobile) return null; // Hide on mobile
 
-  if (isExecutive) {
+  if (isRestricted) {
     return (
       <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
         <Toolbar variant="dense" sx={{ minHeight: 48 }}>
@@ -90,55 +91,6 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
               onClick={() => onNavigate('reports-executive')}
             >
               Executive Reports
-            </Button>
-            <Button
-              startIcon={<QuestionAnswerIcon />} // Ensure QuestionAnswerIcon is imported or use another icon
-              color={currentPage === 'comments' ? 'primary' : 'inherit'}
-              onClick={() => onNavigate('comments')}
-            >
-              Comments
-            </Button>
-          </Box>
-        </Toolbar>
-      </AppBar>
-    );
-  }
-
-  // =========================================================================
-  // PROCESS OWNER VIEW
-  // =========================================================================
-  if (isProcessOwner) {
-    return (
-      <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
-        <Toolbar variant="dense" sx={{ minHeight: 48 }}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              startIcon={<DashboardIcon />}
-              color={currentPage === 'dashboard' ? 'primary' : 'inherit'}
-              onClick={() => onNavigate('dashboard')}
-            >
-              Dashboard
-            </Button>
-            <Button
-              startIcon={<AssignmentIcon />}
-              color={currentPage === 'my-findings' ? 'primary' : 'inherit'}
-              onClick={() => onNavigate('my-findings')}
-            >
-              My Findings
-            </Button>
-            <Button
-              startIcon={<FactCheckIcon />}
-              color={currentPage === 'remediation' ? 'primary' : 'inherit'}
-              onClick={() => onNavigate('remediation')}
-            >
-              Remediation / Evidence
-            </Button>
-            <Button
-              startIcon={<RateReviewIcon />}
-              color={currentPage === 'comments' ? 'primary' : 'inherit'}
-              onClick={() => onNavigate('comments')}
-            >
-              Comments
             </Button>
           </Box>
         </Toolbar>

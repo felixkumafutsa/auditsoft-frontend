@@ -36,6 +36,7 @@ import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
 import { Audit, AuditProgram } from '../types/audit';
+import { getStatusColor } from '../utils/statusColors';
 
 const MySwal = withReactContent(Swal);
 
@@ -63,7 +64,7 @@ interface Evidence {
 const EvidencePage: React.FC = () => {
   const [audits, setAudits] = useState<Audit[]>([]);
   const [selectedAuditId, setSelectedAuditId] = useState<number | ''>('');
-  
+
   const [programs, setPrograms] = useState<AuditProgram[]>([]);
   const [selectedProgramId, setSelectedProgramId] = useState<number | ''>('');
 
@@ -95,7 +96,8 @@ const EvidencePage: React.FC = () => {
 
   // User Role
   const userRole = localStorage.getItem('userRole');
-  const isManager = userRole === 'Audit Manager' || userRole === 'Manager' || userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
+  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
+  const isManager = userRole === 'Audit Manager' || userRole === 'Manager';
   const isAuditor = userRole === 'Auditor';
 
   // 1. Fetch Audits on Mount
@@ -136,7 +138,7 @@ const EvidencePage: React.FC = () => {
           reviewerComment: p.reviewerComment || null
         })) : [];
         setPrograms(mappedPrograms);
-        
+
         // Reset selected program if it's no longer in the list (though logically it won't be)
         setSelectedProgramId('');
       } catch (error) {
@@ -197,9 +199,9 @@ const EvidencePage: React.FC = () => {
       setUploadDialogOpen(false);
       setFile(null);
       setDescription('');
-      
+
       MySwal.fire('Success', 'Evidence uploaded successfully!', 'success');
-      
+
       // Refresh list
       const data = await api.getEvidenceList(Number(selectedProgramId));
       setEvidenceList(Array.isArray(data) ? data : []);
@@ -228,16 +230,16 @@ const EvidencePage: React.FC = () => {
     setVersionUploading(true);
     try {
       await api.uploadEvidenceVersion(selectedEvidence.id, versionFile, changeDescription);
-      
+
       MySwal.fire('Success', 'New version uploaded successfully!', 'success');
-      
+
       // Refresh versions
       const details = await api.getEvidenceDetails(selectedEvidence.id);
       setSelectedEvidence(details);
-      
+
       setVersionFile(null);
       setChangeDescription('');
-      
+
       // Refresh main list
       if (selectedProgramId) {
         const data = await api.getEvidenceList(Number(selectedProgramId));
@@ -260,7 +262,7 @@ const EvidencePage: React.FC = () => {
   // Review/Approve Handlers
   const handleTransition = async (id: number, status: string) => {
     try {
-      await api.transitionEvidence(id, status);
+      await api.transitionEvidence(id, status, userRole || undefined);
       MySwal.fire('Success', `Evidence status updated to ${status}`, 'success');
       // Refresh list
       if (activeTab === 0 && selectedProgramId) {
@@ -332,19 +334,14 @@ const EvidencePage: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Approved': return 'success';
-      case 'Reviewed': return 'info';
-      case 'Uploaded': return 'default';
-      default: return 'default';
-    }
+  const getStatusColorMapped = (status: string) => {
+    return getStatusColor(status);
   };
 
   const filteredEvidence = useMemo(() => {
     if (!searchTerm) return evidenceList;
     const lower = searchTerm.toLowerCase();
-    return evidenceList.filter(e => 
+    return evidenceList.filter(e =>
       e.fileName.toLowerCase().includes(lower) ||
       e.description?.toLowerCase().includes(lower) ||
       e.uploadedBy?.name.toLowerCase().includes(lower)
@@ -353,41 +350,41 @@ const EvidencePage: React.FC = () => {
 
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 70 },
-    { 
-      field: 'auditName', 
-      headerName: 'Audit', 
+    {
+      field: 'auditName',
+      headerName: 'Audit',
       width: 150,
       valueGetter: (_value, row) => row?.auditProgram?.audit?.auditName ?? 'N/A'
     },
     { field: 'fileName', headerName: 'File Name', flex: 1, minWidth: 200 },
     { field: 'description', headerName: 'Description', flex: 1, minWidth: 200 },
-    { 
-      field: 'uploadedBy', 
-      headerName: 'Uploaded By', 
+    {
+      field: 'uploadedBy',
+      headerName: 'Uploaded By',
       width: 150,
       valueGetter: (_value, row) =>
-  row?.uploadedBy?.name ?? 'Unknown'
+        row?.uploadedBy?.name ?? 'Unknown'
 
     },
-    { 
-      field: 'uploadedAt', 
-      headerName: 'Date', 
+    {
+      field: 'uploadedAt',
+      headerName: 'Date',
       width: 150,
       valueFormatter: (value) =>
-  value ? new Date(value as string).toLocaleDateString() : 'N/A'
+        value ? new Date(value as string).toLocaleDateString() : 'N/A'
 
     },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
+    {
+      field: 'status',
+      headerName: 'Status',
       width: 120,
-     renderCell: ({ value }) => (
-  <Chip
-    label={value}
-    color={getStatusColor(value) as any}
-    size="small"
-  />
-)
+      renderCell: ({ value }) => (
+        <Chip
+          label={value}
+          color={getStatusColor(value) as any}
+          size="small"
+        />
+      )
 
     },
     {
@@ -395,43 +392,53 @@ const EvidencePage: React.FC = () => {
       headerName: 'Actions',
       width: 250,
       sortable: false,
-renderCell: ({ row }) => (
-  <Box>
-    <Tooltip title="Preview">
-      <IconButton size="small" onClick={() => handlePreview(row)}>
-        <VisibilityIcon />
-      </IconButton>
-    </Tooltip>
+      renderCell: ({ row }) => (
+        <Box>
+          {row.fileMissing ? (
+            <Tooltip title="File missing on server disk">
+              <IconButton size="small" color="warning">
+                <CloudUploadIcon />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <>
+              <Tooltip title="Preview">
+                <IconButton size="small" onClick={() => handlePreview(row)}>
+                  <VisibilityIcon />
+                </IconButton>
+              </Tooltip>
 
-    <Tooltip title="Download">
-      <IconButton size="small" onClick={() => handleDownload(row.id, row.fileName)}>
-        <DownloadIcon />
-      </IconButton>
-    </Tooltip>
+              <Tooltip title="Download">
+                <IconButton size="small" onClick={() => handleDownload(row.id, row.fileName)}>
+                  <DownloadIcon />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
 
-    <Tooltip title="Version History">
-      <IconButton size="small" onClick={() => handleViewVersions(row)}>
-        <HistoryIcon />
-      </IconButton>
-    </Tooltip>
+          <Tooltip title="Version History">
+            <IconButton size="small" onClick={() => handleViewVersions(row)}>
+              <HistoryIcon />
+            </IconButton>
+          </Tooltip>
 
-    {isAuditor && (
-      <Tooltip title="Delete">
-        <IconButton size="small" color="error" onClick={() => handleDelete(row.id)}>
-          <DeleteIcon />
-        </IconButton>
-      </Tooltip>
-    )}
+          {isAuditor && !isCAE && row.status === 'Uploaded' && (
+            <Tooltip title="Delete">
+              <IconButton size="small" color="error" onClick={() => handleDelete(row.id)}>
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          )}
 
-    {isManager && row.status === 'Uploaded' && (
-      <Tooltip title="Mark as Reviewed">
-        <IconButton size="small" color="primary" onClick={() => handleTransition(row.id, 'Reviewed')}>
-          <RateReviewIcon />
-        </IconButton>
-      </Tooltip>
-    )}
-  </Box>
-)
+          {isManager && row.status === 'Uploaded' && (
+            <Tooltip title="Mark as Reviewed">
+              <IconButton size="small" color="primary" onClick={() => handleTransition(row.id, 'Reviewed')}>
+                <RateReviewIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      )
 
     }
   ];
@@ -442,17 +449,17 @@ renderCell: ({ row }) => (
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
           Evidence Management
         </Typography>
-        
+
         <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ mb: 0 }}>
           <Tab label="By Program" />
           <Tab label="Review Queue" />
         </Tabs>
 
-        {/* Upload Button - Hidden for Managers */}
-        {!isManager && (
-          <Button 
-            variant="contained" 
-            startIcon={<CloudUploadIcon />} 
+        {/* Upload Button - Hidden for Managers and CAE */}
+        {!isManager && !isCAE && (
+          <Button
+            variant="contained"
+            startIcon={<CloudUploadIcon />}
             onClick={() => setUploadDialogOpen(true)}
             disabled={!selectedProgramId}
           >
@@ -520,8 +527,8 @@ renderCell: ({ row }) => (
 
       {activeTab === 1 && (
         <Paper sx={{ p: 2, mb: 3 }}>
-           <Typography variant="h6">Items Awaiting Review</Typography>
-           <Typography variant="body2" color="textSecondary">All evidence across the system with 'Uploaded' status.</Typography>
+          <Typography variant="h6">Items Awaiting Review</Typography>
+          <Typography variant="body2" color="textSecondary">All evidence across the system with 'Uploaded' status.</Typography>
         </Paper>
       )}
 
@@ -585,9 +592,9 @@ renderCell: ({ row }) => (
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setUploadDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleUpload} 
-            variant="contained" 
+          <Button
+            onClick={handleUpload}
+            variant="contained"
             disabled={!file || uploading}
             startIcon={uploading ? <CircularProgress size={20} /> : null}
           >
@@ -597,10 +604,10 @@ renderCell: ({ row }) => (
       </Dialog>
 
       {/* Preview Dialog */}
-      <Dialog open={previewOpen} onClose={() => { 
-        if (previewUrl) URL.revokeObjectURL(previewUrl); 
-        setPreviewOpen(false); 
-        setPreviewUrl(null); 
+      <Dialog open={previewOpen} onClose={() => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewOpen(false);
+        setPreviewUrl(null);
         setPreviewType(null);
       }} maxWidth="md" fullWidth>
         <DialogTitle>Preview Evidence</DialogTitle>
@@ -630,10 +637,10 @@ renderCell: ({ row }) => (
               a.remove();
             }
           }} startIcon={<DownloadIcon />}>Download</Button>
-          <Button onClick={() => { 
-            if (previewUrl) URL.revokeObjectURL(previewUrl); 
-            setPreviewOpen(false); 
-            setPreviewUrl(null); 
+          <Button onClick={() => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewOpen(false);
+            setPreviewUrl(null);
             setPreviewType(null);
           }}>Close</Button>
         </DialogActions>
@@ -664,7 +671,7 @@ renderCell: ({ row }) => (
               <Button startIcon={<DownloadIcon />} onClick={() => handleDownload(selectedEvidence.id, selectedEvidence.fileName)}>
                 Download
               </Button>
-              
+
               {selectedEvidence.status === 'Uploaded' && (isManager || isAuditor) && (
                 <Button variant="outlined" color="info" startIcon={<RateReviewIcon />} onClick={() => { setDetailOpen(false); handleTransition(selectedEvidence.id, 'Reviewed'); }}>
                   Review
@@ -688,10 +695,14 @@ renderCell: ({ row }) => (
                 </Button>
               )}
 
-              <Box sx={{ flexGrow: 1 }} />
-              <IconButton color="error" onClick={() => { setDetailOpen(false); handleDelete(selectedEvidence.id); }}>
-                <DeleteIcon />
-              </IconButton>
+              {isAuditor && !isCAE && selectedEvidence.status === 'Uploaded' && (
+                <>
+                  <Box sx={{ flexGrow: 1 }} />
+                  <IconButton color="error" onClick={() => { setDetailOpen(false); handleDelete(selectedEvidence.id); }}>
+                    <DeleteIcon />
+                  </IconButton>
+                </>
+              )}
             </>
           )}
           <Button onClick={() => setDetailOpen(false)}>Close</Button>
@@ -708,18 +719,18 @@ renderCell: ({ row }) => (
                 { field: 'version', headerName: 'Ver', width: 70 },
                 { field: 'fileName', headerName: 'File Name', flex: 1 },
                 { field: 'description', headerName: 'Changes', flex: 1 },
-                { 
-                  field: 'uploadedBy', 
-                  headerName: 'By', 
-                  width: 150, 
+                {
+                  field: 'uploadedBy',
+                  headerName: 'By',
+                  width: 150,
                   valueGetter: (_value, row) =>
-  row?.uploadedBy?.name ?? 'Unknown'
+                    row?.uploadedBy?.name ?? 'Unknown'
 
                 },
-                { 
-                  field: 'uploadedAt', 
-                  headerName: 'Date', 
-                  width: 150, 
+                {
+                  field: 'uploadedAt',
+                  headerName: 'Date',
+                  width: 150,
                   valueFormatter: (value) =>
                     value ? new Date(value as string).toLocaleString() : 'N/A'
                 },
@@ -727,11 +738,11 @@ renderCell: ({ row }) => (
                   field: 'actions',
                   headerName: 'Actions',
                   width: 100,
-                 renderCell: ({ row }) => (
-  <IconButton size="small" onClick={() => handleDownload(row.id, row.fileName)}>
-    <DownloadIcon />
-  </IconButton>
-)
+                  renderCell: ({ row }) => (
+                    <IconButton size="small" onClick={() => handleDownload(row.id, row.fileName)}>
+                      <DownloadIcon />
+                    </IconButton>
+                  )
 
                 }
               ]}
@@ -742,7 +753,7 @@ renderCell: ({ row }) => (
             <Typography sx={{ py: 2 }}>No version history found.</Typography>
           )}
 
-          {isAuditor && (
+          {isAuditor && !isCAE && (
             <Box sx={{ mt: 3, p: 2, border: '1px dashed grey', borderRadius: 1 }}>
               <Typography variant="subtitle2" gutterBottom>Upload New Version</Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
@@ -757,9 +768,9 @@ renderCell: ({ row }) => (
                   value={changeDescription}
                   onChange={(e) => setChangeDescription(e.target.value)}
                 />
-                <Button 
-                  variant="contained" 
-                  onClick={handleUploadVersion} 
+                <Button
+                  variant="contained"
+                  onClick={handleUploadVersion}
                   disabled={!versionFile || versionUploading}
                   startIcon={versionUploading ? <CircularProgress size={20} /> : <CloudUploadIcon />}
                 >

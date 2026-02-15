@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  Paper, 
-  List, 
-  ListItem, 
-  ListItemText, 
+import {
+  Box,
+  Typography,
+  Button,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
   ListItemSecondaryAction,
   IconButton,
   Dialog,
@@ -113,15 +113,15 @@ const AuditProgramsModule: React.FC<AuditProgramsModuleProps> = ({ audit, onBack
       <Button startIcon={<ArrowBackIcon />} onClick={onBack} sx={{ mb: 2 }}>
         Back
       </Button>
-      
+
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#0F1A2B' }}>
           Manage Audit Programs: {audit.auditName}
         </Typography>
         {canEdit && (
-          <Button 
-            variant="contained" 
-            startIcon={<AddIcon />} 
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
           >
             Add Program
@@ -162,10 +162,12 @@ const AuditProgramsModule: React.FC<AuditProgramsModuleProps> = ({ audit, onBack
                           <IconButton edge="end" onClick={() => handleOpenDialog(program)} sx={{ mr: 1 }}>
                             <EditIcon />
                           </IconButton>
-                          <IconButton edge="end" onClick={() => handleDelete(program.id)} color="error">
-                            <DeleteIcon />
-                          </IconButton>
                         </>
+                      )}
+                      {(userRole === 'Manager' || userRole === 'Audit Manager' || userRole === 'Admin' || userRole === 'System Admin') && (
+                        <IconButton edge="end" onClick={() => handleDelete(program.id)} color="error">
+                          <DeleteIcon />
+                        </IconButton>
                       )}
                     </ListItemSecondaryAction>
                   </ListItem>

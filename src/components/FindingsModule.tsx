@@ -52,6 +52,24 @@ const FindingsModule: React.FC = () => {
 
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 70 },
+    {
+      field: 'auditName',
+      headerName: 'Audit Name',
+      width: 180,
+      valueGetter: (_value, row) => row.audit?.auditName || 'N/A'
+    },
+    {
+      field: 'auditType',
+      headerName: 'Audit Type',
+      width: 120,
+      valueGetter: (_value, row) => row.audit?.auditType || 'N/A'
+    },
+    {
+      field: 'auditProgram',
+      headerName: 'Audit Program',
+      width: 180,
+      valueGetter: (_value, row) => row.auditProgram?.procedureName || 'N/A'
+    },
     { 
       field: 'severity', 
       headerName: 'Severity', 

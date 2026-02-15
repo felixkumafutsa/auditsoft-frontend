@@ -14,13 +14,12 @@ import {
   MenuItem,
   TextField,
   Typography,
-  CircularProgress,
   Tab,
   Tabs,
   InputAdornment
 } from '@mui/material';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Hub as HubIcon, Search as SearchIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, Hub as HubIcon, Search as SearchIcon } from '@mui/icons-material';
 import api from '../services/api';
 
 interface AuditUniverseItem {
@@ -37,7 +36,7 @@ const AuditUniversePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<AuditUniverseItem | null>(null);
-  
+
   // Filtering State
   const [searchQuery, setSearchQuery] = useState('');
   const [tabValue, setTabValue] = useState(0);
@@ -51,7 +50,9 @@ const AuditUniversePage: React.FC = () => {
   });
 
   const userRole = localStorage.getItem('userRole');
+  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
   const isManager = userRole === 'Manager' || userRole === 'Audit Manager';
+  const canModify = isCAE || isManager;
 
   const fetchUniverse = async () => {
     setLoading(true);
@@ -83,7 +84,7 @@ const AuditUniversePage: React.FC = () => {
     }
 
     // 2. Filter by Search Query
-    const searchMatch = 
+    const searchMatch =
       item.entityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.entityType.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.owner?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -160,24 +161,46 @@ const AuditUniversePage: React.FC = () => {
     { field: 'id', headerName: 'ID', width: 70 },
     { field: 'entityName', headerName: 'Entity Name', flex: 1 },
     { field: 'entityType', headerName: 'Type', width: 150 },
-    { 
-      field: 'riskRating', 
-      headerName: 'Risk Rating', 
+    {
+      field: 'riskRating',
+      headerName: 'Risk Rating',
       width: 130,
       renderCell: (params) => (
-        <Chip 
-          label={params.value} 
-          color={getRiskColor(params.value as string) as any} 
-          size="small" 
+        <Chip
+          label={params.value}
+          color={getRiskColor(params.value as string) as any}
+          size="small"
           variant="outlined"
         />
       )
     },
-    { 
-      field: 'owner', 
-      headerName: 'Owner', 
+    {
+      field: 'owner',
+      headerName: 'Owner',
       width: 150,
       valueGetter: (value, row) => row.owner?.name || 'N/A'
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 100,
+      sortable: false,
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {isCAE && (
+            <IconButton
+              size="small"
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(params.row.id);
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      )
     },
   ];
 
@@ -187,10 +210,10 @@ const AuditUniversePage: React.FC = () => {
         <Typography variant="h4" component="h1" color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <HubIcon fontSize="large" /> Audit Universe
         </Typography>
-        {!isManager && (
-          <Button 
-            variant="contained" 
-            color="primary" 
+        {canModify && (
+          <Button
+            variant="contained"
+            color="primary"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
           >
@@ -249,43 +272,43 @@ const AuditUniversePage: React.FC = () => {
           <Box component="form" sx={{ mt: 2 }}>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12 } as any}>
-              <TextField
-                fullWidth
-                label="Entity Name"
-                value={formData.entityName}
-                onChange={(e) => setFormData({ ...formData, entityName: e.target.value })}
-                required
-              />
-            </Grid>
-            <Grid size={{ xs: 6 } as any}>
-              <TextField
-                fullWidth
-                select
-                label="Entity Type"
-                value={formData.entityType}
-                onChange={(e) => setFormData({ ...formData, entityType: e.target.value })}
-              >
-                <MenuItem value="Business Unit">Business Unit</MenuItem>
-                <MenuItem value="Process">Process</MenuItem>
-                <MenuItem value="System">System</MenuItem>
-                <MenuItem value="Vendor">Vendor</MenuItem>
-                <MenuItem value="Product">Product</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid size={{ xs: 6 } as any}>
-              <TextField
-                fullWidth
-                select
-                label="Risk Rating"
-                value={formData.riskRating}
-                onChange={(e) => setFormData({ ...formData, riskRating: e.target.value })}
-              >
-                <MenuItem value="Low">Low</MenuItem>
-                <MenuItem value="Medium">Medium</MenuItem>
-                <MenuItem value="High">High</MenuItem>
-                <MenuItem value="Critical">Critical</MenuItem>
-              </TextField>
-            </Grid>
+                <TextField
+                  fullWidth
+                  label="Entity Name"
+                  value={formData.entityName}
+                  onChange={(e) => setFormData({ ...formData, entityName: e.target.value })}
+                  required
+                />
+              </Grid>
+              <Grid size={{ xs: 6 } as any}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Entity Type"
+                  value={formData.entityType}
+                  onChange={(e) => setFormData({ ...formData, entityType: e.target.value })}
+                >
+                  <MenuItem value="Business Unit">Business Unit</MenuItem>
+                  <MenuItem value="Process">Process</MenuItem>
+                  <MenuItem value="System">System</MenuItem>
+                  <MenuItem value="Vendor">Vendor</MenuItem>
+                  <MenuItem value="Product">Product</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid size={{ xs: 6 } as any}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Risk Rating"
+                  value={formData.riskRating}
+                  onChange={(e) => setFormData({ ...formData, riskRating: e.target.value })}
+                >
+                  <MenuItem value="Low">Low</MenuItem>
+                  <MenuItem value="Medium">Medium</MenuItem>
+                  <MenuItem value="High">High</MenuItem>
+                  <MenuItem value="Critical">Critical</MenuItem>
+                </TextField>
+              </Grid>
             </Grid>
           </Box>
         </DialogContent>

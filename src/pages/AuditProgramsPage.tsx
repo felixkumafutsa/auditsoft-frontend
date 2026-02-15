@@ -33,7 +33,7 @@ const AuditProgramsPage: React.FC = () => {
   const [programs, setPrograms] = useState<AuditProgram[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Dialog State
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<AuditProgram | null>(null);
@@ -42,6 +42,11 @@ const AuditProgramsPage: React.FC = () => {
     controlReference: '',
     expectedOutcome: ''
   });
+
+  const userRole = localStorage.getItem('userRole') || 'Auditor';
+  const isProcessOwner = userRole === 'ProcessOwner' || userRole === 'Process Owner';
+  const isBoardViewer = userRole === 'BoardViewer' || userRole === 'Board Viewer' || userRole === 'Executive';
+  const isRestricted = isProcessOwner || isBoardViewer;
 
   // Fetch Audits on Mount
   useEffect(() => {
@@ -54,7 +59,7 @@ const AuditProgramsPage: React.FC = () => {
           status: a.status || 'Planned'
         })) : [];
         setAudits(mappedAudits);
-        
+
         // Default to first audit if available
         if (mappedAudits.length > 0) {
           setSelectedAuditId(mappedAudits[0].id);
@@ -89,7 +94,7 @@ const AuditProgramsPage: React.FC = () => {
   const filteredPrograms = useMemo(() => {
     if (!searchTerm) return programs;
     const lowerTerm = searchTerm.toLowerCase();
-    return programs.filter(p => 
+    return programs.filter(p =>
       p.procedureName.toLowerCase().includes(lowerTerm) ||
       (p.controlReference && p.controlReference.toLowerCase().includes(lowerTerm)) ||
       (p.expectedOutcome && p.expectedOutcome.toLowerCase().includes(lowerTerm))
@@ -149,32 +154,38 @@ const AuditProgramsPage: React.FC = () => {
     }
   };
 
-  const columns: GridColDef[] = [
-    { field: 'id', headerName: 'ID', width: 70 },
-    { field: 'procedureName', headerName: 'Procedure Name', flex: 1, minWidth: 250 },
-    { field: 'controlReference', headerName: 'Control Ref', width: 150 },
-    { field: 'expectedOutcome', headerName: 'Expected Outcome', flex: 1, minWidth: 200 },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 120,
-      sortable: false,
-      renderCell: (params) => (
-        <Box>
-          <Tooltip title="Edit">
-            <IconButton onClick={() => handleOpenDialog(params.row)} color="primary" size="small">
-              <EditIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Delete">
-            <IconButton onClick={() => handleDelete(params.row.id)} color="error" size="small">
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      )
+  const columns: GridColDef[] = useMemo(() => {
+    const baseColumns: GridColDef[] = [
+      { field: 'id', headerName: 'ID', width: 70 },
+      { field: 'procedureName', headerName: 'Procedure Name', flex: 1, minWidth: 250 },
+      { field: 'controlReference', headerName: 'Control Ref', width: 150 },
+      { field: 'expectedOutcome', headerName: 'Expected Outcome', flex: 1, minWidth: 200 },
+    ];
+
+    if (!isRestricted) {
+      baseColumns.push({
+        field: 'actions',
+        headerName: 'Actions',
+        width: 120,
+        sortable: false,
+        renderCell: (params) => (
+          <Box>
+            <Tooltip title="Edit">
+              <IconButton onClick={() => handleOpenDialog(params.row)} color="primary" size="small">
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Delete">
+              <IconButton onClick={() => handleDelete(params.row.id)} color="error" size="small">
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )
+      });
     }
-  ];
+    return baseColumns;
+  }, [isRestricted]);
 
   return (
     <Box sx={{ width: '100%', p: 2 }}>
@@ -182,14 +193,16 @@ const AuditProgramsPage: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
           Audit Programs
         </Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<AddIcon />} 
-          onClick={() => handleOpenDialog()}
-          disabled={!selectedAuditId}
-        >
-          Add Program
-        </Button>
+        {!isRestricted && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+            disabled={!selectedAuditId}
+          >
+            Add Program
+          </Button>
+        )}
       </Box>
 
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -226,7 +239,7 @@ const AuditProgramsPage: React.FC = () => {
           />
         </Box>
       </Paper>
-      
+
       <Paper sx={{ width: '100%', height: 600 }}>
         {loading ? (
           <Box display="flex" justifyContent="center" alignItems="center" height="100%">

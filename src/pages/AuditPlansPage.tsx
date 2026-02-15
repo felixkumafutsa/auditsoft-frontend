@@ -19,7 +19,6 @@ import {
   DialogContent,
   DialogActions,
   Stack,
-  Divider,
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -38,10 +37,10 @@ import { Audit } from '../types/audit';
 import AuditForm from '../components/AuditForm';
 import AuditExecutionModule from "../components/AuditExecutionModule";
 import AuditProgramsModule from "../components/AuditProgramsModule";
+import { getStatusColor } from '../utils/statusColors';
 
 const AuditPlansPage: React.FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [loading, setLoading] = useState<boolean>(true);
   const [audits, setAudits] = useState<Audit[]>([]);
   const [tabIndex, setTabIndex] = useState(0);
@@ -58,6 +57,7 @@ const AuditPlansPage: React.FC = () => {
 
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
   const isAuditor = userRole === 'Auditor' || userRole === 'auditor';
+  const isManager = userRole === 'Audit Manager' || userRole === 'Manager';
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -78,7 +78,7 @@ const AuditPlansPage: React.FC = () => {
         const usersData = await (api as any).getUsers();
         if (Array.isArray(usersData)) {
           // Filter Auditors
-          const validAuditors = usersData.filter((u: any) => 
+          const validAuditors = usersData.filter((u: any) =>
             u.userRoles?.some((ur: any) => ur.role?.roleName === "Auditor")
           ).map((u: any) => ({
             id: u.id,
@@ -88,7 +88,7 @@ const AuditPlansPage: React.FC = () => {
           setAuditors(validAuditors);
 
           // Filter Managers
-          const validManagers = usersData.filter((u: any) => 
+          const validManagers = usersData.filter((u: any) =>
             u.userRoles?.some((ur: any) => ur.role?.roleName === "Audit Manager" || ur.role?.roleName === "Manager" || ur.role?.roleName === "Chief Audit Executive")
           ).map((u: any) => ({
             id: u.id,
@@ -212,12 +212,12 @@ const AuditPlansPage: React.FC = () => {
 
   const handleAssignConfirm = async () => {
     if (!selectedAudit) return;
-    
+
     try {
       const selectedAuditor = auditors.find(u => u.name === auditorName);
       if (selectedAuditor) {
-          await api.assignAuditors(selectedAudit.id, [selectedAuditor.id]);
-          fetchAudits();
+        await api.assignAuditors(selectedAudit.id, [selectedAuditor.id]);
+        fetchAudits();
       }
       setAssignDialogOpen(false);
     } catch (err) {
@@ -256,7 +256,7 @@ const AuditPlansPage: React.FC = () => {
     // Filter by search term
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();
-      filtered = filtered.filter(a => 
+      filtered = filtered.filter(a =>
         a.auditName.toLowerCase().includes(lowerTerm) ||
         (a.auditType && a.auditType.toLowerCase().includes(lowerTerm)) ||
         (a.assignedTo && a.assignedTo.toLowerCase().includes(lowerTerm))
@@ -287,33 +287,22 @@ const AuditPlansPage: React.FC = () => {
     { field: 'id', headerName: 'ID', width: 70 },
     { field: 'auditName', headerName: 'Audit Name', flex: 1, minWidth: 200 },
     { field: 'auditType', headerName: 'Type', width: 130 },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
+    {
+      field: 'status',
+      headerName: 'Status',
       width: 130,
-      renderCell: (params) => {
-        let color: "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" = "default";
-        switch (params.value) {
-          case 'Planned': color = "info"; break;
-          case 'Approved': color = "primary"; break;
-          case 'In Progress': color = "warning"; break;
-          case 'Under Review': color = "secondary"; break;
-          case 'Finalized': color = "success"; break;
-          case 'Closed': color = "default"; break;
-        }
-        return <Chip label={params.value} color={color} size="small" />;
-      }
+      renderCell: (params) => <Chip label={params.value} color={getStatusColor(params.value)} size="small" />
     },
     { field: 'assignedTo', headerName: 'Assigned To', width: 150 },
-    { 
-      field: 'startDate', 
-      headerName: 'Start Date', 
+    {
+      field: 'startDate',
+      headerName: 'Start Date',
       width: 120,
       valueFormatter: (value: any) => value ? new Date(value).toLocaleDateString() : '-'
     },
-    { 
-      field: 'endDate', 
-      headerName: 'End Date', 
+    {
+      field: 'endDate',
+      headerName: 'End Date',
       width: 120,
       valueFormatter: (value: any) => value ? new Date(value).toLocaleDateString() : '-'
     },
@@ -409,7 +398,7 @@ const AuditPlansPage: React.FC = () => {
           </Button>
         )}
       </Box>
-      
+
       {view === 'list' ? (
         <Paper sx={{ width: '100%', mb: 2 }}>
           <Tabs
@@ -429,94 +418,94 @@ const AuditPlansPage: React.FC = () => {
             <Tab label="Finalized" />
             <Tab label="Closed" />
           </Tabs>
-          
+
           <Box sx={{ p: 2, height: 600, width: '100%' }}>
-             {loading ? (
-               <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-                 <CircularProgress />
-               </Box>
-             ) : (
-               <DataGrid
-                  rows={filteredAudits}
-                  columns={columns}
-                  initialState={{
-                    pagination: {
-                      paginationModel: { pageSize: 10, page: 0 },
-                    },
-                  }}
-                  pageSizeOptions={[10, 25, 50]}
-                  disableRowSelectionOnClick
-                  autoHeight={false} // fixed height container
-                  onRowClick={(params) => {
-                    setSelectedAudit(params.row as Audit);
-                    setActionsModalOpen(true);
-                  }}
-               />
-             )}
+            {loading ? (
+              <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                <CircularProgress />
+              </Box>
+            ) : (
+              <DataGrid
+                rows={filteredAudits}
+                columns={columns}
+                initialState={{
+                  pagination: {
+                    paginationModel: { pageSize: 10, page: 0 },
+                  },
+                }}
+                pageSizeOptions={[10, 25, 50]}
+                disableRowSelectionOnClick
+                autoHeight={false} // fixed height container
+                onRowClick={(params) => {
+                  setSelectedAudit(params.row as Audit);
+                  setActionsModalOpen(true);
+                }}
+              />
+            )}
           </Box>
         </Paper>
       ) : view === 'create' || view === 'edit' ? (
-          <Paper sx={{ p: 3 }}>
-            <AuditForm
-              auditToEdit={view === 'edit' ? selectedAudit : undefined}
-              auditors={auditors}
-              managers={managers}
-              auditUniverseItems={auditUniverseItems}
-              onSuccess={() => {
-                setView('list');
-                fetchAudits();
-              }}
-              onCancel={() => setView('list')}
-            />
-          </Paper>
+        <Paper sx={{ p: 3 }}>
+          <AuditForm
+            auditToEdit={view === 'edit' ? selectedAudit : undefined}
+            auditors={auditors}
+            managers={managers}
+            auditUniverseItems={auditUniverseItems}
+            onSuccess={() => {
+              setView('list');
+              fetchAudits();
+            }}
+            onCancel={() => setView('list')}
+          />
+        </Paper>
       ) : view === 'programs' ? (
-        <AuditProgramsModule 
-          audit={selectedAudit!} 
-          onBack={() => setView("list")} 
+        <AuditProgramsModule
+          audit={selectedAudit!}
+          onBack={() => setView("list")}
         />
       ) : view === 'execution' ? (
-        <AuditExecutionModule 
-           initialAudit={selectedAudit} 
-           onBack={() => setView("list")} 
-           onEdit={handleEdit}
-           onDelete={handleDeleteAudit}
-           onAssign={handleAssignClick}
-           onApprove={handleApprove}
-           onManagePrograms={(audit) => { setSelectedAudit(audit); setView("programs"); }}
-           onFinalize={(audit) => handleFinalize(audit.id)}
-           onClose={(audit) => handleClose(audit.id)}
+        <AuditExecutionModule
+          initialAudit={selectedAudit}
+          onBack={() => setView("list")}
+          onEdit={handleEdit}
+          onDelete={handleDeleteAudit}
+          onAssign={handleAssignClick}
+          onApprove={handleApprove}
+          onManagePrograms={(audit: Audit) => { setSelectedAudit(audit); setView("programs"); }}
+          onFinalize={(audit: Audit) => handleFinalize(audit.id)}
+          onClose={(audit: Audit) => handleClose(audit.id)}
         />
       ) : (
-          <Paper sx={{ p: 3 }}>
-            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h5">Audit Plan Review</Typography>
-              <Button variant="outlined" onClick={() => setView('list')}>Back to List</Button>
-            </Box>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1">{selectedAudit?.auditName}</Typography>
-                <Typography variant="body2">Type: {selectedAudit?.auditType}</Typography>
-                <Typography variant="body2">Status: {selectedAudit?.status}</Typography>
-                <Typography variant="body2">Assigned: {selectedAudit?.assignedTo || '-'}</Typography>
-              </Paper>
-            </Box>
-            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-              {selectedAudit?.status === 'Planned' && isCAE && (
-                <Button variant="contained" color="success" onClick={() => handleApprove(selectedAudit.id)}>Approve</Button>
-              )}
-              {selectedAudit?.status === 'Under Review' && isCAE && (
-                <Button variant="contained" color="success" onClick={() => handleFinalize(selectedAudit.id)}>Finalize</Button>
-              )}
-              {selectedAudit?.status === 'Finalized' && isCAE && (
-                <Button variant="contained" color="warning" onClick={() => handleClose(selectedAudit.id)}>Close</Button>
-              )}
-            </Box>
-          </Paper>
+        <Paper sx={{ p: 3 }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h5">Audit Plan Review</Typography>
+            <Button variant="outlined" onClick={() => setView('list')}>Back to List</Button>
+          </Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="subtitle1">{selectedAudit?.auditName}</Typography>
+              <Typography variant="body2">Type: {selectedAudit?.auditType}</Typography>
+              <Typography variant="body2">Status: {selectedAudit?.status}</Typography>
+              <Typography variant="body2">Assigned: {selectedAudit?.assignedTo || '-'}</Typography>
+            </Paper>
+          </Box>
+          <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+            {selectedAudit?.status === 'Planned' && isCAE && (
+              <Button variant="contained" color="success" onClick={() => handleApprove(selectedAudit.id)}>Approve</Button>
+            )}
+            {selectedAudit?.status === 'Under Review' && isCAE && (
+              <Button variant="contained" color="success" onClick={() => handleFinalize(selectedAudit.id)}>Finalize</Button>
+            )}
+            {selectedAudit?.status === 'Finalized' && isCAE && (
+              <Button variant="contained" color="warning" onClick={() => handleClose(selectedAudit.id)}>Close</Button>
+            )}
+          </Box>
+        </Paper>
       )}
 
       {/* Audit Contextual Actions Modal */}
-      <Dialog 
-        open={actionsModalOpen} 
+      <Dialog
+        open={actionsModalOpen}
         onClose={() => setActionsModalOpen(false)}
         maxWidth="xs"
         fullWidth
@@ -532,38 +521,38 @@ const AuditPlansPage: React.FC = () => {
             <Box>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle1" fontWeight="bold">{selectedAudit.auditName}</Typography>
-                <Typography variant="body2" color="text.secondary">Status: <Chip label={selectedAudit.status} size="small" color="primary" sx={{ ml: 1 }} /></Typography>
+                <Typography variant="body2" color="text.secondary">Status: <Chip label={selectedAudit.status} size="small" color={getStatusColor(selectedAudit.status)} sx={{ ml: 1 }} /></Typography>
               </Box>
-              
+
               <Stack spacing={1.5}>
                 {/* Execute/View Audit */}
-                <Button 
-                  fullWidth 
-                  variant="contained" 
-                  startIcon={<VisibilityIcon />} 
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<VisibilityIcon />}
                   sx={{ bgcolor: '#0F1A2B', '&:hover': { bgcolor: '#1a2b45' } }}
                   onClick={() => {
                     setActionsModalOpen(false);
                     if (isAuditor && (selectedAudit.status === 'Planned' || selectedAudit.status === 'Approved')) {
-                        handleStartAudit(selectedAudit);
+                      handleStartAudit(selectedAudit);
                     } else {
-                        setView("execution");
+                      setView("execution");
                     }
                   }}
                 >
-                  {isAuditor && (selectedAudit.status === 'Planned' || selectedAudit.status === 'Approved') 
-                    ? "Start & Execute Audit" 
+                  {isAuditor && (selectedAudit.status === 'Planned' || selectedAudit.status === 'Approved')
+                    ? "Start & Execute Audit"
                     : (selectedAudit.status === 'Under Review' || selectedAudit.status === 'Execution Finished' ? "Review Audit" : "View / Execute Audit")
                   }
                 </Button>
 
                 {/* Assign Auditor - CAE/Manager when Approved/Planned */}
                 {(isCAE || !isAuditor) && (selectedAudit.status === 'Approved' || selectedAudit.status === 'Planned') && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
+                  <Button
+                    fullWidth
+                    variant="outlined"
                     color="primary"
-                    startIcon={<PersonAddIcon />} 
+                    startIcon={<PersonAddIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       handleAssignClick(selectedAudit);
@@ -575,11 +564,11 @@ const AuditPlansPage: React.FC = () => {
 
                 {/* Approve Plan - CAE when Planned */}
                 {isCAE && selectedAudit.status === 'Planned' && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
+                  <Button
+                    fullWidth
+                    variant="outlined"
                     color="success"
-                    startIcon={<CheckCircleIcon />} 
+                    startIcon={<CheckCircleIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       handleApprove(selectedAudit.id);
@@ -589,13 +578,13 @@ const AuditPlansPage: React.FC = () => {
                   </Button>
                 )}
 
-                {/* Finalize Audit - CAE when Under Review */}
-                {isCAE && (selectedAudit.status === 'Under Review' || selectedAudit.status === 'Execution Finished') && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
+                {/* Finalize Audit - Managers when Under Review */}
+                {isManager && (selectedAudit.status === 'Under Review' || selectedAudit.status === 'Execution Finished') && (
+                  <Button
+                    fullWidth
+                    variant="outlined"
                     color="success"
-                    startIcon={<FactCheckIcon />} 
+                    startIcon={<FactCheckIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       handleFinalize(selectedAudit.id);
@@ -607,11 +596,11 @@ const AuditPlansPage: React.FC = () => {
 
                 {/* Close Audit - CAE when not already closed */}
                 {isCAE && selectedAudit.status !== 'Closed' && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
+                  <Button
+                    fullWidth
+                    variant="outlined"
                     color="warning"
-                    startIcon={<LockIcon />} 
+                    startIcon={<LockIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       handleClose(selectedAudit.id);
@@ -620,13 +609,13 @@ const AuditPlansPage: React.FC = () => {
                     Close Audit
                   </Button>
                 )}
-                
+
                 {/* Programs - Managers when Planned */}
                 {!isAuditor && selectedAudit.status === 'Planned' && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
-                    startIcon={<PlaylistAddIcon />} 
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    startIcon={<PlaylistAddIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       setView("programs");
@@ -638,10 +627,10 @@ const AuditPlansPage: React.FC = () => {
 
                 {/* Edit Plan - Managers/CAE when not closed */}
                 {!isAuditor && selectedAudit.status !== 'Closed' && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
-                    startIcon={<EditIcon />} 
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    startIcon={<EditIcon />}
                     onClick={() => {
                       setActionsModalOpen(false);
                       handleEdit(selectedAudit);

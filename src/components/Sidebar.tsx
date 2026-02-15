@@ -65,7 +65,9 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
   const isManager = userRole === 'Manager' || userRole === 'Audit Manager' || userRole === 'manager';
   const isAuditor = userRole === 'Auditor';
-  const isExecutive = userRole === 'Executive' || userRole === 'BoardViewer' || userRole === 'Board Viewer';
+  const isProcessOwner = userRole === 'ProcessOwner' || userRole === 'Process Owner';
+  const isBoardViewer = userRole === 'BoardViewer' || userRole === 'Board Viewer' || userRole === 'Executive' || userRole === 'Executive / Board Viewer';
+  const isRestricted = isProcessOwner || isBoardViewer;
 
   const drawerContent = (
     <>
@@ -85,21 +87,14 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
           <ListItemText primary="Dashboard" />
         </ListItemButton>
 
-        {isExecutive && (
-          <>
-            <ListItemButton selected={currentPage === 'reports-executive'} onClick={() => onNavigate('reports-executive')}>
-              <ListItemIcon><PieChartIcon sx={{ color: 'white' }} /></ListItemIcon>
-              <ListItemText primary="Executive Reports" />
-            </ListItemButton>
-
-            <ListItemButton selected={currentPage === 'comments'} onClick={() => onNavigate('comments')}>
-              <ListItemIcon><QuestionAnswerIcon sx={{ color: 'white' }} /></ListItemIcon>
-              <ListItemText primary="Comments" />
-            </ListItemButton>
-          </>
+        {isRestricted && (
+          <ListItemButton selected={currentPage === 'reports-executive'} onClick={() => onNavigate('reports-executive')}>
+            <ListItemIcon><PieChartIcon sx={{ color: 'white' }} /></ListItemIcon>
+            <ListItemText primary="Executive Reports" />
+          </ListItemButton>
         )}
 
-        {!isExecutive && (
+        {!isRestricted && (
           <>
             <ListItemButton selected={currentPage === 'messaging'} onClick={() => onNavigate('messaging')}>
               <ListItemIcon><ChatIcon sx={{ color: 'white' }} /></ListItemIcon>
@@ -286,8 +281,9 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
           </>
         )}
 
-        {/* ================= DEFAULT / OTHER ROLES (e.g. Process Owner) ================= */}
-        {!isSystemAdmin && !isCAE && !isAuditor && (
+
+
+        {!isSystemAdmin && !isCAE && !isAuditor && !isRestricted && (
           <>
             <Divider sx={{ my: 1, bgcolor: 'rgba(255,255,255,0.1)' }} />
 

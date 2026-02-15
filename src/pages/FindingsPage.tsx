@@ -25,6 +25,7 @@ import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
 import ActionPlansModule from '../components/ActionPlansModule';
+import { getStatusColor } from '../utils/statusColors';
 
 const MySwal = withReactContent(Swal);
 
@@ -34,6 +35,13 @@ interface Finding {
   severity: 'Critical' | 'High' | 'Medium' | 'Low';
   status: string;
   auditId: number;
+  audit?: {
+    auditName: string;
+    auditType: string;
+  };
+  auditProgram?: {
+    procedureName: string;
+  };
   rootCause?: string;
   createdAt: string;
 }
@@ -51,6 +59,12 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
   const [newStatus, setNewStatus] = useState('');
   const [allowedTransitions, setAllowedTransitions] = useState<string[]>([]);
   const userRole = localStorage.getItem('userRole') || 'Auditor';
+  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
+  const isManager = userRole === 'Audit Manager' || userRole === 'Manager';
+  const isAuditor = userRole === 'Auditor';
+  const isProcessOwner = userRole === 'ProcessOwner' || userRole === 'Process Owner';
+  const isBoardViewer = userRole === 'BoardViewer' || userRole === 'Board Viewer' || userRole === 'Executive';
+  const isRestricted = isProcessOwner || isBoardViewer;
 
   // Draft Form State
   const [draftDescription, setDraftDescription] = useState('');
@@ -90,7 +104,7 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
     try {
       const data = await api.getFindings?.();
       let filteredData = Array.isArray(data) ? data : [];
-      
+
       // Client-side filtering based on viewMode
       if (viewMode === 'draft') {
         filteredData = filteredData.filter((f: any) => f.status === 'Identified' || f.status === 'Draft');
@@ -99,14 +113,14 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
         // Assuming finding has assignedToId or we check ActionPlans
         // For now, we simulate this since backend might not return assignedToId yet
         // filteredData = filteredData.filter((f: any) => f.assignedToId === currentUser?.id);
-        
+
         // Temporary: Just show all for demo, or filter if property exists
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (user.id) {
-             filteredData = filteredData.filter((f: any) => f.assignedToId === user.id);
+          filteredData = filteredData.filter((f: any) => f.assignedToId === user.id);
         }
       }
-      
+
       setFindings(filteredData);
     } catch (err) {
       console.error('Failed to fetch findings', err);
@@ -116,6 +130,7 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
   };
 
   const handleOpenTransitionDialog = async (finding: Finding) => {
+    if (isRestricted) return;
     setSelectedFinding(finding);
     try {
       const response = await api.getAllowedTransitions?.(finding.id);
@@ -160,27 +175,26 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Identified':
-        return 'default';
-      case 'Validated':
-        return 'info';
-      case 'Action Assigned':
-        return 'warning';
-      case 'Remediation In Progress':
-        return 'warning';
-      case 'Verified':
-        return 'success';
-      case 'Closed':
-        return 'success';
-      default:
-        return 'default';
-    }
-  };
-
   const columns: GridColDef<Finding>[] = [
     { field: 'id', headerName: 'ID', width: 70 },
+    {
+      field: 'auditName',
+      headerName: 'Audit Name',
+      width: 200,
+      valueGetter: (_value, row) => row.audit?.auditName || 'N/A'
+    },
+    {
+      field: 'auditType',
+      headerName: 'Audit Type',
+      width: 130,
+      valueGetter: (_value, row) => row.audit?.auditType || 'N/A'
+    },
+    {
+      field: 'auditProgram',
+      headerName: 'Audit Program',
+      width: 200,
+      valueGetter: (_value, row) => row.auditProgram?.procedureName || 'N/A'
+    },
     { field: 'description', headerName: 'Description', flex: 1, minWidth: 250 },
     {
       field: 'severity',
@@ -252,7 +266,7 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
               onChange={(e) => setDraftDescription(e.target.value)}
               placeholder="Describe the finding in detail..."
             />
-            
+
             <TextField
               select
               label="Severity"
@@ -404,23 +418,25 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setTransitionDialog(false)}>Cancel</Button>
-          <Button onClick={handleTransition} variant="contained" disabled={!newStatus}>
-            Update Status
-          </Button>
+          {!isRestricted && (
+            <Button onClick={handleTransition} variant="contained" disabled={!newStatus}>
+              Update Status
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
       {/* Action Plans Dialog */}
-      <Dialog 
-        open={actionPlansOpen} 
-        onClose={() => setActionPlansOpen(false)} 
-        maxWidth="md" 
+      <Dialog
+        open={actionPlansOpen}
+        onClose={() => setActionPlansOpen(false)}
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>Action Plans</DialogTitle>
         <DialogContent>
           {selectedFindingIdForActions && (
-            <ActionPlansModule 
-              findingId={selectedFindingIdForActions} 
+            <ActionPlansModule
+              findingId={selectedFindingIdForActions}
               open={actionPlansOpen}
               onClose={() => setActionPlansOpen(false)}
             />

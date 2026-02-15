@@ -16,7 +16,12 @@ import {
   Alert,
 } from '@mui/material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import SaveIcon from '@mui/icons-material/Save';
 import api from '../services/api';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 
 const AVAILABLE_FIELDS = [
   { id: 'id', label: 'ID' },
@@ -106,9 +111,41 @@ const CustomReportsPage: React.FC = () => {
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
       console.error('Export failed', error);
-      alert('Failed to generate report');
+      MySwal.fire('Error', 'Failed to generate report', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    const { value: reportName } = await MySwal.fire({
+      title: 'Save Custom Report',
+      input: 'text',
+      inputLabel: 'Report Name',
+      inputPlaceholder: 'Enter report name...',
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) {
+          return 'You need to write something!';
+        }
+      }
+    });
+
+    if (reportName) {
+      setLoading(true);
+      try {
+        await api.saveCustomReport({
+          name: reportName,
+          fields: selectedFields,
+          filters: { auditType }
+        });
+        MySwal.fire('Saved!', 'Your custom report has been saved.', 'success');
+      } catch (error) {
+        console.error('Save failed', error);
+        MySwal.fire('Error', 'Failed to save report', 'error');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -256,8 +293,21 @@ const CustomReportsPage: React.FC = () => {
               startIcon={<FileDownloadIcon />}
               disabled={selectedFields.length === 0 || loading}
               onClick={() => handleExport('csv')}
+              sx={{ mb: 2 }}
             >
               Export as CSV
+            </Button>
+
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              startIcon={<SaveIcon />}
+              disabled={selectedFields.length === 0 || loading}
+              onClick={handleSave}
+              color="success"
+            >
+              {loading ? 'Saving...' : 'Save Report Template'}
             </Button>
 
             <Typography variant="caption" display="block" color="textSecondary" mt={2}>

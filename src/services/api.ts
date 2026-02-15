@@ -200,8 +200,11 @@ class ApiClient {
     return fetch(`${BASE_URL}/evidence/${id}/file`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
-    }).then(response => {
-      if (!response.ok) throw new Error('Failed to download evidence');
+    }).then(async response => {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to download evidence' }));
+        throw new Error(errorData.message || 'Failed to download evidence');
+      }
       return response.blob();
     });
   };
@@ -303,6 +306,10 @@ class ApiClient {
       return response.blob();
     });
   };
+
+  saveReport = (auditId: number) => this.post(`/reports/audit/${auditId}/save`, {});
+  saveCustomReport = (data: any) => this.post('/reports/custom/save', data);
+  getSavedReports = () => this.get('/reports/saved');
 
   // --- Tasks & Alerts ---
   getMyTasks = () => this.get('/users/me/tasks');

@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  Paper, 
-  Accordion, 
-  AccordionSummary, 
-  AccordionDetails, 
-  TextField, 
-  Chip, 
-  List, 
-  ListItemButton, 
+import {
+  Box,
+  Typography,
+  Button,
+  Paper,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  TextField,
+  Chip,
+  List,
+  ListItemButton,
   ListItemText,
   Divider,
   CircularProgress,
@@ -60,6 +60,7 @@ import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import HistoryIcon from "@mui/icons-material/History";
+import { getStatusColor } from "../utils/statusColors";
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
@@ -81,8 +82,8 @@ interface AuditExecutionModuleProps {
   onDownload?: (id: number) => void;
 }
 
-const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({ 
-  initialAudit, 
+const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
+  initialAudit,
   onBack,
   onEdit,
   onDelete,
@@ -97,7 +98,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
   const [audits, setAudits] = useState<Audit[]>([]);
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(initialAudit || null);
   const [programs, setPrograms] = useState<AuditProgram[]>([]);
-  const [evidenceMap, setEvidenceMap] = useState<{[key: number]: any[]}>({});
+  const [evidenceMap, setEvidenceMap] = useState<{ [key: number]: any[] }>({});
   const [loading, setLoading] = useState(false);
   const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
   const [uploading, setUploading] = useState<number | null>(null);
@@ -115,7 +116,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-  
+
   // Finding Dialog State
   const [findingDialogOpen, setFindingDialogOpen] = useState(false);
   const [currentProgramId, setCurrentProgramId] = useState<number | null>(null);
@@ -147,7 +148,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
       // Filter for audits that are ready for execution
       const active = Array.isArray(data) ? data.filter((a: Audit) => {
         if (isManager) {
-           return ['In Progress', 'Approved', 'Under Review'].includes(a.status);
+          return ['In Progress', 'Approved', 'Under Review'].includes(a.status);
         }
         return ['In Progress', 'Approved'].includes(a.status);
       }) : [];
@@ -159,7 +160,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
 
   const handleUpdateStatus = async (newStatus: string) => {
     if (!selectedAudit) return;
-    
+
     // Validation: Auditor cannot submit for review without evidence
     if (isAuditor && newStatus === 'Under Review') {
       if (!hasEvidence) {
@@ -203,7 +204,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
       const mappedPrograms = Array.isArray(data) ? data.map((p: any) => ({ ...p, expanded: false })) : [];
       setPrograms(mappedPrograms);
       localStorage.setItem(`cached_programs_${audit.id}`, JSON.stringify(mappedPrograms));
-      
+
       // Pre-fetch evidence for all programs to support validation
       if (Array.isArray(data)) {
         data.forEach((p: any) => fetchEvidence(p.id));
@@ -248,7 +249,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
     // Optimistic update
     const updatedPrograms = programs.map(p => p.id === id ? { ...p, actualResult: result } : p);
     setPrograms(updatedPrograms);
-    
+
     if (selectedAudit) {
       localStorage.setItem(`cached_programs_${selectedAudit.id}`, JSON.stringify(updatedPrograms));
     }
@@ -283,7 +284,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
   const handleFileUpload = async (programId: number, e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
-    
+
     setUploading(programId);
     try {
       await api.uploadEvidence(programId, file, `Evidence for program #${programId}`);
@@ -345,14 +346,14 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
 
   const loadAllEvidence = useCallback(async () => {
     if (programs.length === 0) return;
-    
+
     const promises = programs.map(p => api.getEvidenceList(p.id));
     try {
       const results = await Promise.all(promises);
-      const newMap: {[key: number]: any[]} = {};
+      const newMap: { [key: number]: any[] } = {};
       results.forEach((data, index) => {
         if (Array.isArray(data)) {
-            newMap[programs[index].id] = data;
+          newMap[programs[index].id] = data;
         }
       });
       setEvidenceMap(newMap);
@@ -363,7 +364,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
 
   useEffect(() => {
     if (activeTab === 2 && selectedAudit) {
-        loadAllEvidence();
+      loadAllEvidence();
     }
   }, [activeTab, selectedAudit, loadAllEvidence]);
 
@@ -436,8 +437,8 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                 <React.Fragment key={audit.id}>
                   {index > 0 && <Divider />}
                   <ListItemButton onClick={() => handleSelectAudit(audit)}>
-                    <ListItemText 
-                      primary={audit.auditName} 
+                    <ListItemText
+                      primary={audit.auditName}
                       primaryTypographyProps={{ fontWeight: 'bold' }}
                       secondary={`${audit.auditType || 'Audit'} • ${audit.status}`}
                     />
@@ -454,17 +455,17 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Button 
-        startIcon={<ArrowBackIcon />} 
+      <Button
+        startIcon={<ArrowBackIcon />}
         onClick={() => {
           if (onBack) onBack();
           else setSelectedAudit(null);
-        }} 
+        }}
         sx={{ mb: 2 }}
       >
         {onBack ? 'Back' : 'Back to Active Audits'}
       </Button>
-      
+
       {isOffline && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           You are currently offline. Changes are saved locally and will sync when you are back online.
@@ -476,29 +477,32 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           <Typography variant="h5" sx={{ color: '#0F1A2B', fontWeight: 'bold' }}>
             Executing: {selectedAudit.auditName}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {selectedAudit.auditType} • {selectedAudit.startDate ? new Date(selectedAudit.startDate).toLocaleDateString() : 'No Start Date'} - {selectedAudit.endDate ? new Date(selectedAudit.endDate).toLocaleDateString() : 'No End Date'}
-          </Typography>
+          <Chip
+            label={selectedAudit.status}
+            color={getStatusColor(selectedAudit.status)}
+            size="small"
+            sx={{ mt: 0.5 }}
+          />
         </Box>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
           {/* Contextual Action Buttons */}
           {!isAuditor && onEdit && (selectedAudit.status === 'Planned' || selectedAudit.status === 'Approved') && (
-            <Button 
-              variant="outlined" 
-              size="small" 
-              startIcon={<EditIcon />} 
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<EditIcon />}
               onClick={() => onEdit(selectedAudit)}
             >
               Edit Plan
             </Button>
           )}
 
-          {(isManager || isCAE) && onDelete && selectedAudit.status !== 'Closed' && (
-            <Button 
-              variant="outlined" 
-              size="small" 
-              color="error" 
-              startIcon={<DeleteIcon />} 
+          {isManager && onDelete && selectedAudit.status !== 'Closed' && (
+            <Button
+              variant="outlined"
+              size="small"
+              color="error"
+              startIcon={<DeleteIcon />}
               onClick={() => onDelete(selectedAudit.id)}
             >
               Delete
@@ -506,21 +510,21 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           )}
 
           {((isManager || isCAE) && selectedAudit.status === 'Planned') && onManagePrograms && (
-            <Button 
-              variant="outlined" 
-              size="small" 
-              startIcon={<PlaylistAddIcon />} 
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<PlaylistAddIcon />}
               onClick={() => onManagePrograms(selectedAudit)}
             >
               Programs
             </Button>
           )}
-          
+
           {isManager && onAssign && selectedAudit.status === 'Approved' && (
-            <Button 
-              variant="outlined" 
-              size="small" 
-              startIcon={<PersonAddIcon />} 
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<PersonAddIcon />}
               onClick={() => onAssign(selectedAudit)}
             >
               Assign
@@ -528,35 +532,56 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           )}
 
           {isCAE && selectedAudit.status === 'Planned' && onApprove && (
-            <Button 
-              variant="contained" 
-              size="small" 
-              color="success" 
-              startIcon={<CheckCircleIcon />} 
+            <Button
+              variant="contained"
+              size="small"
+              color="success"
+              startIcon={<CheckCircleIcon />}
               onClick={() => onApprove(selectedAudit.id)}
             >
               Approve Plan
             </Button>
           )}
 
-          {isCAE && (selectedAudit.status === 'Execution Finished' || selectedAudit.status === 'Under Review') && onFinalize && (
-            <Button 
-              variant="contained" 
-              size="small" 
-              color="success" 
-              startIcon={<CheckCircleIcon />} 
+          {isCAE && selectedAudit.status === 'Pending CAE Approval' && (
+            <Button
+              variant="contained"
+              size="small"
+              color="success"
+              startIcon={<CheckCircleIcon />}
+              onClick={async () => {
+                try {
+                  await api.transitionAudit(selectedAudit.id, 'Finalized', currentUser?.role);
+                  MySwal.fire('Approved', 'Report has been approved and finalized.', 'success');
+                  setSelectedAudit({ ...selectedAudit, status: 'Finalized' });
+                } catch (e) {
+                  console.error(e);
+                  MySwal.fire('Error', 'Failed to approve report.', 'error');
+                }
+              }}
+            >
+              Approve Report
+            </Button>
+          )}
+
+          {isManager && (selectedAudit.status === 'Execution Finished' || selectedAudit.status === 'Under Review') && onFinalize && (
+            <Button
+              variant="contained"
+              size="small"
+              color="success"
+              startIcon={<CheckCircleIcon />}
               onClick={() => onFinalize(selectedAudit)}
             >
-              Finalize Audit
+              Submit for CAE Approval
             </Button>
           )}
 
           {isCAE && (selectedAudit.status === 'Process Owner Review' || selectedAudit.status === 'Finalized') && onClose && (
-            <Button 
-              variant="contained" 
-              size="small" 
-              color="warning" 
-              startIcon={<CheckCircleOutlineIcon />} 
+            <Button
+              variant="contained"
+              size="small"
+              color="warning"
+              startIcon={<CheckCircleOutlineIcon />}
               onClick={() => onClose(selectedAudit)}
             >
               Close Audit
@@ -565,10 +590,36 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
 
           {/* Icon-only secondary actions */}
           {isManager && selectedAudit.status === 'Closed' && onPreview && (
-            <Tooltip title="Preview Audit Report">
-              <IconButton size="small" onClick={() => onPreview(selectedAudit.id)}>
-                <PictureAsPdfIcon fontSize="small" />
-              </IconButton>
+            <Tooltip title="View Audit Report">
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<PictureAsPdfIcon />}
+                onClick={() => onPreview(selectedAudit.id)}
+              >
+                View Audit Report
+              </Button>
+            </Tooltip>
+          )}
+
+          {isManager && selectedAudit.status === 'Closed' && (
+            <Tooltip title="Save Report">
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<CheckCircleIcon />}
+                onClick={async () => {
+                  try {
+                    await api.saveReport(selectedAudit.id);
+                    MySwal.fire('Success', 'Report saved successfully!', 'success');
+                  } catch (e) {
+                    console.error(e);
+                    MySwal.fire('Error', 'Failed to save report.', 'error');
+                  }
+                }}
+              >
+                Save Report
+              </Button>
             </Tooltip>
           )}
 
@@ -584,9 +635,9 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
 
           {/* Workflow Status Transitions (Interactive) */}
           {isAuditor && selectedAudit.status === 'In Progress' && (
-            <Button 
-              variant="contained" 
-              color="primary" 
+            <Button
+              variant="contained"
+              color="primary"
               onClick={() => handleUpdateStatus('Under Review')}
               size="small"
               disabled={!hasEvidence}
@@ -595,9 +646,9 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </Button>
           )}
           {isManager && selectedAudit.status === 'Under Review' && (
-            <Button 
-              variant="contained" 
-              color="success" 
+            <Button
+              variant="contained"
+              color="success"
               onClick={() => handleUpdateStatus('Execution Finished')}
               size="small"
             >
@@ -605,9 +656,9 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </Button>
           )}
           {isProcessOwner && selectedAudit.status === 'Finalized' && (
-            <Button 
-              variant="contained" 
-              color="info" 
+            <Button
+              variant="contained"
+              color="info"
               onClick={() => handleUpdateStatus('Process Owner Review')}
               size="small"
             >
@@ -625,71 +676,71 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           <Tab icon={<PlaylistAddIcon />} label="Comments" />
         </Tabs>
       </Paper>
-      
+
       {loading ? <CircularProgress /> : (
         <Box sx={{ mt: 2 }}>
           {/* Tab 0: Audit Programs (Read-Only Summary) */}
           {activeTab === 0 && (
-             <TableContainer component={Paper}>
-                <Table>
-                    <TableHead sx={{ bgcolor: '#f5f5f5' }}>
-                        <TableRow>
-                            <TableCell><strong>Procedure</strong></TableCell>
-                            <TableCell><strong>Control Reference</strong></TableCell>
-                            <TableCell><strong>Expected Outcome</strong></TableCell>
-                            <TableCell><strong>Status</strong></TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {programs.map(p => (
-                            <TableRow key={p.id}>
-                                <TableCell>{p.procedureName}</TableCell>
-                                <TableCell>{p.controlReference || 'N/A'}</TableCell>
-                                <TableCell>{p.expectedOutcome || 'N/A'}</TableCell>
-                                <TableCell>
-                                    <Chip 
-                                        label={p.actualResult ? "Tested" : "Pending"} 
-                                        color={p.actualResult ? "success" : "default"} 
-                                        size="small" 
-                                    />
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {programs.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={4} align="center">No audit programs defined.</TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-             </TableContainer>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                  <TableRow>
+                    <TableCell><strong>Procedure</strong></TableCell>
+                    <TableCell><strong>Control Reference</strong></TableCell>
+                    <TableCell><strong>Expected Outcome</strong></TableCell>
+                    <TableCell><strong>Status</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {programs.map(p => (
+                    <TableRow key={p.id}>
+                      <TableCell>{p.procedureName}</TableCell>
+                      <TableCell>{p.controlReference || 'N/A'}</TableCell>
+                      <TableCell>{p.expectedOutcome || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={p.actualResult ? "Tested" : "Pending"}
+                          color={p.actualResult ? "success" : "default"}
+                          size="small"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {programs.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center">No audit programs defined.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
 
           {/* Tab 1: Fieldwork & Testing (Interactive Accordion) */}
           {activeTab === 1 && (
-             <Box>
-               {programs.map(program => (
-                <Accordion 
-                  key={program.id} 
-                  expanded={program.expanded} 
+            <Box>
+              {programs.map(program => (
+                <Accordion
+                  key={program.id}
+                  expanded={program.expanded}
                   onChange={() => toggleAccordion(program.id)}
                   sx={{ mb: 1 }}
                 >
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                        <Typography fontWeight="bold">{program.procedureName}</Typography>
-                        {program.actualResult && <Chip label="Tested" color="success" size="small" />}
+                      <Typography fontWeight="bold">{program.procedureName}</Typography>
+                      {program.actualResult && <Chip label="Tested" color="success" size="small" />}
                     </Box>
                   </AccordionSummary>
-                  
+
                   <AccordionDetails>
                     <Box sx={{ mb: 2 }}>
                       <Typography variant="subtitle2" color="text.secondary">Control Reference:</Typography>
                       <Typography variant="body2" paragraph>{program.controlReference}</Typography>
-                      
+
                       <Typography variant="subtitle2" color="text.secondary">Expected Outcome:</Typography>
                       <Typography variant="body2" paragraph>{program.expectedOutcome}</Typography>
-                      
+
                       <Box sx={{ mt: 2, p: 2, bgcolor: '#f0f4f8', borderRadius: 1 }}>
                         <Typography variant="subtitle2" gutterBottom>Test Result:</Typography>
                         <ToggleButtonGroup
@@ -699,15 +750,15 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                           sx={{ mb: 2 }}
                           size="small"
                         >
-                           <ToggleButton value="Pass" color="success">
-                             <CheckCircleIcon sx={{ mr: 1 }} /> Pass
-                           </ToggleButton>
-                           <ToggleButton value="Fail" color="error">
-                             <CancelIcon sx={{ mr: 1 }} /> Fail
-                           </ToggleButton>
-                           <ToggleButton value="Partial" color="warning">
-                             <HelpOutlineIcon sx={{ mr: 1 }} /> Partial
-                           </ToggleButton>
+                          <ToggleButton value="Pass" color="success">
+                            <CheckCircleIcon sx={{ mr: 1 }} /> Pass
+                          </ToggleButton>
+                          <ToggleButton value="Fail" color="error">
+                            <CancelIcon sx={{ mr: 1 }} /> Fail
+                          </ToggleButton>
+                          <ToggleButton value="Partial" color="warning">
+                            <HelpOutlineIcon sx={{ mr: 1 }} /> Partial
+                          </ToggleButton>
                         </ToggleButtonGroup>
 
                         {/* Reviewer Comments - Manager Only */}
@@ -725,29 +776,33 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                             sx={{ mb: 2, bgcolor: 'white' }}
                           />
                         )}
-                        
+
                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-                          <Button
-                            component="label"
-                            variant="outlined"
-                            startIcon={<CloudUploadIcon />}
-                            disabled={uploading === program.id}
-                          >
-                            {uploading === program.id ? 'Uploading...' : 'Upload Evidence'}
-                            <input 
-                              type="file" 
-                              hidden
-                              onChange={(e) => handleFileUpload(program.id, e)}
+                          {isAuditor && !isCAE && (
+                            <Button
+                              component="label"
+                              variant="outlined"
+                              startIcon={<CloudUploadIcon />}
                               disabled={uploading === program.id}
-                            />
-                          </Button>
-                          <Button 
-                            variant="contained" 
-                            color="error" 
-                            onClick={() => handleRaiseFinding(program.id)}
-                          >
-                            Raise Finding
-                          </Button>
+                            >
+                              {uploading === program.id ? 'Uploading...' : 'Upload Evidence'}
+                              <input
+                                type="file"
+                                hidden
+                                onChange={(e) => handleFileUpload(program.id, e)}
+                                disabled={uploading === program.id}
+                              />
+                            </Button>
+                          )}
+                          {isAuditor && !isCAE && (
+                            <Button
+                              variant="contained"
+                              color="error"
+                              onClick={() => handleRaiseFinding(program.id)}
+                            >
+                              Raise Finding
+                            </Button>
+                          )}
                         </Box>
 
                         {/* Evidence List */}
@@ -775,9 +830,11 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                                           <HistoryIcon fontSize="small" />
                                         </IconButton>
                                       </Tooltip>
-                                      <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteEvidence(program.id, ev.id)}>
-                                        <DeleteIcon color="error" fontSize="small" />
-                                      </IconButton>
+                                      {isAuditor && !isCAE && (
+                                        <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteEvidence(program.id, ev.id)}>
+                                          <DeleteIcon color="error" fontSize="small" />
+                                        </IconButton>
+                                      )}
                                     </Stack>
                                   }
                                 >
@@ -799,68 +856,70 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                 </Accordion>
               ))}
               {programs.length === 0 && <Typography>No programs to execute.</Typography>}
-             </Box>
+            </Box>
           )}
 
           {/* Tab 2: Working Papers (All Evidence) */}
           {activeTab === 2 && (
-             <TableContainer component={Paper}>
-                <Table>
-                    <TableHead sx={{ bgcolor: '#f5f5f5' }}>
-                        <TableRow>
-                            <TableCell><strong>File Name</strong></TableCell>
-                            <TableCell><strong>Related Procedure</strong></TableCell>
-                            <TableCell><strong>Date Uploaded</strong></TableCell>
-                            <TableCell align="right"><strong>Actions</strong></TableCell>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                  <TableRow>
+                    <TableCell><strong>File Name</strong></TableCell>
+                    <TableCell><strong>Related Procedure</strong></TableCell>
+                    <TableCell><strong>Date Uploaded</strong></TableCell>
+                    <TableCell align="right"><strong>Actions</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {Object.keys(evidenceMap).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center">No working papers uploaded yet.</TableCell>
+                    </TableRow>
+                  ) : (
+                    Object.entries(evidenceMap).flatMap(([progId, evidenceList]) => {
+                      const prog = programs.find(p => p.id === Number(progId));
+                      return evidenceList.map((ev: any) => (
+                        <TableRow key={ev.id}>
+                          <TableCell>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <InsertDriveFileIcon color="action" />
+                              <Link href="#" color="inherit" underline="hover">{ev.fileName}</Link>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{prog?.procedureName || `Program #${progId}`}</TableCell>
+                          <TableCell>{new Date(ev.createdAt).toLocaleDateString()}</TableCell>
+                          <TableCell align="right">
+                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                              <Tooltip title="Preview">
+                                <IconButton size="small" onClick={() => handlePreviewEvidence(ev.id)} color="primary">
+                                  <VisibilityIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Download">
+                                <IconButton size="small" onClick={() => handleDownloadEvidence(ev.id, ev.fileName)} color="primary">
+                                  <FileDownloadIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Version History">
+                                <IconButton size="small" onClick={() => handleEvidenceHistory(ev.id)} color="info">
+                                  <HistoryIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              {isAuditor && !isCAE && (
+                                <IconButton size="small" onClick={() => handleDeleteEvidence(Number(progId), ev.id)} color="error">
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              )}
+                            </Stack>
+                          </TableCell>
                         </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {Object.keys(evidenceMap).length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={4} align="center">No working papers uploaded yet.</TableCell>
-                            </TableRow>
-                        ) : (
-                            Object.entries(evidenceMap).flatMap(([progId, evidenceList]) => {
-                                const prog = programs.find(p => p.id === Number(progId));
-                                return evidenceList.map((ev: any) => (
-                                    <TableRow key={ev.id}>
-                                        <TableCell>
-                                            <Box display="flex" alignItems="center" gap={1}>
-                                                <InsertDriveFileIcon color="action" />
-                                                <Link href="#" color="inherit" underline="hover">{ev.fileName}</Link>
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell>{prog?.procedureName || `Program #${progId}`}</TableCell>
-                                        <TableCell>{new Date(ev.createdAt).toLocaleDateString()}</TableCell>
-                                        <TableCell align="right">
-                                            <Stack direction="row" spacing={1} justifyContent="flex-end">
-                                                <Tooltip title="Preview">
-                                                    <IconButton size="small" onClick={() => handlePreviewEvidence(ev.id)} color="primary">
-                                                        <VisibilityIcon fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Download">
-                                                    <IconButton size="small" onClick={() => handleDownloadEvidence(ev.id, ev.fileName)} color="primary">
-                                                        <FileDownloadIcon fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Version History">
-                                                    <IconButton size="small" onClick={() => handleEvidenceHistory(ev.id)} color="info">
-                                                        <HistoryIcon fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <IconButton size="small" onClick={() => handleDeleteEvidence(Number(progId), ev.id)} color="error">
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </Stack>
-                                        </TableCell>
-                                    </TableRow>
-                                ));
-                            })
-                        )}
-                    </TableBody>
-                </Table>
-             </TableContainer>
+                      ));
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
 
           {/* Tab 3: Comments & Feedback */}
@@ -943,15 +1002,15 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
       </Dialog>
 
       {/* Evidence Preview Dialog */}
-      <Dialog 
-        open={previewDialogOpen} 
-        onClose={() => { 
-          if (previewUrl) window.URL.revokeObjectURL(previewUrl); 
-          setPreviewDialogOpen(false); 
-          setPreviewUrl(null); 
+      <Dialog
+        open={previewDialogOpen}
+        onClose={() => {
+          if (previewUrl) window.URL.revokeObjectURL(previewUrl);
+          setPreviewDialogOpen(false);
+          setPreviewUrl(null);
           setPreviewType(null);
-        }} 
-        maxWidth="lg" 
+        }}
+        maxWidth="lg"
         fullWidth
       >
         <DialogTitle>Evidence Preview</DialogTitle>
@@ -966,9 +1025,9 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                 <Box textAlign="center">
                   <Typography variant="h6" gutterBottom>Preview not available for this file type</Typography>
                   <Typography variant="body2" color="text.secondary">Please download the file to view its contents.</Typography>
-                  <Button 
-                    variant="contained" 
-                    sx={{ mt: 2 }} 
+                  <Button
+                    variant="contained"
+                    sx={{ mt: 2 }}
                     onClick={() => {
                       const a = document.createElement('a');
                       a.href = previewUrl;
@@ -986,10 +1045,10 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { 
-            if (previewUrl) window.URL.revokeObjectURL(previewUrl); 
-            setPreviewDialogOpen(false); 
-            setPreviewUrl(null); 
+          <Button onClick={() => {
+            if (previewUrl) window.URL.revokeObjectURL(previewUrl);
+            setPreviewDialogOpen(false);
+            setPreviewUrl(null);
             setPreviewType(null);
           }}>Close</Button>
         </DialogActions>

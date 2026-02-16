@@ -258,6 +258,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                   <ListItemIcon><LibraryBooksIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Standards" />
                 </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'compliance-policies'} onClick={() => onNavigate('compliance-policies')}>
+                  <ListItemIcon><DescriptionIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Policies" />
+                </ListItemButton>
                 <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'compliance-controls'} onClick={() => onNavigate('compliance-controls')}>
                   <ListItemIcon><RuleIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Controls" />

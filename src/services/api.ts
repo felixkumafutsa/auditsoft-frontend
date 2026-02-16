@@ -240,6 +240,15 @@ class ApiClient {
   deleteFramework = (id: number) => this.delete(`/compliance-frameworks/${id}`);
   getCoverageStats = () => this.get('/compliance-stats');
 
+  // --- Policy Management ---
+  getPolicies = () => this.get('/policies');
+  getPolicy = (id: number) => this.get(`/policies/${id}`);
+  createPolicy = (data: any) => this.post('/policies', data);
+  updatePolicy = (id: number, data: any) => this.put(`/policies/${id}`, data);
+  deletePolicy = (id: number) => this.delete(`/policies/${id}`);
+  mapPolicyToFramework = (policyId: number, frameworkId: number) => this.post(`/policies/${policyId}/map/${frameworkId}`, {});
+  removePolicyMapping = (mappingId: number) => this.delete(`/policies/mappings/${mappingId}`);
+
   getControlMappings = (programId: number) => this.get(`/audit-programs/${programId}/controls`);
   createControlMapping = (data: any) => this.post('/control-mappings', data);
   updateControlMapping = (id: number, data: any) => this.put(`/control-mappings/${id}`, data);

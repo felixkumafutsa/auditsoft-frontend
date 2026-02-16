@@ -589,7 +589,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           )}
 
           {/* Icon-only secondary actions */}
-          {isManager && selectedAudit.status === 'Closed' && onPreview && (
+          {isManager && (selectedAudit.status === 'Finalized' || selectedAudit.status === 'Pending CAE Approval' || selectedAudit.status === 'Closed') && onPreview && (
             <Tooltip title="View Audit Report">
               <Button
                 variant="outlined"
@@ -597,28 +597,40 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                 startIcon={<PictureAsPdfIcon />}
                 onClick={() => onPreview(selectedAudit.id)}
               >
-                View Audit Report
+                Preview Report
               </Button>
             </Tooltip>
           )}
 
-          {isManager && selectedAudit.status === 'Closed' && (
-            <Tooltip title="Save Report">
+          {isManager && selectedAudit.status === 'Finalized' && (
+            <Tooltip title="Save and Submit Report for CAE Approval">
               <Button
-                variant="outlined"
+                variant="contained"
                 size="small"
+                color="primary"
                 startIcon={<CheckCircleIcon />}
                 onClick={async () => {
-                  try {
-                    await api.saveReport(selectedAudit.id);
-                    MySwal.fire('Success', 'Report saved successfully!', 'success');
-                  } catch (e) {
-                    console.error(e);
-                    MySwal.fire('Error', 'Failed to save report.', 'error');
+                  const result = await MySwal.fire({
+                    title: 'Save Report for CAE Approval?',
+                    text: 'This will submit the report for CAE review and approval.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Save & Submit',
+                    cancelButtonText: 'Cancel'
+                  });
+                  if (result.isConfirmed) {
+                    try {
+                      await api.saveReport(selectedAudit.id);
+                      MySwal.fire('Success', 'Report saved and submitted for CAE approval!', 'success');
+                      setSelectedAudit({ ...selectedAudit, status: 'Pending CAE Approval' });
+                    } catch (e) {
+                      console.error(e);
+                      MySwal.fire('Error', 'Failed to save report.', 'error');
+                    }
                   }
                 }}
               >
-                Save Report
+                Save & Submit for Approval
               </Button>
             </Tooltip>
           )}

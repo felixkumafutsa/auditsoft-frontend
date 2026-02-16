@@ -26,6 +26,7 @@ export type Page =
   | 'risk-kri'
   | 'risk-heatmaps'
   | 'compliance-standards'
+  | 'compliance-policies'
   | 'compliance-controls'
   | 'compliance-coverage'
   | 'continuous-audits'

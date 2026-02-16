@@ -15,6 +15,7 @@ import AuditProgramsPage from '../pages/AuditProgramsPage';
 import StandardsLibraryPage from '../pages/StandardsLibraryPage';
 import ControlMappingPage from '../pages/ControlMappingPage';
 import CoverageAnalysisPage from '../pages/CoverageAnalysisPage';
+import PolicyManagementPage from '../pages/PolicyManagementPage';
 import FindingsPage from '../pages/FindingsPage';
 import EvidencePage from '../pages/EvidencePage';
 import RemediationPage from '../pages/RemediationPage';
@@ -162,6 +163,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             // Compliance
             case 'compliance-standards':
                 return <StandardsLibraryPage />;
+            case 'compliance-policies':
+                return <PolicyManagementPage />;
             case 'compliance-controls':
                 return <ControlMappingPage />;
             case 'compliance-coverage':

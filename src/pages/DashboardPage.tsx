@@ -815,13 +815,21 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 // ========== AUDITOR DASHBOARD ==========
 const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [myAudits, setMyAudits] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await api.getAudits();
-        setMyAudits(Array.isArray(data) ? data : []);
+        const [auditsData, notificationsData, tasksData] = await Promise.all([
+          api.getAudits(),
+          api.getNotifications?.() || Promise.resolve([]),
+          api.getMyTasks?.() || Promise.resolve([]),
+        ]);
+        setMyAudits(Array.isArray(auditsData) ? auditsData : []);
+        setNotifications(Array.isArray(notificationsData) ? notificationsData : []);
+        setTasks(Array.isArray(tasksData) ? tasksData : []);
       } catch (e) {
         console.error("Failed to fetch auditor data", e);
       } finally {
@@ -894,21 +902,114 @@ const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </Box>
       </Box>
 
-      {/* My Tasks */}
-      <Paper elevation={2} sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-          My Current Tasks
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-        {loading ? (
-          <CircularProgress />
-        ) : (
-          <Alert severity="info">
-            You have <strong>{activeAudits} active audits</strong> in progress.
-            Click "My Audits" to view execution details.
-          </Alert>
-        )}
-      </Paper>
+      {/* Recent Tasks & Notifications */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+          gap: 3,
+        }}
+      >
+        {/* My Tasks Card */}
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+            <AssignmentIcon color="primary" />
+            <Typography variant="h6" fontWeight="bold">
+              Recent Tasks
+            </Typography>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+          {loading ? (
+            <CircularProgress />
+          ) : tasks.length > 0 ? (
+            <List dense>
+              {tasks.slice(0, 5).map((task: any, index: number) => (
+                <React.Fragment key={task.id || index}>
+                  <ListItem>
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      <CheckCircleIcon color="primary" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={task.title || task.auditName || 'Audit Task'}
+                      secondary={task.dueDate ? `Due: ${new Date(task.dueDate).toLocaleDateString()}` : task.status}
+                      primaryTypographyProps={{ variant: 'body2', fontWeight: 'medium' }}
+                      secondaryTypographyProps={{ variant: 'caption' }}
+                    />
+                  </ListItem>
+                  <Divider variant="inset" component="li" />
+                </React.Fragment>
+              ))}
+            </List>
+          ) : (
+            <Alert severity="info">
+              You have <strong>{activeAudits} active audits</strong> in progress.
+              Click "My Audits" to view execution details.
+            </Alert>
+          )}
+        </Paper>
+
+        {/* Notifications Card */}
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+            <HistoryIcon color="primary" />
+            <Typography variant="h6" fontWeight="bold">
+              Recent Notifications
+            </Typography>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+          {loading ? (
+            <CircularProgress />
+          ) : notifications.length > 0 ? (
+            <List dense>
+              {notifications.slice(0, 5).map((n: any) => {
+                const Icon =
+                  n.type === "action_required"
+                    ? WarningIcon
+                    : n.type === "success"
+                      ? CheckCircleIcon
+                      : n.type === "error"
+                        ? ErrorIcon
+                        : n.type === "warning"
+                          ? WarningIcon
+                          : DescriptionIcon;
+                return (
+                  <React.Fragment key={n.id}>
+                    <ListItem>
+                      <ListItemIcon sx={{ minWidth: 40 }}>
+                        <Icon
+                          color={
+                            n.type === "success"
+                              ? "success"
+                              : n.type === "error"
+                                ? "error"
+                                : n.type === "warning" || n.type === "action_required"
+                                  ? "warning"
+                                  : "primary"
+                          }
+                        />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={n.title}
+                        secondary={n.message}
+                        primaryTypographyProps={{
+                          variant: 'body2',
+                          fontWeight: n.isRead ? 'normal' : 'bold'
+                        }}
+                        secondaryTypographyProps={{ variant: 'caption' }}
+                      />
+                    </ListItem>
+                    <Divider variant="inset" component="li" />
+                  </React.Fragment>
+                );
+              })}
+            </List>
+          ) : (
+            <Typography variant="body2" color="textSecondary" sx={{ py: 2, textAlign: 'center' }}>
+              No recent notifications.
+            </Typography>
+          )}
+        </Paper>
+      </Box>
     </Box>
   );
 };

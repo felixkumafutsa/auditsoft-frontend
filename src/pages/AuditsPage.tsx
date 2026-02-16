@@ -91,7 +91,6 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const [error, setError] = useState<string | null>(null);
   const [auditToEdit, setAuditToEdit] = useState<any | null>(null);
   const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
-  const [notifications, setNotifications] = useState<any[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -264,15 +263,6 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
 
       setAudits(mappedData);
 
-      // Fetch notifications if auditor
-      if (isAuditor) {
-        try {
-          const notifs = await (api as any).getNotifications();
-          setNotifications(Array.isArray(notifs) ? notifs : []);
-        } catch (e) {
-          console.error("Failed to fetch notifications", e);
-        }
-      }
       localStorage.setItem('cached_audits', JSON.stringify(mappedData));
       setError(null);
     } catch (err) {
@@ -962,48 +952,6 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               </Card>
             ))}
           </Box>
-
-          {/* Recent Notifications for Auditors */}
-          {isAuditor && (
-            <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
-              <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
-                <HistoryIcon color="primary" />
-                <Typography variant="h6" fontWeight="bold">Recent Notifications</Typography>
-              </Box>
-              <Divider sx={{ mb: 1 }} />
-              {notifications.length > 0 ? (
-                <List dense>
-                  {notifications.slice(0, 5).map((n: any) => {
-                    const Icon = n.type === "action_required" ? WarningIcon
-                      : n.type === "success" ? CheckCircleIcon
-                        : n.type === "error" ? ErrorIcon
-                          : n.type === "warning" ? WarningIcon
-                            : DescriptionIcon;
-                    return (
-                      <React.Fragment key={n.id}>
-                        <ListItem>
-                          <ListItemIcon sx={{ minWidth: 40 }}>
-                            <Icon color={n.type === "success" ? "success" : n.type === "error" ? "error" : n.type === "warning" || n.type === "action_required" ? "warning" : "primary"} />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={n.title}
-                            secondary={n.message}
-                            primaryTypographyProps={{ variant: 'body2', fontWeight: n.read ? 'normal' : 'bold' }}
-                            secondaryTypographyProps={{ variant: 'caption' }}
-                          />
-                        </ListItem>
-                        <Divider variant="inset" component="li" />
-                      </React.Fragment>
-                    );
-                  })}
-                </List>
-              ) : (
-                <Typography variant="body2" color="textSecondary" sx={{ py: 2, textAlign: 'center' }}>
-                  No recent notifications.
-                </Typography>
-              )}
-            </Paper>
-          )}
 
           <Box
             sx={{

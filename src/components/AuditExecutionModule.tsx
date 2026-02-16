@@ -60,6 +60,8 @@ import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import HistoryIcon from "@mui/icons-material/History";
+import RateReviewIcon from "@mui/icons-material/RateReview";
+import SaveIcon from "@mui/icons-material/Save";
 import { getStatusColor } from "../utils/statusColors";
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
@@ -103,6 +105,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
   const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
   const [uploading, setUploading] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(0); // 0: Programs, 1: Fieldwork, 2: Working Papers, 3: Comments
+  const [chiefAuditorComments, setChiefAuditorComments] = useState('');
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -497,17 +500,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </Button>
           )}
 
-          {isManager && onDelete && selectedAudit.status !== 'Closed' && (
-            <Button
-              variant="outlined"
-              size="small"
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={() => onDelete(selectedAudit.id)}
-            >
-              Delete
-            </Button>
-          )}
+          {/* Remove Delete button for Managers - only System Admin can delete audits */}
 
           {((isManager || isCAE) && selectedAudit.status === 'Planned') && onManagePrograms && (
             <Button
@@ -543,7 +536,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </Button>
           )}
 
-          {isCAE && selectedAudit.status === 'Pending CAE Approval' && (
+          {isCAE && selectedAudit.status === 'Finalized' && (
             <Button
               variant="contained"
               size="small"
@@ -564,7 +557,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </Button>
           )}
 
-          {isManager && (selectedAudit.status === 'Execution Finished' || selectedAudit.status === 'Under Review') && onFinalize && (
+          {isManager && selectedAudit.status === 'Under Review' && onFinalize && (
             <Button
               variant="contained"
               size="small"
@@ -572,24 +565,63 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
               startIcon={<CheckCircleIcon />}
               onClick={() => onFinalize(selectedAudit)}
             >
-              Submit for CAE Approval
+              Finalize Audit
             </Button>
           )}
 
-          {isCAE && (selectedAudit.status === 'Process Owner Review' || selectedAudit.status === 'Finalized') && onClose && (
-            <Button
-              variant="contained"
-              size="small"
-              color="warning"
-              startIcon={<CheckCircleOutlineIcon />}
-              onClick={() => onClose(selectedAudit)}
-            >
-              Close Audit
-            </Button>
+          {/* Chief Auditor Actions when audit is Finalized */}
+          {isCAE && selectedAudit.status === 'Finalized' && (
+            <>
+              <Button
+                variant="outlined"
+                size="small"
+                color="info"
+                startIcon={<VisibilityIcon />}
+                onClick={() => {
+                  console.log('Review Report clicked');
+                  if (onPreview) {
+                    onPreview(selectedAudit.id);
+                  } else {
+                    console.error('onPreview function not available');
+                  }
+                }}
+              >
+                Review Report
+              </Button>
+              
+              <Button
+                variant="contained"
+                size="small"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={async () => {
+                  try {
+                    const mappedRole = currentUser?.role === 'CAE' || currentUser?.role === 'Chief Audit Executive (CAE)' || currentUser?.role === 'Chief Audit Executive' ? 'Chief Auditor' : currentUser?.role;
+                    await (api as any).transitionAudit(selectedAudit.id, 'Finalized', mappedRole);
+                    MySwal.fire('Approved', 'Report has been approved.', 'success');
+                  } catch (e) {
+                    console.error(e);
+                    MySwal.fire('Error', 'Failed to approve report.', 'error');
+                  }
+                }}
+              >
+                Approve Report
+              </Button>
+              
+              <Button
+                variant="contained"
+                size="small"
+                color="warning"
+                startIcon={<CheckCircleOutlineIcon />}
+                onClick={() => onClose && onClose(selectedAudit)}
+              >
+                Close Audit
+              </Button>
+            </>
           )}
 
           {/* Icon-only secondary actions */}
-          {isManager && (selectedAudit.status === 'Finalized' || selectedAudit.status === 'Pending CAE Approval' || selectedAudit.status === 'Closed') && onPreview && (
+          {isManager && selectedAudit.status === 'Finalized' && onPreview && (
             <Tooltip title="View Audit Report">
               <Button
                 variant="outlined"
@@ -602,35 +634,25 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </Tooltip>
           )}
 
+          {/* Save Report button for Managers when audit is Finalized */}
           {isManager && selectedAudit.status === 'Finalized' && (
-            <Tooltip title="Save and Submit Report for CAE Approval">
+            <Tooltip title="Save Report">
               <Button
                 variant="contained"
                 size="small"
                 color="primary"
-                startIcon={<CheckCircleIcon />}
+                startIcon={<DescriptionIcon />}
                 onClick={async () => {
-                  const result = await MySwal.fire({
-                    title: 'Save Report for CAE Approval?',
-                    text: 'This will submit the report for CAE review and approval.',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Yes, Save & Submit',
-                    cancelButtonText: 'Cancel'
-                  });
-                  if (result.isConfirmed) {
-                    try {
-                      await api.saveReport(selectedAudit.id);
-                      MySwal.fire('Success', 'Report saved and submitted for CAE approval!', 'success');
-                      setSelectedAudit({ ...selectedAudit, status: 'Pending CAE Approval' });
-                    } catch (e) {
-                      console.error(e);
-                      MySwal.fire('Error', 'Failed to save report.', 'error');
-                    }
+                  try {
+                    await (api as any).saveReport(selectedAudit.id);
+                    MySwal.fire('Success', 'Report saved successfully!', 'success');
+                  } catch (e) {
+                    console.error(e);
+                    MySwal.fire('Error', 'Failed to save report.', 'error');
                   }
                 }}
               >
-                Save & Submit for Approval
+                Save Report
               </Button>
             </Tooltip>
           )}
@@ -657,16 +679,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
               Submit for Review
             </Button>
           )}
-          {isManager && selectedAudit.status === 'Under Review' && (
-            <Button
-              variant="contained"
-              color="success"
-              onClick={() => handleUpdateStatus('Execution Finished')}
-              size="small"
-            >
-              Confirm Execution Finished
-            </Button>
-          )}
+          {/* Remove Execution Finished button for Manager */}
           {isProcessOwner && selectedAudit.status === 'Finalized' && (
             <Button
               variant="contained"
@@ -685,7 +698,9 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           <Tab icon={<AssignmentIcon />} label="Audit Programs" />
           <Tab icon={<FactCheckIcon />} label="Fieldwork & Testing" />
           <Tab icon={<FolderIcon />} label="Working Papers" />
-          <Tab icon={<PlaylistAddIcon />} label="Comments" />
+          {isCAE && selectedAudit.status === 'Finalized' && (
+            <Tab icon={<RateReviewIcon />} label="Chief Auditor Review" />
+          )}
         </Tabs>
       </Paper>
 
@@ -934,15 +949,50 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </TableContainer>
           )}
 
-          {/* Tab 3: Comments & Feedback */}
+          {/* Tab 3: Chief Auditor Review & Comments */}
           {activeTab === 3 && (
             <Box>
-              <Typography variant="h6" gutterBottom>Reviewer Comments & Audit Feedback</Typography>
+              <Typography variant="h6" gutterBottom>Chief Auditor Review & Comments</Typography>
+              
+              {/* Chief Auditor Comment Section */}
+              {isCAE && (
+                <Paper variant="outlined" sx={{ mb: 3, p: 2 }}>
+                  <Typography variant="subtitle1" gutterBottom>Add Chief Auditor Comments</Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    label="Chief Auditor Review Comments"
+                    placeholder="Enter your review comments and feedback..."
+                    value={chiefAuditorComments}
+                    onChange={(e) => setChiefAuditorComments(e.target.value)}
+                    sx={{ mb: 2 }}
+                  />
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<SaveIcon />}
+                    onClick={async () => {
+                      try {
+                        await (api as any).saveChiefAuditorComments(selectedAudit.id, chiefAuditorComments);
+                        MySwal.fire('Success', 'Comments saved successfully!', 'success');
+                      } catch (e) {
+                        console.error(e);
+                        MySwal.fire('Error', 'Failed to save comments.', 'error');
+                      }
+                    }}
+                  >
+                    Save Comments
+                  </Button>
+                </Paper>
+              )}
+
+              {/* Existing Reviewer Comments */}
               <Paper variant="outlined">
                 <List>
                   {programs.filter(p => p.reviewerComment).length === 0 ? (
                     <ListItem>
-                      <ListItemText primary="No comments have been left on this audit yet." />
+                      <ListItemText primary="No review comments have been added yet." />
                     </ListItem>
                   ) : (
                     programs.filter(p => p.reviewerComment).map(p => (
@@ -958,7 +1008,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                                   variant="body2"
                                   color="text.primary"
                                 >
-                                  Comment:
+                                  Review Comment:
                                 </Typography>
                                 {` — ${p.reviewerComment}`}
                               </React.Fragment>

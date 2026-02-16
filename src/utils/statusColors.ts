@@ -9,10 +9,6 @@ export const getStatusColor = (status: string): "default" | "primary" | "seconda
             return 'warning';
         case 'Under Review':
             return 'secondary';
-        case 'Execution Finished':
-            return 'info';
-        case 'Pending CAE Approval':
-            return 'warning';
         case 'Finalized':
             return 'success';
         case 'Closed':
@@ -44,10 +40,6 @@ export const getStatusColor = (status: string): "default" | "primary" | "seconda
         // Generic/Fallback
         case 'Pending Approval':
             return 'warning';
-        case 'Process Owner Review':
-            return 'info';
-        case 'Reviewed by Owner':
-            return 'success';
         case 'Rejected':
             return 'error';
         default:

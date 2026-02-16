@@ -244,7 +244,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     { id: 3, description: "Outdated software version", severity: "Low", status: "Open" },
   ]);
 
-  const workflowSteps = ['Planned', 'Approved', 'In Progress', 'Under Review', 'Execution Finished', 'Pending CAE Approval', 'Finalized', 'Reviewed by Owner', 'Closed'];
+  const workflowSteps = ['Planned', 'Approved', 'In Progress', 'Under Review', 'Finalized', 'Closed'];
 
   const fetchAudits = async () => {
     setLoading(true);
@@ -549,14 +549,16 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const handleFinalizeAudit = async () => {
     if (auditToEdit) {
       try {
-        const toStatus = "Pending CAE Approval";
-        await api.transitionAudit(auditToEdit.id, toStatus, currentUser?.role);
+        const toStatus = "Finalized";
+        // Map role names to backend format
+        const mappedRole = currentUser?.role === 'CAE' || currentUser?.role === 'Chief Audit Executive (CAE)' || currentUser?.role === 'Chief Audit Executive' ? 'Chief Auditor' : currentUser?.role;
+        await api.transitionAudit(auditToEdit.id, toStatus, mappedRole);
         const updatedAudit = { ...auditToEdit, status: toStatus };
         setAudits(audits.map(a => a.id === auditToEdit.id ? updatedAudit : a));
         setView("list");
       } catch (err) {
-        console.error("Failed to submit for CAE approval", err);
-        MySwal.fire('Error', "Failed to submit audit for CAE approval.", 'error');
+        console.error("Failed to finalize audit", err);
+        MySwal.fire('Error', "Failed to finalize audit.", 'error');
       }
     }
   };
@@ -564,7 +566,9 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const handleApproveReport = async (auditId: number) => {
     try {
       const toStatus = "Finalized";
-      await api.transitionAudit(auditId, toStatus, currentUser?.role);
+      // Map role names to backend format
+      const mappedRole = currentUser?.role === 'CAE' || currentUser?.role === 'Chief Audit Executive (CAE)' || currentUser?.role === 'Chief Audit Executive' ? 'Chief Auditor' : currentUser?.role;
+      await api.transitionAudit(auditId, toStatus, mappedRole);
       setAudits(audits.map(a => a.id === auditId ? { ...a, status: toStatus } : a));
       MySwal.fire('Approved', 'Report has been approved and finalized.', 'success');
     } catch (err) {
@@ -578,7 +582,9 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     if (target) {
       try {
         const toStatus = "Closed";
-        await api.transitionAudit(target.id, toStatus, currentUser?.role);
+        // Map role names to backend format
+        const mappedRole = currentUser?.role === 'CAE' || currentUser?.role === 'Chief Audit Executive (CAE)' || currentUser?.role === 'Chief Audit Executive' ? 'Chief Auditor' : currentUser?.role;
+        await api.transitionAudit(target.id, toStatus, mappedRole);
         const updatedAudit = { ...target, status: toStatus };
         setAudits(audits.map(a => a.id === target.id ? updatedAudit : a));
         setView("list");
@@ -779,7 +785,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               </Tooltip>
             )}
 
-            {isCAE && (params.row.status === 'Finalized' || params.row.status === 'Process Owner Review') && (
+            {isCAE && params.row.status === 'Finalized' && (
               <Tooltip title="Close Audit">
                 <IconButton size="small" color="warning" onClick={(e) => { e.stopPropagation(); handleCloseAudit(params.row); }}>
                   <CheckCircleOutlineIcon fontSize="small" />
@@ -787,13 +793,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
               </Tooltip>
             )}
 
-            {isCAE && params.row.status === 'Pending CAE Approval' && (
-              <Tooltip title="Approve Report">
-                <IconButton size="small" color="success" onClick={(e) => { e.stopPropagation(); handleApproveReport(params.row.id); }}>
-                  <CheckCircleIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
+            {/* Remove Pending CAE Approval button - obsolete status */}
 
             {isManager && (
               <Tooltip title="Delete Audit">
@@ -1374,7 +1374,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                 >
                   {isAuditor && (auditToEdit.status === 'Planned' || auditToEdit.status === 'Approved')
                     ? "Start & Execute Audit"
-                    : (auditToEdit.status === 'Under Review' || auditToEdit.status === 'Execution Finished' ? "Review Audit" : "View / Execute Audit")
+                    : (auditToEdit.status === 'Under Review' ? "Review Audit" : "View / Execute Audit")
                   }
                 </Button>
 
@@ -1410,8 +1410,8 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                   </Button>
                 )}
 
-                {/* Finalize Audit - Managers when Under Review / Execution Finished */}
-                {isManager && (auditToEdit.status === 'Under Review' || auditToEdit.status === 'Execution Finished') && (
+                {/* Finalize Audit - Managers when Under Review */}
+                {isManager && auditToEdit.status === 'Under Review' && (
                   <Button
                     fullWidth
                     variant="outlined"
@@ -1427,7 +1427,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                 )}
 
                 {/* Close Audit - CAE when Finalized */}
-                {isCAE && (auditToEdit.status === 'Finalized' || auditToEdit.status === 'Process Owner Review') && (
+                {isCAE && auditToEdit.status === 'Finalized' && (
                   <Button
                     fullWidth
                     variant="outlined"

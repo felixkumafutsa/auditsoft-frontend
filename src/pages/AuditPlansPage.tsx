@@ -55,7 +55,7 @@ const AuditPlansPage: React.FC = () => {
   const [auditUniverseItems, setAuditUniverseItems] = useState<{ id: number; entityName: string; entityType: string }[]>([]);
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
 
-  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
+  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Auditor';
   const isAuditor = userRole === 'Auditor' || userRole === 'auditor';
   const isManager = userRole === 'Audit Manager' || userRole === 'Manager';
 
@@ -178,7 +178,9 @@ const AuditPlansPage: React.FC = () => {
     try {
       const audit = audits.find(a => a.id === id);
       if (audit) {
-        await (api as any).transitionAudit(id, 'Finalized', isCAE ? 'Chief Audit Executive (CAE)' : userRole);
+        // Map role names to backend format
+        const mappedRole = userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Audit Executive' ? 'Chief Auditor' : userRole;
+        await (api as any).transitionAudit(id, 'Finalized', mappedRole);
         setAudits(audits.map(a => a.id === id ? { ...a, status: 'Finalized' } : a));
         if (selectedAudit?.id === id) {
           setSelectedAudit({ ...audit, status: 'Finalized' });
@@ -193,7 +195,9 @@ const AuditPlansPage: React.FC = () => {
     try {
       const audit = audits.find(a => a.id === id);
       if (audit) {
-        await (api as any).transitionAudit(id, 'Closed', isCAE ? 'Chief Audit Executive (CAE)' : userRole);
+        // Map role names to backend format
+        const mappedRole = userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Audit Executive' ? 'Chief Auditor' : userRole;
+        await (api as any).transitionAudit(id, 'Closed', mappedRole);
         setAudits(audits.map(a => a.id === id ? { ...a, status: 'Closed' } : a));
         if (selectedAudit?.id === id) {
           setSelectedAudit({ ...(audit as any), status: 'Closed' });
@@ -329,14 +333,14 @@ const AuditPlansPage: React.FC = () => {
                 </Tooltip>
               </>
             )}
-            {(status === 'Under Review' || status === 'Execution Finished') && isCAE && (
+            {status === 'Under Review' && isManager && (
               <Tooltip title="Finalize">
                 <IconButton onClick={(e) => { e.stopPropagation(); handleFinalize(params.row.id); }} color="success" size="small">
                   <FactCheckIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
-            {(status === 'Finalized' || status === 'Process Owner Review') && isCAE && (
+            {status === 'Finalized' && isCAE && (
               <Tooltip title="Close Audit">
                 <IconButton onClick={(e) => { e.stopPropagation(); handleClose(params.row.id); }} color="warning" size="small">
                   <LockIcon fontSize="small" />
@@ -493,7 +497,7 @@ const AuditPlansPage: React.FC = () => {
             {selectedAudit?.status === 'Planned' && isCAE && (
               <Button variant="contained" color="success" onClick={() => handleApprove(selectedAudit.id)}>Approve</Button>
             )}
-            {selectedAudit?.status === 'Under Review' && isCAE && (
+            {selectedAudit?.status === 'Under Review' && isManager && (
               <Button variant="contained" color="success" onClick={() => handleFinalize(selectedAudit.id)}>Finalize</Button>
             )}
             {selectedAudit?.status === 'Finalized' && isCAE && (
@@ -542,7 +546,7 @@ const AuditPlansPage: React.FC = () => {
                 >
                   {isAuditor && (selectedAudit.status === 'Planned' || selectedAudit.status === 'Approved')
                     ? "Start & Execute Audit"
-                    : (selectedAudit.status === 'Under Review' || selectedAudit.status === 'Execution Finished' ? "Review Audit" : "View / Execute Audit")
+                    : (selectedAudit.status === 'Under Review' ? "Review Audit" : "View / Execute Audit")
                   }
                 </Button>
 
@@ -579,7 +583,7 @@ const AuditPlansPage: React.FC = () => {
                 )}
 
                 {/* Finalize Audit - Managers when Under Review */}
-                {isManager && (selectedAudit.status === 'Under Review' || selectedAudit.status === 'Execution Finished') && (
+                {isManager && selectedAudit.status === 'Under Review' && (
                   <Button
                     fullWidth
                     variant="outlined"
@@ -594,8 +598,8 @@ const AuditPlansPage: React.FC = () => {
                   </Button>
                 )}
 
-                {/* Close Audit - CAE when not already closed */}
-                {isCAE && selectedAudit.status !== 'Closed' && (
+                {/* Close Audit - CAE when Finalized */}
+                {isCAE && selectedAudit.status === 'Finalized' && (
                   <Button
                     fullWidth
                     variant="outlined"

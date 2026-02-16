@@ -120,13 +120,6 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             >
               My Audits
             </Button>
-            <Button
-              startIcon={<RateReviewIcon />}
-              color={currentPage === 'comments' ? 'primary' : 'inherit'}
-              onClick={() => onNavigate('comments')}
-            >
-              Comments
-            </Button>
           </Box>
         </Toolbar>
       </AppBar>
@@ -199,13 +192,6 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
               onClick={() => onNavigate('system-settings')}
             >
               System Settings
-            </Button>
-            <Button
-              startIcon={<RateReviewIcon />}
-              color={currentPage === 'comments' ? 'primary' : 'inherit'}
-              onClick={() => onNavigate('comments')}
-            >
-              Comments
             </Button>
           </Box>
         </Toolbar>
@@ -373,14 +359,6 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
                 <ListItemText>Evidence</ListItemText>
               </MenuItem>
             </Menu>
-
-            <Button
-              startIcon={<RateReviewIcon />}
-              color={currentPage === 'comments' ? 'primary' : 'inherit'}
-              onClick={() => onNavigate('comments')}
-            >
-              Comments
-            </Button>
           </Box>
         </Toolbar>
       </AppBar>
@@ -498,13 +476,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             </MenuItem>
           </Menu>
 
-          <Button
-            startIcon={<RateReviewIcon />}
-            color={currentPage === 'comments' ? 'primary' : 'inherit'}
-            onClick={() => onNavigate('comments')}
-          >
-            Comments
-          </Button>
+          {/* Remove Comments button for Manager/Other roles */}
         </Box>
       </Toolbar>
     </AppBar >

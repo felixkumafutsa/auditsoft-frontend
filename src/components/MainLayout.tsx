@@ -19,7 +19,6 @@ import PolicyManagementPage from '../pages/PolicyManagementPage';
 import FindingsPage from '../pages/FindingsPage';
 import EvidencePage from '../pages/EvidencePage';
 import RemediationPage from '../pages/RemediationPage';
-import CommentsPage from '../pages/CommentsPage';
 import UsersPage from '../pages/UsersPage';
 import RolesPage from '../pages/RolesPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
@@ -122,8 +121,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             // Process Owner
             case 'remediation':
                 return <RemediationPage />;
-            case 'comments':
-                return <CommentsPage />;
 
             // Evidence
             case 'evidence':

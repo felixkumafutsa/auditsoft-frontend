@@ -45,8 +45,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       }
       
       if (backendRoleName === 'System Administrator') role = 'Admin';
-      else if (backendRoleName === 'Chief Audit Executive (CAE)') role = 'CAE';
-      else if (backendRoleName === 'Executive / Board Viewer') role = 'Executive';
+      else if (backendRoleName === 'Chief Audit Executive (CAE)' || backendRoleName === 'Chief Auditor') role = 'CAE';
+      else if (backendRoleName === 'Executive / Board Viewer' || backendRoleName === 'Board Member') role = 'Executive';
       else if (backendRoleName === 'Audit Manager') role = 'Manager';
       else if (backendRoleName === 'Process Owner') role = 'ProcessOwner';
       else if (backendRoleName === 'Auditor') role = 'Auditor';

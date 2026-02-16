@@ -62,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
   const [fieldWorkOpen, setFieldWorkOpen] = useState(false);
 
   const isSystemAdmin = userRole === 'System Administrator' || userRole === 'Admin';
-  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
+  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Auditor';
   const isManager = userRole === 'Manager' || userRole === 'Audit Manager' || userRole === 'manager';
   const isAuditor = userRole === 'Auditor';
   const isProcessOwner = userRole === 'ProcessOwner' || userRole === 'Process Owner';
@@ -99,11 +99,6 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
             <ListItemButton selected={currentPage === 'messaging'} onClick={() => onNavigate('messaging')}>
               <ListItemIcon><ChatIcon sx={{ color: 'white' }} /></ListItemIcon>
               <ListItemText primary="Messages" />
-            </ListItemButton>
-
-            <ListItemButton selected={currentPage === 'comments'} onClick={() => onNavigate('comments')}>
-              <ListItemIcon><QuestionAnswerIcon sx={{ color: 'white' }} /></ListItemIcon>
-              <ListItemText primary="Comments" />
             </ListItemButton>
           </>
         )}
@@ -261,6 +256,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                 <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'compliance-policies'} onClick={() => onNavigate('compliance-policies')}>
                   <ListItemIcon><DescriptionIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Policies" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'policy-management'} onClick={() => onNavigate('policy-management')}>
+                  <ListItemIcon><LibraryBooksIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Policy Management" />
                 </ListItemButton>
                 <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'compliance-controls'} onClick={() => onNavigate('compliance-controls')}>
                   <ListItemIcon><RuleIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>

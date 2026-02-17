@@ -162,6 +162,8 @@ class ApiClient {
     this.get(`/audits/${id}/allowed-transitions`);
 
   // --- Audit Comments ---
+  saveChiefAuditorComments = (auditId: number, comments: string) =>
+    this.post(`/audits/${auditId}/chief-auditor-comments`, { comments });
   getAuditComments = (auditId: number) => this.get(`/audits/${auditId}/comments`);
   addAuditComment = (auditId: number, data: any) => this.post(`/audits/${auditId}/comments`, data);
 

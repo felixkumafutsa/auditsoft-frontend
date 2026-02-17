@@ -38,6 +38,10 @@ import AuditForm from '../components/AuditForm';
 import AuditExecutionModule from "../components/AuditExecutionModule";
 import AuditProgramsModule from "../components/AuditProgramsModule";
 import { getStatusColor } from '../utils/statusColors';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 
 const AuditPlansPage: React.FC = () => {
   const theme = useTheme();
@@ -54,6 +58,8 @@ const AuditPlansPage: React.FC = () => {
   const [managers, setManagers] = useState<{ id: number; name: string; role: string }[]>([]);
   const [auditUniverseItems, setAuditUniverseItems] = useState<{ id: number; entityName: string; entityType: string }[]>([]);
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Auditor';
   const isAuditor = userRole === 'Auditor' || userRole === 'auditor';
@@ -226,6 +232,18 @@ const AuditPlansPage: React.FC = () => {
       setAssignDialogOpen(false);
     } catch (err) {
       console.error("Failed to assign auditor", err);
+    }
+  };
+
+  const handlePreviewReport = async (auditId: number) => {
+    try {
+      const blob = await api.previewAuditReport(auditId);
+      const url = window.URL.createObjectURL(blob);
+      setPreviewUrl(url);
+      setPreviewOpen(true);
+    } catch (error) {
+      console.error('Failed to preview report:', error);
+      MySwal.fire('Error', 'Failed to preview report.', 'error');
     }
   };
 
@@ -478,6 +496,7 @@ const AuditPlansPage: React.FC = () => {
           onManagePrograms={(audit: Audit) => { setSelectedAudit(audit); setView("programs"); }}
           onFinalize={(audit: Audit) => handleFinalize(audit.id)}
           onClose={(audit: Audit) => handleClose(audit.id)}
+          onPreview={handlePreviewReport}
         />
       ) : (
         <Paper sx={{ p: 3 }}>
@@ -678,6 +697,42 @@ const AuditPlansPage: React.FC = () => {
           <Button onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleAssignConfirm} variant="contained">Assign</Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Report Preview Dialog */}
+      <Dialog 
+        open={previewOpen} 
+        onClose={() => {
+          setPreviewOpen(false);
+          if (previewUrl) {
+            window.URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+          }
+        }}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">Audit Report Preview</Typography>
+          <IconButton onClick={() => {
+            setPreviewOpen(false);
+            if (previewUrl) {
+              window.URL.revokeObjectURL(previewUrl);
+              setPreviewUrl(null);
+            }
+          }} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {previewUrl && (
+            <iframe
+              src={previewUrl}
+              style={{ width: '100%', height: '80vh', border: 'none' }}
+              title="Audit Report Preview"
+            />
+          )}
+        </DialogContent>
       </Dialog>
     </Box>
   );

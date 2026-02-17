@@ -536,27 +536,6 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </Button>
           )}
 
-          {isCAE && selectedAudit.status === 'Finalized' && (
-            <Button
-              variant="contained"
-              size="small"
-              color="success"
-              startIcon={<CheckCircleIcon />}
-              onClick={async () => {
-                try {
-                  await api.transitionAudit(selectedAudit.id, 'Finalized', currentUser?.role);
-                  MySwal.fire('Approved', 'Report has been approved and finalized.', 'success');
-                  setSelectedAudit({ ...selectedAudit, status: 'Finalized' });
-                } catch (e) {
-                  console.error(e);
-                  MySwal.fire('Error', 'Failed to approve report.', 'error');
-                }
-              }}
-            >
-              Approve Report
-            </Button>
-          )}
-
           {isManager && selectedAudit.status === 'Under Review' && onFinalize && (
             <Button
               variant="contained"
@@ -570,7 +549,15 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           )}
 
           {/* Chief Auditor Actions when audit is Finalized */}
-          {isCAE && selectedAudit.status === 'Finalized' && (
+          {(() => {
+            console.log('Chief Auditor Debug:', { 
+              isCAE, 
+              userRole: currentUser?.role, 
+              auditStatus: selectedAudit?.status,
+              shouldShow: isCAE && selectedAudit?.status === 'Finalized'
+            });
+            return isCAE && selectedAudit?.status === 'Finalized';
+          })() && (
             <>
               <Button
                 variant="outlined"
@@ -596,8 +583,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                 startIcon={<CheckCircleIcon />}
                 onClick={async () => {
                   try {
-                    const mappedRole = currentUser?.role === 'CAE' || currentUser?.role === 'Chief Audit Executive (CAE)' || currentUser?.role === 'Chief Audit Executive' ? 'Chief Auditor' : currentUser?.role;
-                    await (api as any).transitionAudit(selectedAudit.id, 'Finalized', mappedRole);
+                    // Approve Report doesn't need to transition status - just confirm approval
                     MySwal.fire('Approved', 'Report has been approved.', 'success');
                   } catch (e) {
                     console.error(e);
@@ -621,13 +607,21 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           )}
 
           {/* Icon-only secondary actions */}
-          {isManager && selectedAudit.status === 'Finalized' && onPreview && (
+          {(() => {
+            console.log('Manager Debug:', { 
+              isManager, 
+              userRole: currentUser?.role, 
+              auditStatus: selectedAudit?.status,
+              shouldShow: isManager && selectedAudit?.status === 'Finalized' && onPreview
+            });
+            return isManager && selectedAudit?.status === 'Finalized' && onPreview;
+          })() && (
             <Tooltip title="View Audit Report">
               <Button
                 variant="outlined"
                 size="small"
                 startIcon={<PictureAsPdfIcon />}
-                onClick={() => onPreview(selectedAudit.id)}
+                onClick={() => onPreview && onPreview(selectedAudit.id)}
               >
                 Preview Report
               </Button>
@@ -635,7 +629,15 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           )}
 
           {/* Save Report button for Managers when audit is Finalized */}
-          {isManager && selectedAudit.status === 'Finalized' && (
+          {(() => {
+            console.log('Save Report Debug:', { 
+              isManager, 
+              userRole: currentUser?.role, 
+              auditStatus: selectedAudit?.status,
+              shouldShow: isManager && selectedAudit?.status === 'Finalized'
+            });
+            return isManager && selectedAudit?.status === 'Finalized';
+          })() && (
             <Tooltip title="Save Report">
               <Button
                 variant="contained"

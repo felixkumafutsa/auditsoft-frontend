@@ -525,15 +525,15 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               Weekly Activity
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={activityData}>
+              <LineChart data={activityData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="audits" fill="#1976d2" name="Audits Created" />
-                <Bar dataKey="findings" fill="#d32f2f" name="Findings Logged" />
-              </BarChart>
+                <Line type="monotone" dataKey="audits" stroke="#1976d2" name="Audits Created" strokeWidth={2} />
+                <Line type="monotone" dataKey="findings" stroke="#d32f2f" name="Findings Logged" strokeWidth={2} />
+              </LineChart>
             </ResponsiveContainer>
           </Paper>
         </Box>

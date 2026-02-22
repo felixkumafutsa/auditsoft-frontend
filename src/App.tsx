@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import LoginPage from './pages/LoginPage';
 import MainLayout from './components/MainLayout';
-import ReportsFilesPage from './pages/ReportsFilesPage';
+import AuditWorkpaperPage from './pages/AuditWorkpaperPage';
 
 const App: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,7 +40,14 @@ const App: React.FC = () => {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
-            {isAuthenticated ? <MainLayout onLogout={handleLogout} /> : <LoginPage onLoginSuccess={handleLoginSuccess} />}
+            {isAuthenticated ? (
+                <Routes>
+                    <Route path="/workpaper/:programId" element={<AuditWorkpaperPage />} />
+                    <Route path="/*" element={<MainLayout onLogout={handleLogout} />} />
+                </Routes>
+            ) : (
+                <LoginPage onLoginSuccess={handleLoginSuccess} />
+            )}
         </ThemeProvider>
     );
 };

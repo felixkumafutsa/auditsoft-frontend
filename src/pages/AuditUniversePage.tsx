@@ -27,7 +27,10 @@ interface AuditUniverseItem {
   entityType: string;
   entityName: string;
   riskRating: string;
-  owner?: { name: string };
+  owner?: { 
+    id: number;
+    name: string; 
+  };
   createdAt: string;
 }
 
@@ -36,6 +39,7 @@ const AuditUniversePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<AuditUniverseItem | null>(null);
+  const [processOwners, setProcessOwners] = useState<any[]>([]);
 
   // Filtering State
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,7 +50,7 @@ const AuditUniversePage: React.FC = () => {
     entityType: 'Business Unit',
     entityName: '',
     riskRating: 'Medium',
-    ownerId: 1 // Default to current user or admin for now
+    ownerId: '' as string | number // Will be set when process owners are loaded
   });
 
   const userRole = localStorage.getItem('userRole');
@@ -66,9 +70,37 @@ const AuditUniversePage: React.FC = () => {
     }
   };
 
+  const fetchProcessOwners = async () => {
+    try {
+      const users = await api.getUsers();
+      // Filter users who are process owners
+      const processOwnerUsers = Array.isArray(users) ? users.filter((user: any) => {
+        const userRoles = user?.userRoles || user?.roles;
+        if (!userRoles) return false;
+        
+        const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+        return roles.some((role: any) => 
+          role?.role?.name === 'Process Owner' || 
+          role?.name === 'Process Owner' ||
+          role?.role?.name === 'ProcessOwner' || 
+          role?.name === 'ProcessOwner'
+        );
+      }) : [];
+      setProcessOwners(processOwnerUsers);
+      
+      // Set default owner if available
+      if (processOwnerUsers.length > 0 && !formData.ownerId) {
+        setFormData(prev => ({ ...prev, ownerId: processOwnerUsers[0].id }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch process owners:', error);
+    }
+  };
+
   useEffect(() => {
     fetchUniverse();
-  }, []);
+    fetchProcessOwners();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter Logic
   const filteredItems = items.filter(item => {
@@ -103,7 +135,7 @@ const AuditUniversePage: React.FC = () => {
         entityType: item.entityType,
         entityName: item.entityName,
         riskRating: item.riskRating,
-        ownerId: 1
+        ownerId: item.owner?.id || ''
       });
     } else {
       setEditingItem(null);
@@ -111,7 +143,7 @@ const AuditUniversePage: React.FC = () => {
         entityType: 'Business Unit',
         entityName: '',
         riskRating: 'Medium',
-        ownerId: 1
+        ownerId: processOwners.length > 0 ? processOwners[0].id : ''
       });
     }
     setOpenDialog(true);
@@ -279,6 +311,22 @@ const AuditUniversePage: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, entityName: e.target.value })}
                   required
                 />
+              </Grid>
+              <Grid size={{ xs: 12 } as any}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Process Owner"
+                  value={formData.ownerId}
+                  onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
+                  required
+                >
+                  {processOwners.map((owner) => (
+                    <MenuItem key={owner.id} value={owner.id}>
+                      {owner.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Grid>
               <Grid size={{ xs: 6 } as any}>
                 <TextField

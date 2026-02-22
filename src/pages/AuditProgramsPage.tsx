@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -24,10 +25,12 @@ import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ArticleIcon from '@mui/icons-material/Article';
 import api from '../services/api';
 import { Audit, AuditProgram } from '../types/audit';
 
 const AuditProgramsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [audits, setAudits] = useState<Audit[]>([]);
   const [selectedAuditId, setSelectedAuditId] = useState<number | ''>('');
   const [programs, setPrograms] = useState<AuditProgram[]>([]);
@@ -159,7 +162,24 @@ const AuditProgramsPage: React.FC = () => {
       { field: 'id', headerName: 'ID', width: 70 },
       { field: 'procedureName', headerName: 'Procedure Name', flex: 1, minWidth: 250 },
       { field: 'controlReference', headerName: 'Control Ref', width: 150 },
+      { field: 'controlReference', headerName: 'Control Ref', width: 150 },
       { field: 'expectedOutcome', headerName: 'Expected Outcome', flex: 1, minWidth: 200 },
+      {
+        field: 'workpaper',
+        headerName: 'Workpaper',
+        width: 120,
+        sortable: false,
+        renderCell: (params: any) => (
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<ArticleIcon />}
+            onClick={() => navigate(`/workpaper/${params.row.id}`)}
+          >
+            Open
+          </Button>
+        )
+      }
     ];
 
     if (!isRestricted) {

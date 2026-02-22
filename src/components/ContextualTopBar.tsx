@@ -9,21 +9,17 @@ import {
   useTheme,
   useMediaQuery,
   ListItemIcon,
-  ListItemText,
-  Divider
+  ListItemText
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
   Assignment as AssignmentIcon,
   List as ListIcon,
-  Add as AddIcon,
-  CheckCircle as CheckCircleIcon,
   FactCheck as FactCheckIcon,
   Description as DescriptionIcon,
   Group as GroupIcon,
   Security as SecurityIcon,
   History as HistoryIcon,
-  Settings as SettingsIcon,
   Tune as TuneIcon,
   SettingsApplications as SystemSettingsIcon,
   LibraryBooks as LibraryBooksIcon,
@@ -37,9 +33,7 @@ import {
   Shield as ShieldIcon,
   PieChart as PieChartIcon,
   Hub as HubIcon,
-  Work as WorkIcon,
-  RateReview as RateReviewIcon,
-  QuestionAnswer as QuestionAnswerIcon
+  Work as WorkIcon
 } from '@mui/icons-material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { Page } from '../types/navigation';
@@ -59,7 +53,6 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   const [reportsAnchor, setReportsAnchor] = React.useState<null | HTMLElement>(null);
   const [riskAnchor, setRiskAnchor] = React.useState<null | HTMLElement>(null);
   const [complianceAnchor, setComplianceAnchor] = React.useState<null | HTMLElement>(null);
-  const [adminAnchor, setAdminAnchor] = React.useState<null | HTMLElement>(null);
   const [usersAnchor, setUsersAnchor] = React.useState<null | HTMLElement>(null);
   const [fieldWorkAnchor, setFieldWorkAnchor] = React.useState<null | HTMLElement>(null);
 
@@ -340,7 +333,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             <Button
               startIcon={<WorkIcon />}
               endIcon={<KeyboardArrowDownIcon />}
-              color={['findings', 'evidence'].includes(currentPage) ? 'primary' : 'inherit'}
+              color={['findings', 'evidence', 'workpapers', 'timesheets'].includes(currentPage) ? 'primary' : 'inherit'}
               onClick={(e) => setFieldWorkAnchor(e.currentTarget)}
             >
               Field Work
@@ -357,6 +350,14 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
               <MenuItem onClick={() => { onNavigate('evidence'); setFieldWorkAnchor(null); }}>
                 <ListItemIcon><FolderIcon fontSize="small" /></ListItemIcon>
                 <ListItemText>Evidence</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={() => { onNavigate('workpapers'); setFieldWorkAnchor(null); }}>
+                <ListItemIcon><DescriptionIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>Workpapers</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={() => { onNavigate('timesheets'); setFieldWorkAnchor(null); }}>
+                <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>Timesheets</ListItemText>
               </MenuItem>
             </Menu>
           </Box>
@@ -456,7 +457,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
           <Button
             startIcon={<WorkIcon />}
             endIcon={<KeyboardArrowDownIcon />}
-            color={['findings', 'evidence'].includes(currentPage) ? 'primary' : 'inherit'}
+            color={['findings', 'evidence', 'workpapers', 'timesheets'].includes(currentPage) ? 'primary' : 'inherit'}
             onClick={(e) => setFieldWorkAnchor(e.currentTarget)}
           >
             Field Work
@@ -473,6 +474,14 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             <MenuItem onClick={() => { onNavigate('evidence'); setFieldWorkAnchor(null); }}>
               <ListItemIcon><FolderIcon fontSize="small" /></ListItemIcon>
               <ListItemText>Evidence</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { onNavigate('workpapers'); setFieldWorkAnchor(null); }}>
+              <ListItemIcon><DescriptionIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Workpapers</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { onNavigate('timesheets'); setFieldWorkAnchor(null); }}>
+              <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Timesheets</ListItemText>
             </MenuItem>
           </Menu>
 

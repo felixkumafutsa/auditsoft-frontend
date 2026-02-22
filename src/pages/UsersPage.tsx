@@ -12,7 +12,10 @@ import {
   TextField, 
   MenuItem, 
   Alert,
-  Chip
+  Chip,
+  FormControl,
+  InputLabel,
+  Select
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
@@ -25,6 +28,7 @@ interface User {
   name: string;
   email: string;
   userRoles?: { role: { id: number; roleName: string } }[];
+  auditUniverseEntities?: { id: number; entityName: string; entityType: string }[];
 }
 
 interface Role {
@@ -32,9 +36,16 @@ interface Role {
   roleName: string;
 }
 
+interface AuditUniverseEntity {
+  id: number;
+  entityName: string;
+  entityType: string;
+}
+
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [auditUniverseEntities, setAuditUniverseEntities] = useState<AuditUniverseEntity[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -45,6 +56,7 @@ const UsersPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRoleId, setSelectedRoleId] = useState<number | string>('');
+  const [selectedAuditUniverseEntities, setSelectedAuditUniverseEntities] = useState<number[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -53,12 +65,14 @@ const UsersPage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [usersData, rolesData] = await Promise.all([
+      const [usersData, rolesData, auditUniverseData] = await Promise.all([
         api.getUsers(),
-        api.getRoles()
+        api.getRoles(),
+        api.getAuditUniverse()
       ]);
       setUsers(Array.isArray(usersData) ? usersData : []);
       setRoles(Array.isArray(rolesData) ? rolesData : []);
+      setAuditUniverseEntities(Array.isArray(auditUniverseData) ? auditUniverseData : []);
     } catch (err) {
       console.error('Failed to fetch data', err);
       setError('Failed to load users or roles.');
@@ -73,15 +87,19 @@ const UsersPage: React.FC = () => {
       setName(user.name);
       setEmail(user.email);
       setPassword(''); // Don't populate password on edit
-      // Attempt to pre-select the first role if exists
+      // Attempt to pre-select first role if exists
       const roleId = user.userRoles && user.userRoles.length > 0 ? user.userRoles[0].role.id : '';
       setSelectedRoleId(roleId);
+      // Pre-select audit universe entities
+      const entityIds = user.auditUniverseEntities?.map(entity => entity.id) || [];
+      setSelectedAuditUniverseEntities(entityIds);
     } else {
       setCurrentUser(null);
       setName('');
       setEmail('');
       setPassword('');
       setSelectedRoleId('');
+      setSelectedAuditUniverseEntities([]);
     }
     setOpenDialog(true);
   };
@@ -93,7 +111,11 @@ const UsersPage: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      const userData: any = { name, email };
+      const userData: any = { 
+        name, 
+        email,
+        auditUniverseEntityIds: selectedAuditUniverseEntities 
+      };
       if (password) userData.password = password;
 
       if (currentUser) {
@@ -151,6 +173,17 @@ const UsersPage: React.FC = () => {
       renderCell: (params: GridRenderCellParams) => {
         const roles = params.row.userRoles?.map((ur: any) => ur.role.roleName).join(', ');
         return roles ? <Chip label={roles} size="small" /> : '-';
+      }
+    },
+    { 
+      field: 'auditUniverse', 
+      headerName: 'Audit Universe Entities', 
+      flex: 1.5,
+      renderCell: (params: GridRenderCellParams) => {
+        const entities = params.row.auditUniverseEntities?.map((entity: any) => 
+          `${entity.entityName} (${entity.entityType})`
+        ).join(', ');
+        return entities ? <Chip label={entities} size="small" variant="outlined" /> : '-';
       }
     },
     {
@@ -235,6 +268,26 @@ const UsersPage: React.FC = () => {
               </MenuItem>
             ))}
           </TextField>
+          <FormControl fullWidth margin="dense">
+            <InputLabel>Audit Universe Entities</InputLabel>
+            <Select
+              multiple
+              value={selectedAuditUniverseEntities}
+              onChange={(e) => setSelectedAuditUniverseEntities(e.target.value as number[])}
+              renderValue={(selected) => {
+                const selectedEntities = auditUniverseEntities.filter(entity => 
+                  selectedAuditUniverseEntities.includes(entity.id)
+                );
+                return selectedEntities.map(entity => entity.entityName).join(', ');
+              }}
+            >
+              {auditUniverseEntities.map((entity) => (
+                <MenuItem key={entity.id} value={entity.id}>
+                  {entity.entityName} ({entity.entityType})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>

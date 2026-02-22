@@ -154,7 +154,10 @@ const AuditPlansPage: React.FC = () => {
     try {
       const audit = audits.find(a => a.id === id);
       if (audit) {
-        await api.updateAudit(id, { ...audit, status: 'Approved' });
+        // Only send the fields that should be updated
+        await api.updateAudit(id, { 
+          status: 'Approved'
+        });
         setAudits(audits.map(a => a.id === id ? { ...a, status: 'Approved' } : a));
         if (selectedAudit?.id === id) {
           setSelectedAudit({ ...audit, status: 'Approved' });
@@ -169,7 +172,10 @@ const AuditPlansPage: React.FC = () => {
     try {
       const audit = audits.find(a => a.id === id);
       if (audit) {
-        await api.updateAudit(id, { ...audit, status: 'Rejected' });
+        // Only send the fields that should be updated
+        await api.updateAudit(id, { 
+          status: 'Rejected'
+        });
         setAudits(audits.map(a => a.id === id ? { ...a, status: 'Rejected' } : a));
         if (selectedAudit?.id === id) {
           setSelectedAudit({ ...audit, status: 'Rejected' });

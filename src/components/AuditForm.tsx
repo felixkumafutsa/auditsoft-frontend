@@ -41,7 +41,6 @@ const AuditForm: React.FC<AuditFormProps> = ({
   const [auditType, setAuditType] = useState('Operational');
   const [startDate, setStartDate] = useState<Dayjs | null>(null);
   const [endDate, setEndDate] = useState<Dayjs | null>(null);
-  const [assignedTo, setAssignedTo] = useState('');
   
   // New Fields
   const [auditUniverseId, setAuditUniverseId] = useState<number | ''>('');
@@ -71,7 +70,6 @@ const AuditForm: React.FC<AuditFormProps> = ({
       setAuditType(auditToEdit.auditType || 'Operational');
       setStartDate(auditToEdit.startDate ? dayjs(auditToEdit.startDate) : null);
       setEndDate(auditToEdit.endDate ? dayjs(auditToEdit.endDate) : null);
-      setAssignedTo(auditToEdit.assignedTo || '');
       
       setAuditUniverseId(auditToEdit.auditUniverseId || '');
       setAssignedManagerId(auditToEdit.assignedManagerId || '');
@@ -85,7 +83,6 @@ const AuditForm: React.FC<AuditFormProps> = ({
     } else {
       // Reset form if we switch from edit to create
       setAuditName('');
-      setAssignedTo('');
       setAuditUniverseId('');
       setAssignedManagerId('');
       setAssignedAuditorIds([]);
@@ -113,12 +110,10 @@ const AuditForm: React.FC<AuditFormProps> = ({
     }
 
     const payload = {
-      auditName: auditName,
-      auditType: auditType,
-      // Format dates for the backend (ISO-8601 DateTime)
+      auditName,
+      auditType,
       startDate: startDate ? startDate.toISOString() : null,
       endDate: endDate ? endDate.toISOString() : null,
-      assignedTo: assignedTo,
       status: auditToEdit ? auditToEdit.status : 'Planned',
       auditUniverseId: auditUniverseId === '' ? undefined : Number(auditUniverseId),
       assignedManagerId: assignedManagerId === '' ? undefined : Number(assignedManagerId),
@@ -138,7 +133,6 @@ const AuditForm: React.FC<AuditFormProps> = ({
       setAuditName('');
       setStartDate(null);
       setEndDate(null);
-      setAssignedTo('');
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error creating audit:', error);

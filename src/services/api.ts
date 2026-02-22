@@ -108,7 +108,7 @@ class ApiClient {
 
   logout(): void {
     this.token = null;
-    localStorage.removeItem('authToken');
+    localStorage.removeItem('token'); // Fixed: was 'authToken' but login saves as 'token'
   }
 
   // --- Roles ---
@@ -175,6 +175,14 @@ class ApiClient {
   updateAuditProgram = (id: number, data: any) => this.put(`/audit-programs/${id}`, data);
   deleteAuditProgram = (id: number) => this.delete(`/audit-programs/${id}`);
 
+  // --- Workpapers ---
+  getWorkpapers = () => this.get('/workpapers');
+  getWorkpaper = (id: number) => this.get(`/workpapers/${id}`);
+  getWorkpaperByProgram = (programId: number) => this.get(`/workpapers/audit-program/${programId}`);
+  createWorkpaper = (data: any) => this.post('/workpapers', data);
+  updateWorkpaper = (id: number, data: any) => this.patch(`/workpapers/${id}`, data);
+  deleteWorkpaper = (id: number) => this.delete(`/workpapers/${id}`);
+
   // --- Evidence ---
   getEvidenceList = (programId: number) => this.get(`/audit-programs/${programId}/evidence`);
   getAllEvidence = (status?: string) => this.get(`/evidence${status ? `?status=${status}` : ''}`);
@@ -220,6 +228,8 @@ class ApiClient {
   deleteFinding = (id: number) => this.delete(`/findings/${id}`);
   transitionFinding = (id: number, toStatus: string, userRole?: string) =>
     this.post(`/findings/${id}/transition`, { toStatus, userRole });
+  assignActionToFinding = (id: number, comment?: string) =>
+    this.post(`/findings/${id}/assign-action`, { comment });
   getAllowedTransitions = (id: number) =>
     this.get(`/findings/${id}/allowed-transitions`);
   escalateFinding = (id: number, reason: string, escalatedTo: string) =>
@@ -371,6 +381,13 @@ class ApiClient {
 
   // --- Workflow ---
   getWorkflowConfig = () => this.get('/workflow/audit/config');
+
+  // --- Timesheets ---
+  logTime = (data: { userId: number, auditId: number, hours: number, date: string, activity?: string }) =>
+    this.post('/timesheets', data);
+  getMyTimesheets = (userId: number) => this.get(`/timesheets/my/${userId}`);
+  getAuditTimesheets = (auditId: number) => this.get(`/timesheets/audit/${auditId}`);
+  getResourceUtilization = () => this.get('/timesheets/utilization');
 
   // --- Helper to handle PATCH requests ---
   private async patch(endpoint: string, body: any): Promise<any> {

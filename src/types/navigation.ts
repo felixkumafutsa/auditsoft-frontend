@@ -12,6 +12,8 @@ export type Page =
   | 'my-findings'
   | 'remediation'
   | 'evidence'
+  | 'workpapers'
+  | 'timesheets'
   | 'users'
   | 'roles'
   | 'workflow-config'

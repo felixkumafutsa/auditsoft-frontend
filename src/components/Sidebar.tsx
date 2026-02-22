@@ -16,17 +16,13 @@ import {
   Person as PersonIcon,
   ExpandLess,
   ExpandMore,
-  Add as AddIcon,
   List as ListIcon,
-  CheckCircle as CheckCircleIcon,
   Description as DescriptionIcon,
   Group as GroupIcon,
-  Security as SecurityIcon,
   History as HistoryIcon,
-  Settings as SettingsIcon,
-  Notifications as NotificationsIcon,
   Tune as TuneIcon,
   SettingsApplications as SystemSettingsIcon,
+  Security as SecurityIcon,
   LibraryBooks as LibraryBooksIcon,
   BarChart as BarChartIcon,
   Warning as WarningIcon,
@@ -40,7 +36,8 @@ import {
   Hub as HubIcon,
   Work as WorkIcon,
   Chat as ChatIcon,
-  QuestionAnswer as QuestionAnswerIcon
+  AccessTime as AccessTimeIcon,
+  Article as ArticleIcon
 } from '@mui/icons-material';
 import { Page } from '../types/navigation';
 
@@ -281,6 +278,16 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
               <ListItemIcon><FolderIcon sx={{ color: 'white' }} /></ListItemIcon>
               <ListItemText primary="Evidence" />
             </ListItemButton>
+
+            <ListItemButton selected={currentPage === 'workpapers'} onClick={() => onNavigate('workpapers')}>
+              <ListItemIcon><ArticleIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="Workpapers" />
+            </ListItemButton>
+
+            <ListItemButton selected={currentPage === 'timesheets'} onClick={() => onNavigate('timesheets')}>
+              <ListItemIcon><AccessTimeIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="Timesheets" />
+            </ListItemButton>
           </>
         )}
 
@@ -369,6 +376,14 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                 <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'evidence'} onClick={() => onNavigate('evidence')}>
                   <ListItemIcon><FolderIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Evidence" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'workpapers'} onClick={() => onNavigate('workpapers')}>
+                  <ListItemIcon><ArticleIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Workpapers" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'timesheets'} onClick={() => onNavigate('timesheets')}>
+                  <ListItemIcon><AccessTimeIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Timesheets" />
                 </ListItemButton>
               </List>
             </Collapse>

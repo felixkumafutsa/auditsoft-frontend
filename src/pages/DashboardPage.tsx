@@ -13,9 +13,15 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  LinearProgress,
   Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from "@mui/material";
+import Grid from '@mui/material/Grid';
 import {
   Assignment as AssignmentIcon,
   Warning as WarningIcon,
@@ -29,7 +35,11 @@ import {
   Error as ErrorIcon,
   Hub as HubIcon,
   Link as LinkIcon,
+  Assessment as AssessmentIcon,
+  Business as BusinessIcon,
+  Timeline as TimelineIcon,
   Description as DescriptionIcon,
+  Edit as EditIcon,
   Gavel as GavelIcon,
   BarChart as BarChartIcon,
 } from "@mui/icons-material";
@@ -51,7 +61,6 @@ import {
 import api from "../services/api";
 import { Page } from "../types/navigation";
 import ActionPlansModule from "../components/ActionPlansModule";
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { getStatusColor, getStatusHexColor } from "../utils/statusColors";
 
 type UserRole =
@@ -62,6 +71,7 @@ type UserRole =
   | "Auditor"
   | "ProcessOwner"
   | "CAE";
+
 
 // ========== STAT CARD COMPONENT ==========
 const StatCard: React.FC<{
@@ -132,7 +142,7 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           notifications: Array.isArray(notifications) ? notifications : [],
         });
       } catch (e) {
-        console.error("Failed to fetch manager data", e);
+        // Error handling without logging
       } finally {
         setLoading(false);
       }
@@ -152,209 +162,208 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       </Typography>
 
       {/* Top Section: Quick Links/Stats */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          gap: 3,
-          mb: 4,
-        }}
-      >
-        <Card elevation={2}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Audit Planning Snapshot
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={stats.auditTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="audits"
-                  stroke="#8884d8"
-                  activeDot={{ r: 8 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Audit Planning Snapshot
+              </Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={stats.auditTrend}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="audits"
+                    stroke="#8884d8"
+                    activeDot={{ r: 8 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <Card elevation={2}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Audit Status Distribution
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={stats.auditStatusDistribution}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({
-                    name,
-                    percent,
-                  }: {
-                    name?: string | number;
-                    percent?: number;
-                  }) =>
-                    `${name || ""} ${(percent ? percent * 100 : 0).toFixed(0)}%`
-                  }
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {stats.auditStatusDistribution.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </Box>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Audit Status Distribution
+              </Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={stats.auditStatusDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({
+                      name,
+                      percent,
+                    }: {
+                      name?: string | number;
+                      percent?: number;
+                    }) =>
+                      `${name || ""} ${(percent ? percent * 100 : 0).toFixed(0)}%`
+                    }
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {stats.auditStatusDistribution.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
       {/* Middle Section: Quick Actions */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" },
-          gap: 3,
-          mb: 4,
-        }}
-      >
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<AssignmentIcon />}
-          onClick={() => onNavigate("audit-plans")}
-          sx={{ py: 2, bgcolor: "#1976d2" }}
-        >
-          View All Audit Plans
-        </Button>
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<DescriptionIcon />}
-          onClick={() => onNavigate("audit-programs")}
-          sx={{ py: 2, bgcolor: "#2e7d32" }}
-        >
-          Manage Audit Programs
-        </Button>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<AssignmentIcon />}
+            fullWidth
+            onClick={() => onNavigate("audit-plans")}
+            sx={{ py: 2, bgcolor: "#1976d2" }}
+          >
+            View All Audit Plans
+          </Button>
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<DescriptionIcon />}
+            fullWidth
+            onClick={() => onNavigate("audit-programs")}
+            sx={{ py: 2, bgcolor: "#2e7d32" }}
+          >
+            Manage Audit Programs
+          </Button>
+        </Grid>
+      </Grid>
+
+      {/* Resource Management */}
+      <Box sx={{ mb: 4 }}>
+        {/* Time logging removed - access via navigation */}
       </Box>
 
       {/* Bottom Section: Tasks & Notifications */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          gap: 3,
-        }}
-      >
-        <Card elevation={2}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              My Tasks
-            </Typography>
-            <List>
-              {stats.tasks.length > 0 ? (
-                stats.tasks.map((task: any, index) => (
-                  <ListItem key={index}>
-                    <ListItemIcon>
-                      <CheckCircleIcon color="primary" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={task.title}
-                      secondary={task.dueDate}
-                    />
-                  </ListItem>
-                ))
-              ) : (
-                <ListItem>
-                  <ListItemText primary="No pending tasks" />
-                </ListItem>
-              )}
-            </List>
-          </CardContent>
-        </Card>
-
-        <Card elevation={2}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Recent Notifications
-            </Typography>
-            <List>
-              {stats.notifications.length > 0 ? (
-                stats.notifications.slice(0, 5).map((n: any) => {
-                  const isAuditReport =
-                    typeof n.title === "string" &&
-                    (n.title.toLowerCase().includes("audit closed") ||
-                      n.title.toLowerCase().includes("report"));
-
-                  const Icon =
-                    n.type === "action_required"
-                      ? WarningIcon
-                      : n.type === "success"
-                        ? CheckCircleIcon
-                        : n.type === "error"
-                          ? ErrorIcon
-                          : n.type === "warning"
-                            ? WarningIcon
-                            : DescriptionIcon;
-
-                  return (
-                    <ListItem key={n.id}>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                My Tasks
+              </Typography>
+              <List>
+                {stats.tasks.length > 0 ? (
+                  stats.tasks.map((task: any, index) => (
+                    <ListItem key={index}>
                       <ListItemIcon>
-                        <Icon
-                          color={
-                            n.type === "success"
-                              ? "success"
-                              : n.type === "error"
-                                ? "error"
-                                : n.type === "warning" || n.type === "action_required"
-                                  ? "warning"
-                                  : "primary"
-                          }
-                        />
+                        <CheckCircleIcon color="primary" />
                       </ListItemIcon>
                       <ListItemText
-                        primary={n.title}
-                        secondary={
-                          <>
-                            {n.message}
-                            {isAuditReport && (
-                              <Typography
-                                component="span"
-                                variant="caption"
-                                color="textSecondary"
-                                sx={{ display: "block" }}
-                              >
-                                A report was generated after an audit closed.
-                              </Typography>
-                            )}
-                          </>
-                        }
+                        primary={task.title}
+                        secondary={task.dueDate}
                       />
                     </ListItem>
-                  );
-                })
-              ) : (
-                <ListItem>
-                  <ListItemText primary="No recent notifications" />
-                </ListItem>
-              )}
-            </List>
-          </CardContent>
-        </Card>
-      </Box>
+                  ))
+                ) : (
+                  <ListItem>
+                    <ListItemText primary="No pending tasks" />
+                  </ListItem>
+                )}
+              </List>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Recent Notifications
+              </Typography>
+              <List>
+                {stats.notifications.length > 0 ? (
+                  stats.notifications.slice(0, 5).map((n: any) => {
+                    const isAuditReport =
+                      typeof n.title === "string" &&
+                      (n.title.toLowerCase().includes("audit closed") ||
+                        n.title.toLowerCase().includes("report"));
+
+                    const Icon =
+                      n.type === "action_required"
+                        ? WarningIcon
+                        : n.type === "success"
+                          ? CheckCircleIcon
+                          : n.type === "error"
+                            ? ErrorIcon
+                            : n.type === "warning"
+                              ? WarningIcon
+                              : DescriptionIcon;
+
+                    return (
+                      <ListItem key={n.id}>
+                        <ListItemIcon>
+                          <Icon
+                            color={
+                              n.type === "success"
+                                ? "success"
+                                : n.type === "error"
+                                  ? "error"
+                                  : n.type === "warning" || n.type === "action_required"
+                                    ? "warning"
+                                    : "primary"
+                            }
+                          />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={n.title}
+                          secondary={
+                            <>
+                              {n.message}
+                              {isAuditReport && (
+                                <Typography
+                                  component="span"
+                                  variant="caption"
+                                  color="textSecondary"
+                                  sx={{ display: "block" }}
+                                >
+                                  A report was generated after an audit closed.
+                                </Typography>
+                              )}
+                            </>
+                          }
+                        />
+                      </ListItem>
+                    );
+                  })
+                ) : (
+                  <ListItem>
+                    <ListItemText primary="No recent notifications" />
+                  </ListItem>
+                )}
+              </List>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
     </Box>
   );
 };
@@ -384,7 +393,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           systemHealth: "Operational",
         });
       } catch (e) {
-        console.error("Failed to fetch admin data", e);
         setStats((prev) => ({ ...prev, systemHealth: "Error" }));
       } finally {
         setLoading(false);
@@ -413,19 +421,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       </Typography>
 
       {/* Stats Grid */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "1fr 1fr",
-            md: "repeat(4, 1fr)",
-          },
-          gap: 3,
-          mb: 4,
-        }}
-      >
-        <Box>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="System Health"
             value={stats.systemHealth}
@@ -433,8 +430,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color={stats.systemHealth === "Operational" ? "#2e7d32" : "#d32f2f"}
             onClick={() => onNavigate("system-settings")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Manage Users"
             value="→"
@@ -442,8 +439,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color="#9c27b0"
             onClick={() => onNavigate("users")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Manage Roles"
             value="→"
@@ -451,8 +448,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color="#ed6c02"
             onClick={() => onNavigate("roles")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Integrations"
             value={
@@ -508,18 +505,12 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             icon={<HubIcon fontSize="large" />}
             color="#1976d2"
           />
-        </Box>
-      </Box>
+        </Grid>
+      </Grid>
 
       {/* Charts Grid */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" },
-          gap: 3,
-        }}
-      >
-        <Box>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Paper elevation={2} sx={{ p: 3 }}>
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
               Weekly Activity
@@ -536,9 +527,9 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </LineChart>
             </ResponsiveContainer>
           </Paper>
-        </Box>
+        </Grid>
 
-        <Box>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper elevation={2} sx={{ p: 3 }}>
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
               Quick Actions
@@ -570,8 +561,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </Button>
             </Box>
           </Paper>
-        </Box>
-      </Box>
+        </Grid>
+      </Grid>
     </Box>
   );
 };
@@ -592,7 +583,7 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         setAudits(Array.isArray(auditData) ? auditData : []);
         setFindings(Array.isArray(findingData) ? findingData : []);
       } catch (e) {
-        console.error("Failed to fetch manager data", e);
+        // Error handling without logging
       } finally {
         setLoading(false);
       }
@@ -636,19 +627,9 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       </Typography>
 
       {/* Stats Grid */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "1fr 1fr",
-            md: "repeat(4, 1fr)",
-          },
-          gap: 3,
-          mb: 4,
-        }}
-      >
-        <Box>
+      {/* Stats Grid */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Assigned Audits"
             value={audits.length}
@@ -656,8 +637,8 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color="#1976d2"
             onClick={() => onNavigate("audits")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Open Findings"
             value={findings.filter((f) => f.status !== "Closed").length}
@@ -665,16 +646,16 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color="#d32f2f"
             onClick={() => onNavigate("findings")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="In Progress"
             value={audits.filter((a) => a.status === "In Progress").length}
             icon={<ScheduleIcon fontSize="large" />}
             color={getStatusHexColor("In Progress")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Completed"
             value={
@@ -685,18 +666,17 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             icon={<CheckCircleIcon fontSize="large" />}
             color={getStatusHexColor("Completed")}
           />
-        </Box>
+        </Grid>
+      </Grid>
+
+      {/* Resource Management */}
+      <Box sx={{ mb: 4 }}>
+        {/* Time logging removed - access via navigation */}
       </Box>
 
       {/* Charts */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          gap: 3,
-        }}
-      >
-        <Box>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper elevation={2} sx={{ p: 3 }}>
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
               Audit Status Overview
@@ -730,9 +710,9 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </Typography>
             )}
           </Paper>
-        </Box>
+        </Grid>
 
-        <Box>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper elevation={2} sx={{ p: 3 }}>
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
               Findings by Severity
@@ -753,8 +733,8 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </Typography>
             )}
           </Paper>
-        </Box>
-      </Box>
+        </Grid>
+      </Grid>
 
       {/* Recent Audits */}
       <Box sx={{ mt: 3 }}>
@@ -808,7 +788,7 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           )}
         </Paper>
       </Box>
-    </Box>
+    </Box >
   );
 };
 
@@ -831,7 +811,7 @@ const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         setNotifications(Array.isArray(notificationsData) ? notificationsData : []);
         setTasks(Array.isArray(tasksData) ? tasksData : []);
       } catch (e) {
-        console.error("Failed to fetch auditor data", e);
+        // Error handling without logging
       } finally {
         setLoading(false);
       }
@@ -855,19 +835,8 @@ const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         My Audits Dashboard
       </Typography>
 
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "1fr 1fr",
-            md: "repeat(4, 1fr)",
-          },
-          gap: 3,
-          mb: 4,
-        }}
-      >
-        <Box>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="My Audits"
             value={myAudits.length}
@@ -875,141 +844,139 @@ const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color="#1976d2"
             onClick={() => onNavigate("execution")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="In Progress"
             value={activeAudits}
             icon={<ScheduleIcon fontSize="large" />}
             color={getStatusHexColor("In Progress")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Completed"
             value={completedAudits}
             icon={<CheckCircleIcon fontSize="large" />}
             color={getStatusHexColor("Completed")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Pending Review"
             value={myAudits.filter((a) => a.status === "Under Review").length}
             icon={<TrendingUpIcon fontSize="large" />}
             color={getStatusHexColor("Under Review")}
           />
-        </Box>
-      </Box>
+        </Grid>
+      </Grid>
 
       {/* Recent Tasks & Notifications */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          gap: 3,
-        }}
-      >
+      <Grid container spacing={3}>
         {/* My Tasks Card */}
-        <Paper elevation={2} sx={{ p: 3 }}>
-          <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
-            <AssignmentIcon color="primary" />
-            <Typography variant="h6" fontWeight="bold">
-              Recent Tasks
-            </Typography>
-          </Box>
-          <Divider sx={{ mb: 2 }} />
-          {loading ? (
-            <CircularProgress />
-          ) : tasks.length > 0 ? (
-            <List dense>
-              {tasks.slice(0, 5).map((task: any, index: number) => (
-                <React.Fragment key={task.id || index}>
-                  <ListItem>
-                    <ListItemIcon sx={{ minWidth: 40 }}>
-                      <CheckCircleIcon color="primary" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={task.title || task.auditName || 'Audit Task'}
-                      secondary={task.dueDate ? `Due: ${new Date(task.dueDate).toLocaleDateString()}` : task.status}
-                      primaryTypographyProps={{ variant: 'body2', fontWeight: 'medium' }}
-                      secondaryTypographyProps={{ variant: 'caption' }}
-                    />
-                  </ListItem>
-                  <Divider variant="inset" component="li" />
-                </React.Fragment>
-              ))}
-            </List>
-          ) : (
-            <Alert severity="info">
-              You have <strong>{activeAudits} active audits</strong> in progress.
-              Click "My Audits" to view execution details.
-            </Alert>
-          )}
-        </Paper>
-
-        {/* Notifications Card */}
-        <Paper elevation={2} sx={{ p: 3 }}>
-          <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
-            <HistoryIcon color="primary" />
-            <Typography variant="h6" fontWeight="bold">
-              Recent Notifications
-            </Typography>
-          </Box>
-          <Divider sx={{ mb: 2 }} />
-          {loading ? (
-            <CircularProgress />
-          ) : notifications.length > 0 ? (
-            <List dense>
-              {notifications.slice(0, 5).map((n: any) => {
-                const Icon =
-                  n.type === "action_required"
-                    ? WarningIcon
-                    : n.type === "success"
-                      ? CheckCircleIcon
-                      : n.type === "error"
-                        ? ErrorIcon
-                        : n.type === "warning"
-                          ? WarningIcon
-                          : DescriptionIcon;
-                return (
-                  <React.Fragment key={n.id}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+              <AssignmentIcon color="primary" />
+              <Typography variant="h6" fontWeight="bold">
+                Recent Tasks
+              </Typography>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+            {loading ? (
+              <CircularProgress />
+            ) : tasks.length > 0 ? (
+              <List dense>
+                {tasks.slice(0, 5).map((task: any, index: number) => (
+                  <React.Fragment key={task.id || index}>
                     <ListItem>
                       <ListItemIcon sx={{ minWidth: 40 }}>
-                        <Icon
-                          color={
-                            n.type === "success"
-                              ? "success"
-                              : n.type === "error"
-                                ? "error"
-                                : n.type === "warning" || n.type === "action_required"
-                                  ? "warning"
-                                  : "primary"
-                          }
-                        />
+                        <CheckCircleIcon color="primary" />
                       </ListItemIcon>
                       <ListItemText
-                        primary={n.title}
-                        secondary={n.message}
-                        primaryTypographyProps={{
-                          variant: 'body2',
-                          fontWeight: n.isRead ? 'normal' : 'bold'
-                        }}
+                        primary={task.title || task.auditName || 'Audit Task'}
+                        secondary={task.dueDate ? `Due: ${new Date(task.dueDate).toLocaleDateString()}` : task.status}
+                        primaryTypographyProps={{ variant: 'body2', fontWeight: 'medium' }}
                         secondaryTypographyProps={{ variant: 'caption' }}
                       />
                     </ListItem>
                     <Divider variant="inset" component="li" />
                   </React.Fragment>
-                );
-              })}
-            </List>
-          ) : (
-            <Typography variant="body2" color="textSecondary" sx={{ py: 2, textAlign: 'center' }}>
-              No recent notifications.
-            </Typography>
-          )}
-        </Paper>
-      </Box>
+                ))}
+              </List>
+            ) : (
+              <Alert severity="info">
+                You have <strong>{activeAudits} active audits</strong> in progress.
+                Click "My Audits" to view execution details.
+              </Alert>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Notifications Card */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+              <HistoryIcon color="primary" />
+              <Typography variant="h6" fontWeight="bold">
+                Recent Notifications
+              </Typography>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+            {loading ? (
+              <CircularProgress />
+            ) : notifications.length > 0 ? (
+              <List dense>
+                {notifications.slice(0, 5).map((n: any) => {
+                  const Icon =
+                    n.type === "action_required"
+                      ? WarningIcon
+                      : n.type === "success"
+                        ? CheckCircleIcon
+                        : n.type === "error"
+                          ? ErrorIcon
+                          : n.type === "warning"
+                            ? WarningIcon
+                            : DescriptionIcon;
+                  return (
+                    <React.Fragment key={n.id}>
+                      <ListItem>
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                          <Icon
+                            color={
+                              n.type === "success"
+                                ? "success"
+                                : n.type === "error"
+                                  ? "error"
+                                  : n.type === "warning" || n.type === "action_required"
+                                    ? "warning"
+                                    : "primary"
+                            }
+                          />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={n.title}
+                          secondary={n.message}
+                          primaryTypographyProps={{
+                            variant: 'body2',
+                            fontWeight: n.isRead ? 'normal' : 'bold'
+                          }}
+                          secondaryTypographyProps={{ variant: 'caption' }}
+                        />
+                      </ListItem>
+                      <Divider variant="inset" component="li" />
+                    </React.Fragment>
+                  );
+                })}
+              </List>
+            ) : (
+              <Typography variant="body2" color="textSecondary" sx={{ py: 2, textAlign: 'center' }}>
+                No recent notifications.
+              </Typography>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
     </Box>
   );
 };
@@ -1068,7 +1035,7 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           overallRisk: criticalCount > 5 ? "High" : "Medium",
         });
       } catch (e) {
-        console.error("Failed to fetch CAE data", e);
+        // Error handling without logging
       } finally {
         setLoading(false);
       }
@@ -1128,19 +1095,8 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       </Typography>
 
       {/* Navigation Cards */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "1fr 1fr",
-            md: "repeat(4, 1fr)",
-          },
-          gap: 3,
-          mb: 4,
-        }}
-      >
-        <Box>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Audit Plans"
             value="View"
@@ -1148,8 +1104,8 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color="#1976d2"
             onClick={() => onNavigate("audit-plans")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Risk Escalation"
             value={stats.overallRisk === "High" ? "Action Req" : "Stable"}
@@ -1157,8 +1113,8 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color={stats.overallRisk === "High" ? "#d32f2f" : "#ed6c02"}
             onClick={() => onNavigate("risk-register")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Compliance"
             value="Manage"
@@ -1166,8 +1122,8 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color="#2e7d32"
             onClick={() => onNavigate("compliance-standards")}
           />
-        </Box>
-        <Box>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Reports"
             value="View"
@@ -1175,222 +1131,216 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color="#9c27b0"
             onClick={() => onNavigate("reports-executive")}
           />
-        </Box>
-      </Box>
+        </Grid>
+      </Grid>
 
       {/* Main Executive Summary Grid */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          gap: 3,
-        }}
-      >
+      <Grid container spacing={3}>
         {/* 1. Audit Progress Snapshot */}
-        <Paper
-          elevation={2}
-          sx={{ p: 3, display: "flex", flexDirection: "column" }}
-        >
-          <Typography
-            variant="h6"
-            fontWeight="bold"
-            sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Paper
+            elevation={2}
+            sx={{ p: 3, display: "flex", flexDirection: "column" }}
           >
-            <TrendingUpIcon color="primary" /> Audit Progress Snapshot
-          </Typography>
-          <Box sx={{ height: 300, width: "100%" }}>
-            {auditStatusData.length > 0 ? (
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={auditStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${((percent || 0) * 100).toFixed(0)}%`
-                    }
-                  >
-                    {auditStatusData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" height={36} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                height="100%"
-              >
-                <Typography color="textSecondary">
-                  No active audit data available.
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        </Paper>
+            <Typography
+              variant="h6"
+              fontWeight="bold"
+              sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}
+            >
+              <TrendingUpIcon color="primary" /> Audit Progress Snapshot
+            </Typography>
+            <Box sx={{ height: 300, width: "100%" }}>
+              {auditStatusData.length > 0 ? (
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={auditStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ name, percent }) =>
+                        `${name} ${((percent || 0) * 100).toFixed(0)}%`
+                      }
+                    >
+                      {auditStatusData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" height={36} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                  height="100%"
+                >
+                  <Typography color="textSecondary">
+                    No active audit data available.
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
 
         {/* 2. Risk Key Indicators (KRIs) */}
-        <Paper
-          elevation={2}
-          sx={{ p: 3, display: "flex", flexDirection: "column" }}
-        >
-          <Typography
-            variant="h6"
-            fontWeight="bold"
-            sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Paper
+            elevation={2}
+            sx={{ p: 3, display: "flex", flexDirection: "column" }}
           >
-            <WarningIcon color="error" /> Key Risk Indicators (KRIs)
-          </Typography>
-          <Box sx={{ height: 300, width: "100%" }}>
-            {kriStatusData.length > 0 ? (
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={kriStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${((percent || 0) * 100).toFixed(0)}%`
-                    }
-                  >
-                    {kriStatusData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={KRI_COLORS[entry.name] || "#8884d8"}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" height={36} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                height="100%"
-              >
-                <Typography color="textSecondary">
-                  No Key Risk Indicators tracked yet.
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        </Paper>
+            <Typography
+              variant="h6"
+              fontWeight="bold"
+              sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}
+            >
+              <WarningIcon color="error" /> Key Risk Indicators (KRIs)
+            </Typography>
+            <Box sx={{ height: 300, width: "100%" }}>
+              {kriStatusData.length > 0 ? (
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={kriStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ name, percent }) =>
+                        `${name} ${((percent || 0) * 100).toFixed(0)}%`
+                      }
+                    >
+                      {kriStatusData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={KRI_COLORS[entry.name] || "#8884d8"}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" height={36} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                  height="100%"
+                >
+                  <Typography color="textSecondary">
+                    No Key Risk Indicators tracked yet.
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
 
         {/* 3. Pending Actions */}
-        <Paper elevation={2} sx={{ p: 3, gridColumn: { md: "1 / -1" } }}>
-          <Typography
-            variant="h6"
-            fontWeight="bold"
-            sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}
-          >
-            <AssignmentIcon color="secondary" /> Pending Actions
-          </Typography>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-              gap: 3,
-            }}
-          >
-            {/* Audits Pending Approval Column */}
-            <Box>
-              <Typography
-                variant="subtitle2"
-                color="textSecondary"
-                gutterBottom
-              >
-                Audits Pending Approval
-              </Typography>
-              {auditsPendingApproval.length > 0 ? (
-                <List dense>
-                  {auditsPendingApproval.slice(0, 5).map((audit: any) => (
-                    <ListItem key={audit.id}>
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        <CheckCircleIcon color="action" fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={audit.auditName}
-                        secondary={`Due: ${audit.endDate || "N/A"}`}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Alert severity="info" sx={{ mt: 1 }}>
-                  No audits pending approval.
-                </Alert>
-              )}
-            </Box>
-
-            {/* Findings & Evidence for Review Column */}
-            <Box>
-              <Typography
-                variant="subtitle2"
-                color="textSecondary"
-                gutterBottom
-              >
-                Findings & Evidence for Review
-              </Typography>
-              {findingsForReview.length > 0 || evidenceForReview.length > 0 ? (
-                <List dense>
-                  {findingsForReview.slice(0, 3).map((notif: any) => (
-                    <ListItem key={notif.id}>
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        <ErrorIcon
-                          color={notif.read ? "disabled" : "error"}
-                          fontSize="small"
+        <Grid size={{ xs: 12 }}>
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography
+              variant="h6"
+              fontWeight="bold"
+              sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}
+            >
+              <AssignmentIcon color="secondary" /> Pending Actions
+            </Typography>
+            <Grid container spacing={3}>
+              {/* Audits Pending Approval Column */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography
+                  variant="subtitle2"
+                  color="textSecondary"
+                  gutterBottom
+                >
+                  Audits Pending Approval
+                </Typography>
+                {auditsPendingApproval.length > 0 ? (
+                  <List dense>
+                    {auditsPendingApproval.slice(0, 5).map((audit: any) => (
+                      <ListItem key={audit.id}>
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          <CheckCircleIcon color="action" fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={audit.auditName}
+                          secondary={`Due: ${audit.endDate || "N/A"}`}
                         />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={notif.message}
-                        primaryTypographyProps={{
-                          fontWeight: notif.read ? "normal" : "bold",
-                        }}
-                        secondary={`Finding: ${new Date(notif.createdAt).toLocaleDateString()}`}
-                      />
-                    </ListItem>
-                  ))}
-                  {evidenceForReview.slice(0, 2).map((item: any) => (
-                    <ListItem key={item.id}>
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        <DescriptionIcon color="action" fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={`Evidence for ${item.auditProgramId}`}
-                        secondary={`Status: ${item.status}`}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Alert severity="success" sx={{ mt: 1 }}>
-                  No items require review.
-                </Alert>
-              )}
-            </Box>
-          </Box>
-        </Paper>
-      </Box>
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Alert severity="info" sx={{ mt: 1 }}>
+                    No audits pending approval.
+                  </Alert>
+                )}
+              </Grid>
+
+              {/* Findings & Evidence for Review Column */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography
+                  variant="subtitle2"
+                  color="textSecondary"
+                  gutterBottom
+                >
+                  Findings & Evidence for Review
+                </Typography>
+                {findingsForReview.length > 0 || evidenceForReview.length > 0 ? (
+                  <List dense>
+                    {findingsForReview.slice(0, 3).map((notif: any) => (
+                      <ListItem key={notif.id}>
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          <ErrorIcon
+                            color={notif.read ? "disabled" : "error"}
+                            fontSize="small"
+                          />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={notif.message}
+                          primaryTypographyProps={{
+                            fontWeight: notif.read ? "normal" : "bold",
+                          }}
+                          secondary={`Finding: ${new Date(notif.createdAt).toLocaleDateString()}`}
+                        />
+                      </ListItem>
+                    ))}
+                    {evidenceForReview.slice(0, 2).map((item: any) => (
+                      <ListItem key={item.id}>
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          <DescriptionIcon color="action" fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={`Evidence for ${item.auditProgramId}`}
+                          secondary={`Status: ${item.status}`}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Alert severity="success" sx={{ mt: 1 }}>
+                    No items require review.
+                  </Alert>
+                )}
+              </Grid>
+            </Grid>
+          </Paper>
+        </Grid>
+      </Grid>
     </Box>
   );
 };
@@ -1398,6 +1348,7 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 // ========== PROCESS OWNER DASHBOARD ==========
 const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [findings, setFindings] = useState<any[]>([]);
+  const [audits, setAudits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFindingId, setSelectedFindingId] = useState<number | null>(
     null,
@@ -1407,6 +1358,9 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     assignedFindings: 0,
     openActionPlans: 0,
     overdueItems: 0,
+    totalAudits: 0,
+    completedAudits: 0,
+    inProgressAudits: 0,
   });
 
   useEffect(() => {
@@ -1419,9 +1373,9 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       const userStr = localStorage.getItem('user');
       const currentUser = userStr ? JSON.parse(userStr) : null;
 
-      const [allFindings, allAudits] = await Promise.all([
+      const [allFindings, ownerAudits] = await Promise.all([
         (api as any).getFindings?.() || Promise.resolve([]),
-        api.getAudits()
+        api.getOwnerAudits() // Get audits owned by this process owner
       ]);
 
       // Filter findings where the user is assigned or related to their entity's audits
@@ -1429,21 +1383,36 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         // If the finding is assigned to this user
         if (f.assignedToId === currentUser?.id) return true;
         // Or if the finding belongs to an audit that is owned by this process owner
-        const relatedAudit = allAudits.find((a: any) => a.id === f.auditId);
+        const relatedAudit = ownerAudits.find((a: any) => a.id === f.auditId);
         return relatedAudit?.auditUniverse?.ownerId === currentUser?.id;
       }) : [];
 
-      const overdueActionPlans = await api.getOverdueActionPlans?.() || [];
+      const overdueActionPlans = await api.getOverdueActionPlans?.() || Promise.resolve([]);
 
       setFindings(myFindings);
+      setAudits(ownerAudits || []);
+
+      // Calculate audit statistics
+      const auditStats = (ownerAudits || []).reduce((acc: any, audit: any) => {
+        acc.total += 1;
+        if (audit.status === 'Completed' || audit.status === 'Closed') {
+          acc.completed += 1;
+        } else if (audit.status === 'In Progress') {
+          acc.inProgress += 1;
+        }
+        return acc;
+      }, { total: 0, completed: 0, inProgress: 0 });
 
       setStats({
         assignedFindings: myFindings.length,
         openActionPlans: 0, // Would need to fetch action plans count
         overdueItems: Array.isArray(overdueActionPlans) ? overdueActionPlans.length : 0,
+        totalAudits: auditStats.total,
+        completedAudits: auditStats.completed,
+        inProgressAudits: auditStats.inProgress,
       });
     } catch (error) {
-      console.error("Failed to fetch process owner data", error);
+      // Error handling without logging
     } finally {
       setLoading(false);
     }
@@ -1453,55 +1422,6 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     setSelectedFindingId(findingId);
     setActionPlansOpen(true);
   };
-
-  const columns: GridColDef[] = [
-    { field: "id", headerName: "ID", width: 70 },
-    { field: "description", headerName: "Description", flex: 1, minWidth: 200 },
-    {
-      field: "severity",
-      headerName: "Severity",
-      width: 120,
-      renderCell: (params) => (
-        <Chip
-          label={params.value}
-          color={
-            params.value === "Critical"
-              ? "error"
-              : params.value === "High"
-                ? "warning"
-                : "default"
-          }
-          size="small"
-        />
-      ),
-    },
-    {
-      field: "status",
-      headerName: "Status",
-      width: 120,
-      renderCell: (params) => (
-        <Chip label={params.value} variant="outlined" size="small" />
-      ),
-    },
-    {
-      field: "actions",
-      headerName: "Actions",
-      width: 200,
-      sortable: false,
-      renderCell: (params) => (
-        <Box>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => handleOpenActionPlans(params.row.id)}
-            sx={{ fontSize: "0.75rem" }}
-          >
-            Remediation / Evidence
-          </Button>
-        </Box>
-      ),
-    },
-  ];
 
   return (
     <Box>
@@ -1520,16 +1440,35 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             xs: "1fr",
             sm: "1fr 1fr",
             md: "repeat(3, 1fr)",
+            lg: "repeat(6, 1fr)",
           },
           gap: 3,
           mb: 4,
         }}
       >
         <StatCard
+          title="Total Audits"
+          value={stats.totalAudits}
+          icon={<AssessmentIcon fontSize="large" />}
+          color="#1976d2"
+        />
+        <StatCard
+          title="Completed Audits"
+          value={stats.completedAudits}
+          icon={<CheckCircleIcon fontSize="large" />}
+          color="#2e7d32"
+        />
+        <StatCard
+          title="In Progress Audits"
+          value={stats.inProgressAudits}
+          icon={<TrendingUpIcon fontSize="large" />}
+          color="#ed6c02"
+        />
+        <StatCard
           title="Assigned Findings"
           value={stats.assignedFindings}
           icon={<AssignmentIcon fontSize="large" />}
-          color="#1976d2"
+          color="#9c27b0"
         />
         <StatCard
           title="Open Action Plans"
@@ -1545,25 +1484,195 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         />
       </Box>
 
-      {/* Findings Table */}
+      {/* Recent Audits Table */}
       <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-          My Assigned Findings
+          Audits on Your Entities
         </Typography>
-        <Box sx={{ height: 400, width: "100%" }}>
-          <DataGrid
-            rows={findings}
-            columns={columns}
-            initialState={{
-              pagination: {
-                paginationModel: { pageSize: 5, page: 0 },
-              },
-            }}
-            pageSizeOptions={[5, 10, 25]}
-            disableRowSelectionOnClick
-            loading={loading}
-          />
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Audit Name</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Entity</TableCell>
+                <TableCell>Start Date</TableCell>
+                <TableCell>End Date</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {audits.slice(0, 5).map((audit: any) => (
+                <TableRow key={audit.id}>
+                  <TableCell>{audit.auditName}</TableCell>
+                  <TableCell>{audit.auditType}</TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={audit.status} 
+                      size="small" 
+                      color={
+                        audit.status === 'Completed' || audit.status === 'Closed' ? 'success' :
+                        audit.status === 'In Progress' ? 'warning' :
+                        audit.status === 'Planned' ? 'info' : 'default'
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>{audit.auditUniverse?.entityName || 'N/A'}</TableCell>
+                  <TableCell>{audit.startDate ? new Date(audit.startDate).toLocaleDateString() : 'N/A'}</TableCell>
+                  <TableCell>{audit.endDate ? new Date(audit.endDate).toLocaleDateString() : 'N/A'}</TableCell>
+                  <TableCell>
+                    <Button 
+                      size="small" 
+                      variant="outlined"
+                      onClick={() => window.location.href = `/audits/${audit.id}`}
+                    >
+                      View Details
+                    </Button>
+                  </TableCell>
+                  {/* Audit details navigation - fixed for dynamic paths */}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {audits.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 3 }}>
+            <Typography color="text.secondary">
+              No audits found for your entities
+            </Typography>
+          </Box>
+        )}
+      </Paper>
+
+      {/* Charts Section */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 3 }}>
+        {/* Findings by Severity Chart */}
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+            Findings by Severity
+          </Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={findings.reduce((acc: any[], finding) => {
+                  const severity = finding.severity || 'Unknown';
+                  const existing = acc.find(item => item.name === severity);
+                  if (existing) {
+                    existing.value += 1;
+                  } else {
+                    acc.push({ name: severity, value: 1 });
+                  }
+                  return acc;
+                }, [])}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'].map((color, index) => (
+                  <Cell key={`cell-${index}`} fill={color} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </Paper>
+
+        {/* Findings by Status Chart */}
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+            Findings by Status
+          </Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={findings.reduce((acc: any[], finding) => {
+              const status = finding.status || 'Unknown';
+              const existing = acc.find(item => item.status === status);
+              if (existing) {
+                existing.count += 1;
+              } else {
+                acc.push({ status, count: 1 });
+              }
+              return acc;
+            }, [])}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="status" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#1976d2" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Paper>
+      </Box>
+
+      {/* Action Plans Summary */}
+      <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+          Remediation Progress
+        </Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+          <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+            <Typography variant="h4" color="success.dark" fontWeight="bold">
+              {findings.filter(f => f.status === 'Closed' || f.status === 'Completed').length}
+            </Typography>
+            <Typography variant="body2" color="success.dark">
+              Completed
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
+            <Typography variant="h4" color="warning.dark" fontWeight="bold">
+              {findings.filter(f => f.status === 'In Progress' || f.status === 'Action Assigned').length}
+            </Typography>
+            <Typography variant="body2" color="warning.dark">
+              In Progress
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
+            <Typography variant="h4" color="error.dark" fontWeight="bold">
+              {findings.filter(f => f.status === 'Open' || f.status === 'Identified').length}
+            </Typography>
+            <Typography variant="body2" color="error.dark">
+              Pending
+            </Typography>
+          </Box>
         </Box>
+      </Paper>
+
+      {/* Recent Findings List */}
+      <Paper elevation={2} sx={{ p: 3 }}>
+        <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+          Recent Findings
+        </Typography>
+        <List>
+          {findings.slice(0, 5).map((finding) => (
+            <ListItem key={finding.id} divider>
+              <ListItemIcon>
+                <AssignmentIcon color={finding.severity === 'Critical' ? 'error' : finding.severity === 'High' ? 'warning' : 'primary'} />
+              </ListItemIcon>
+              <ListItemText
+                primary={finding.description}
+                secondary={`Severity: ${finding.severity} | Status: ${finding.status}`}
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleOpenActionPlans(finding.id)}
+              >
+                View Details
+              </Button>
+            </ListItem>
+          ))}
+          {findings.length === 0 && (
+            <ListItem>
+              <ListItemText primary="No findings assigned to you" />
+            </ListItem>
+          )}
+        </List>
       </Paper>
 
       {/* Action Plans Module (Dialog) */}
@@ -1605,7 +1714,7 @@ const BoardDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           risks: Array.isArray(risks) ? risks : [],
         });
       } catch (error) {
-        console.error("Failed to fetch board data", error);
+        // Error handling without logging
       } finally {
         setLoading(false);
       }

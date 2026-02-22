@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { Box, Typography, Button, Chip, Alert } from '@mui/material';
+import { Box, Typography, Button, Chip, Alert, Menu, MenuItem } from '@mui/material';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
@@ -20,10 +20,46 @@ const FindingsModule: React.FC = () => {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string>('');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
     fetchFindings();
+    fetchUserRole();
   }, []);
+
+  const fetchUserRole = () => {
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    
+    // Check for both userRoles and roles properties
+    const userRoles = user?.userRoles || user?.roles;
+    
+    if (user && userRoles) {
+      const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+      
+      // Check if user has Chief Auditor role
+      const chiefAuditorRole = roles.find((role: any) => 
+        role?.role?.name === 'Chief Auditor' || 
+        role?.name === 'Chief Auditor' || 
+        role?.role?.name === 'Chief Audit Executive' ||
+        role?.name === 'Chief Audit Executive'
+      );
+      
+      if (chiefAuditorRole) {
+        setUserRole('Chief Auditor');
+        return;
+      }
+      
+      // Get the actual role name from the role object
+      // Handle different possible structures: role.role.name or role.name
+      const actualRole = roles[0]?.role?.name || 
+                        roles[0]?.name || 
+                        '';
+      
+      setUserRole(actualRole);
+    }
+  };
 
   const fetchFindings = async () => {
     try {
@@ -38,6 +74,35 @@ const FindingsModule: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAssignAction = async (findingId: number) => {
+    try {
+      const result: any = await api.assignActionToFinding(findingId);
+      
+      if (result.success) {
+        await MySwal.fire({
+          title: 'Success!',
+          text: result.message,
+          icon: 'success',
+          confirmButtonText: 'Create Action Plan'
+        }).then((swalResult) => {
+          if (swalResult.isConfirmed) {
+            // Redirect to action plan creation page
+            window.location.href = result.redirectTo.path;
+          }
+        });
+      }
+    } catch (error: any) {
+      console.error('Error assigning action:', error);
+      MySwal.fire({
+        title: 'Error',
+        text: 'Failed to assign action to finding',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+    }
+    setAnchorEl(null);
   };
 
   const getSeverityColor = (severity: string) => {
@@ -96,18 +161,37 @@ const FindingsModule: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 150,
+      width: 200,
       sortable: false,
-      renderCell: (params: GridRenderCellParams) => (
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={() => MySwal.fire(`Finding #${params.row.id}`, `View Action Plans for Finding #${params.row.id}`, 'info')}
-          sx={{ textTransform: 'none' }}
-        >
-          Manage Actions
-        </Button>
-      ),
+      renderCell: (params: GridRenderCellParams) => {
+        const isChiefAuditor = userRole === 'Chief Auditor';
+        const canAssignAction = params.row.status === 'Validated' && isChiefAuditor;
+        
+        return (
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Button 
+              variant="contained" 
+              size="small" 
+              onClick={() => MySwal.fire(`Finding #${params.row.id}`, `View Action Plans for Finding #${params.row.id}`, 'info')}
+              sx={{ textTransform: 'none' }}
+            >
+              Manage Actions
+            </Button>
+            
+            {canAssignAction && (
+              <Button 
+                variant="contained" 
+                size="small" 
+                color="primary"
+                onClick={() => handleAssignAction(params.row.id)}
+                sx={{ textTransform: 'none' }}
+              >
+                Assign Action
+              </Button>
+            )}
+          </Box>
+        );
+      },
     },
   ];
 

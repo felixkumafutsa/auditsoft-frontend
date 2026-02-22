@@ -58,7 +58,49 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
   const [transitionDialog, setTransitionDialog] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [allowedTransitions, setAllowedTransitions] = useState<string[]>([]);
-  const userRole = localStorage.getItem('userRole') || 'Auditor';
+  
+  // Properly parse user role from user object
+  const getUserRole = () => {
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    
+    console.log('DEBUG - User object:', user);
+    
+    // Check for both userRoles and roles properties
+    const userRoles = user?.userRoles || user?.roles;
+    console.log('DEBUG - User roles property:', userRoles);
+    
+    if (user && userRoles) {
+      const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+      console.log('DEBUG - Roles array:', roles);
+      
+      // Check if user has Chief Auditor role
+      const chiefAuditorRole = roles.find((role: any) => 
+        role?.role?.name === 'Chief Auditor' || 
+        role?.name === 'Chief Auditor' || 
+        role?.role?.name === 'Chief Audit Executive' ||
+        role?.name === 'Chief Audit Executive'
+      );
+      
+      if (chiefAuditorRole) {
+        console.log('DEBUG - Returning Chief Auditor');
+        return 'Chief Auditor';
+      }
+      
+      // Get the actual role name from the role object
+      // Handle different possible structures: role.role.name or role.name
+      const actualRole = roles[0]?.role?.name || 
+                        roles[0]?.name || 
+                        'Auditor';
+      
+      console.log('DEBUG - Detected actual role:', actualRole);
+      return actualRole;
+    }
+    console.log('DEBUG - No roles found, defaulting to Auditor');
+    return 'Auditor';
+  };
+  
+  const userRole = getUserRole();
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
   const isManager = userRole === 'Audit Manager' || userRole === 'Manager';
   const isAuditor = userRole === 'Auditor';
@@ -144,8 +186,29 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
   const handleTransition = async () => {
     if (!selectedFinding || !newStatus) return;
     try {
-      await api.transitionFinding?.(selectedFinding.id, newStatus, userRole);
-      MySwal.fire('Success', 'Finding status updated successfully!', 'success');
+      // Use assignActionToFinding for Action Assigned transition
+      if (newStatus === 'Action Assigned') {
+        const result: any = await api.assignActionToFinding(selectedFinding.id);
+        
+        if (result.success) {
+          await MySwal.fire({
+            title: 'Success!',
+            text: result.message,
+            icon: 'success',
+            confirmButtonText: 'Create Action Plan'
+          }).then((swalResult) => {
+            if (swalResult.isConfirmed) {
+              // Redirect to action plan creation page
+              window.location.href = result.redirectTo.path;
+            }
+          });
+        }
+      } else {
+        // Use regular transition for other status changes
+        await api.transitionFinding?.(selectedFinding.id, newStatus, userRole);
+        MySwal.fire('Success', 'Finding status updated successfully!', 'success');
+      }
+      
       setTransitionDialog(false);
       setNewStatus('');
       fetchFindings();

@@ -1,90 +1,266 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Grid, Button, Chip } from '@mui/material';
-import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  Button, 
+  Card,
+  CardContent
+} from '@mui/material';
+import { 
+  PieChart, 
+  Pie, 
+  Cell,
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from 'recharts';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { Audit } from '../types/audit';
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  auditUniverseEntities?: { id: number; entityName: string; entityType: string }[];
+}
+
 const ProcessOwnerPage: React.FC = () => {
   const [audits, setAudits] = useState<Audit[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [version] = useState(Date.now()); // Force re-render
   const navigate = useNavigate();
 
+  console.log('🔄 ProcessOwnerPage v2.0 - New Dashboard Loading', { version });
+
   useEffect(() => {
-    const fetchOwnerAudits = async () => {
+    const fetchCurrentUserAndAudits = async () => {
       try {
-        const data = await api.getOwnerAudits();
-        setAudits(Array.isArray(data) ? data : []);
+        // Get current user info
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setCurrentUser(user);
+        }
+
+        // Get all audits
+        const allAudits = await api.getOwnerAudits();
+        const auditsArray = Array.isArray(allAudits) ? allAudits : [];
+
+        // Filter audits by user's audit universe entities
+        if (currentUser?.auditUniverseEntities && currentUser.auditUniverseEntities.length > 0) {
+          const userEntityIds = currentUser.auditUniverseEntities.map((entity: any) => entity.id);
+          const filteredAudits = auditsArray.filter((audit: any) => 
+            audit.auditUniverseItemId && userEntityIds.includes(audit.auditUniverseItemId)
+          );
+          setAudits(filteredAudits);
+        } else {
+          setAudits(auditsArray);
+        }
       } catch (e) {
         console.error('Failed to fetch process owner audits', e);
-      } finally {
-        setLoading(false);
       }
     };
-    fetchOwnerAudits();
-  }, []);
+    fetchCurrentUserAndAudits();
+  }, [currentUser?.auditUniverseEntities]);
 
-  const columns: GridColDef<Audit>[] = [
-    { field: 'id', headerName: 'ID', width: 70 },
-    { field: 'auditName', headerName: 'Audit Name', flex: 1, minWidth: 220 },
-    { 
-      field: 'status', headerName: 'Status', width: 150,
-      renderCell: (params) => <Chip label={params.value} size="small" />
-    },
-    { 
-      field: 'startDate', headerName: 'Start', width: 120,
-      valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString() : ''
-    },
-    { 
-      field: 'endDate', headerName: 'End', width: 120,
-      valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString() : ''
-    },
-    {
-      field: 'programCount', headerName: 'Programs', width: 120,
-      valueGetter: (p: any) => p.row.auditPrograms?.length || 0
-    },
-    {
-      field: 'findingCount', headerName: 'Findings', width: 120,
-      valueGetter: (p: any) => p.row.findings?.length || 0
-    },
-    {
-      field: 'actions', headerName: 'Actions', width: 180, sortable: false,
-      renderCell: (params) => (
-        <Button variant="outlined" size="small" onClick={() => navigate(`/audits/${params.row.id}`)}>
-          View
-        </Button>
-      )
-    },
-  ];
+  // Calculate statistics
+  const stats = {
+    totalAudits: audits.length,
+    completedAudits: audits.filter(audit => audit.status === 'Closed').length,
+    inProgressAudits: audits.filter(audit => audit.status === 'In Progress').length,
+    plannedAudits: audits.filter(audit => audit.status === 'Planned').length,
+    totalFindings: audits.reduce((sum, audit) => sum + (audit.findings?.length || 0), 0),
+    highRiskFindings: audits.reduce((sum, audit) => 
+      sum + (audit.findings?.filter((f: any) => f.riskLevel === 'High').length || 0), 0
+    ),
+  };
+
+  // Status distribution for pie chart
+  const statusData = [
+    { name: 'Planned', value: stats.plannedAudits, color: '#FFA500' },
+    { name: 'In Progress', value: stats.inProgressAudits, color: '#2196F3' },
+    { name: 'Closed', value: stats.completedAudits, color: '#4CAF50' },
+  ].filter(item => item.value > 0);
+
+  // Monthly trend data for line chart
+  const monthlyData = React.useMemo(() => {
+    const last6Months = [];
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = month.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      
+      const monthAudits = audits.filter(audit => {
+        const auditDate = new Date(audit.startDate || (audit as any).createdAt || '');
+        return auditDate.getMonth() === month.getMonth() && 
+               auditDate.getFullYear() === month.getFullYear();
+      });
+      
+      last6Months.push({
+        month: monthName,
+        audits: monthAudits.length,
+        findings: monthAudits.reduce((sum, audit) => sum + (audit.findings?.length || 0), 0)
+      });
+    }
+    
+    return last6Months;
+  }, [audits]);
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#0F1A2B', mb: 2 }}>
+    <Box key={version} sx={{ p: 3 }}>
+      <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#0F1A2B', mb: 3 }}>
         Process Owner Dashboard
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Audits executed in association with your owned processes/entities.
+        Audit statistics and trends for your assigned business entities.
       </Typography>
 
-      <Paper sx={{ p: 2 }}>
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12 } as any}>
-            <div style={{ width: '100%', height: 600 }}>
-              <DataGrid
-                rows={audits}
-                columns={columns}
-                loading={loading}
-                initialState={{
-                  pagination: { paginationModel: { pageSize: 10, page: 0 } },
-                }}
-                pageSizeOptions={[10, 25, 50]}
-                disableRowSelectionOnClick
-                slots={{ toolbar: GridToolbar }}
-              />
-            </div>
-          </Grid>
-        </Grid>
-      </Paper>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {/* Statistics Cards */}
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Card sx={{ flex: 1, minWidth: 200 }}>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Total Audits
+              </Typography>
+              <Typography variant="h4" color="primary">
+                {stats.totalAudits}
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card sx={{ flex: 1, minWidth: 200 }}>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Completed
+              </Typography>
+              <Typography variant="h4" color="success.main">
+                {stats.completedAudits}
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card sx={{ flex: 1, minWidth: 200 }}>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                In Progress
+              </Typography>
+              <Typography variant="h4" color="info.main">
+                {stats.inProgressAudits}
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card sx={{ flex: 1, minWidth: 200 }}>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Total Findings
+              </Typography>
+              <Typography variant="h4" color="warning.main">
+                {stats.totalFindings}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+
+        {/* Charts */}
+        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+          <Paper sx={{ p: 2, flex: 1, minWidth: 300 }}>
+            <Typography variant="h6" gutterBottom>
+              Audit Status Distribution
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={statusData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                >
+                  {statusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </Paper>
+          <Paper sx={{ p: 2, flex: 1, minWidth: 300 }}>
+            <Typography variant="h6" gutterBottom>
+              Monthly Audit Trends
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="audits" 
+                  stroke="#8884d8" 
+                  strokeWidth={2}
+                  name="Audits"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="findings" 
+                  stroke="#82ca9d" 
+                  strokeWidth={2}
+                  name="Findings"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Box>
+
+        {/* Report Files Section */}
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Report Files
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Button variant="contained" color="primary" onClick={() => navigate('/reports-executive')}>
+              View Executive Reports
+            </Button>
+            <Button variant="outlined" onClick={() => navigate('/reports-files')}>
+              View Report Files
+            </Button>
+          </Box>
+        </Paper>
+
+        {/* Action Plans Section */}
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Action Plans
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Button 
+              variant="contained" 
+              color="secondary"
+              onClick={() => navigate('/remediation')}
+            >
+              View Action Plans
+            </Button>
+            <Button 
+              variant="outlined"
+              onClick={() => navigate('/findings')}
+            >
+              Manage Findings
+            </Button>
+          </Box>
+        </Paper>
+      </Box>
     </Box>
   );
 };

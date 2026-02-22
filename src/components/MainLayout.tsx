@@ -3,8 +3,7 @@ import {
     Box,
     CircularProgress,
     CssBaseline,
-    Drawer,
-    Typography
+    Drawer
 } from '@mui/material';
 import Sidebar from './Sidebar';
 import { Page } from '../types/navigation';
@@ -39,9 +38,10 @@ import BoardViewerPage from '../pages/BoardViewerPage';
 import OperationalReportsPage from '../pages/OperationalReportsPage';
 import CustomReportsPage from '../pages/CustomReportsPage';
 import ReportsFilesPage from '../pages/ReportsFilesPage';
+import AuditWorkpaperPage from '../pages/AuditWorkpaperPage';
+import TimesheetsPage from '../pages/TimesheetsPage';
 import GlobalTopBar from './GlobalTopBar';
 import ContextualTopBar from './ContextualTopBar';
-import api from '../services/api';
 
 interface User {
     name: string;
@@ -57,7 +57,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
 
     const handleLogout = useCallback(() => {
         onLogout();
@@ -125,6 +124,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             // Evidence
             case 'evidence':
                 return <EvidencePage />;
+
+            // Workpapers & Time Tracking
+            case 'workpapers':
+                return <AuditWorkpaperPage />;
+            case 'timesheets':
+                return <TimesheetsPage />;
 
             // Admin
             case 'users':
@@ -203,7 +208,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 onDrawerToggle={handleDrawerToggle}
                 onLogout={handleLogout}
                 onNavigate={handleNavigate}
-                unreadCount={unreadCount}
             />
 
             {/* Spacer for fixed GlobalTopBar */}

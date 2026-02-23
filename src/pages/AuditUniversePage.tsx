@@ -27,9 +27,9 @@ interface AuditUniverseItem {
   entityType: string;
   entityName: string;
   riskRating: string;
-  owner?: { 
+  owner?: {
     id: number;
-    name: string; 
+    name: string;
   };
   createdAt: string;
 }
@@ -73,21 +73,21 @@ const AuditUniversePage: React.FC = () => {
   const fetchProcessOwners = async () => {
     try {
       const users = await api.getUsers();
+
       // Filter users who are process owners
       const processOwnerUsers = Array.isArray(users) ? users.filter((user: any) => {
         const userRoles = user?.userRoles || user?.roles;
         if (!userRoles) return false;
-        
+
         const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
-        return roles.some((role: any) => 
-          role?.role?.name === 'Process Owner' || 
-          role?.name === 'Process Owner' ||
-          role?.role?.name === 'ProcessOwner' || 
-          role?.name === 'ProcessOwner'
-        );
+        return roles.some((role: any) => {
+          const name = role?.role?.roleName || role?.roleName || role?.role?.name || role?.name || '';
+          return name === 'Process Owner' || name === 'ProcessOwner';
+        });
       }) : [];
+
       setProcessOwners(processOwnerUsers);
-      
+
       // Set default owner if available
       if (processOwnerUsers.length > 0 && !formData.ownerId) {
         setFormData(prev => ({ ...prev, ownerId: processOwnerUsers[0].id }));

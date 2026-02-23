@@ -1,24 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  Button, 
+import {
+  Box,
+  Typography,
+  Paper,
+  Button,
   Card,
   CardContent
 } from '@mui/material';
-import { 
-  PieChart, 
-  Pie, 
+import {
+  PieChart,
+  Pie,
   Cell,
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer 
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
 } from 'recharts';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
@@ -56,7 +56,7 @@ const ProcessOwnerPage: React.FC = () => {
         // Filter audits by user's audit universe entities
         if (currentUser?.auditUniverseEntities && currentUser.auditUniverseEntities.length > 0) {
           const userEntityIds = currentUser.auditUniverseEntities.map((entity: any) => entity.id);
-          const filteredAudits = auditsArray.filter((audit: any) => 
+          const filteredAudits = auditsArray.filter((audit: any) =>
             audit.auditUniverseItemId && userEntityIds.includes(audit.auditUniverseItemId)
           );
           setAudits(filteredAudits);
@@ -77,7 +77,7 @@ const ProcessOwnerPage: React.FC = () => {
     inProgressAudits: audits.filter(audit => audit.status === 'In Progress').length,
     plannedAudits: audits.filter(audit => audit.status === 'Planned').length,
     totalFindings: audits.reduce((sum, audit) => sum + (audit.findings?.length || 0), 0),
-    highRiskFindings: audits.reduce((sum, audit) => 
+    highRiskFindings: audits.reduce((sum, audit) =>
       sum + (audit.findings?.filter((f: any) => f.riskLevel === 'High').length || 0), 0
     ),
   };
@@ -93,24 +93,24 @@ const ProcessOwnerPage: React.FC = () => {
   const monthlyData = React.useMemo(() => {
     const last6Months = [];
     const now = new Date();
-    
+
     for (let i = 5; i >= 0; i--) {
       const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthName = month.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      
+
       const monthAudits = audits.filter(audit => {
         const auditDate = new Date(audit.startDate || (audit as any).createdAt || '');
-        return auditDate.getMonth() === month.getMonth() && 
-               auditDate.getFullYear() === month.getFullYear();
+        return auditDate.getMonth() === month.getMonth() &&
+          auditDate.getFullYear() === month.getFullYear();
       });
-      
+
       last6Months.push({
         month: monthName,
         audits: monthAudits.length,
         findings: monthAudits.reduce((sum, audit) => sum + (audit.findings?.length || 0), 0)
       });
     }
-    
+
     return last6Months;
   }, [audits]);
 
@@ -205,17 +205,17 @@ const ProcessOwnerPage: React.FC = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="audits" 
-                  stroke="#8884d8" 
+                <Line
+                  type="monotone"
+                  dataKey="audits"
+                  stroke="#8884d8"
                   strokeWidth={2}
                   name="Audits"
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="findings" 
-                  stroke="#82ca9d" 
+                <Line
+                  type="monotone"
+                  dataKey="findings"
+                  stroke="#82ca9d"
                   strokeWidth={2}
                   name="Findings"
                 />
@@ -239,27 +239,6 @@ const ProcessOwnerPage: React.FC = () => {
           </Box>
         </Paper>
 
-        {/* Action Plans Section */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Action Plans
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <Button 
-              variant="contained" 
-              color="secondary"
-              onClick={() => navigate('/remediation')}
-            >
-              View Action Plans
-            </Button>
-            <Button 
-              variant="outlined"
-              onClick={() => navigate('/findings')}
-            >
-              Manage Findings
-            </Button>
-          </Box>
-        </Paper>
       </Box>
     </Box>
   );

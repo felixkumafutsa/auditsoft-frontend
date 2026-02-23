@@ -58,7 +58,15 @@ interface Evidence {
   uploadedBy: { name: string };
   uploadedAt: string;
   status: string;
+  auditProgram?: {
+    id: number;
+    audit?: {
+      id: number;
+      auditName: string;
+    }
+  };
   versions?: EvidenceVersion[];
+  fileMissing?: boolean;
 }
 
 const EvidencePage: React.FC = () => {
@@ -96,7 +104,7 @@ const EvidencePage: React.FC = () => {
 
   // User Role
   const userRole = localStorage.getItem('userRole');
-  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
+  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Auditor';
   const isManager = userRole === 'Audit Manager' || userRole === 'Manager';
   const isAuditor = userRole === 'Auditor';
 

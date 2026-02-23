@@ -6,6 +6,7 @@ import withReactContent from 'sweetalert2-react-content';
 
 const MySwal = withReactContent(Swal);
 import api from '../services/api';
+import ActionPlansModule from './ActionPlansModule';
 
 interface Finding {
   id: number;
@@ -22,6 +23,8 @@ const FindingsModule: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [actionPlansOpen, setActionPlansOpen] = useState(false);
+  const [selectedFindingId, setSelectedFindingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchFindings();
@@ -29,35 +32,51 @@ const FindingsModule: React.FC = () => {
   }, []);
 
   const fetchUserRole = () => {
+    // 1. Try to get the already mapped role from localStorage
+    const savedRole = localStorage.getItem('userRole');
+    if (savedRole) {
+      setUserRole(savedRole);
+      return;
+    }
+
+    // 2. Fallback to parsing the user object
     const userStr = localStorage.getItem('user');
     const user = userStr ? JSON.parse(userStr) : null;
-    
-    // Check for both userRoles and roles properties
+
+    if (user?.role) {
+      setUserRole(user.role);
+      return;
+    }
+
     const userRoles = user?.userRoles || user?.roles;
-    
     if (user && userRoles) {
       const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
-      
-      // Check if user has Chief Auditor role
-      const chiefAuditorRole = roles.find((role: any) => 
-        role?.role?.name === 'Chief Auditor' || 
-        role?.name === 'Chief Auditor' || 
-        role?.role?.name === 'Chief Audit Executive' ||
-        role?.name === 'Chief Audit Executive'
-      );
-      
-      if (chiefAuditorRole) {
-        setUserRole('Chief Auditor');
+
+      // Check for Chief Auditor/CAE
+      const hasCAERole = roles.some((r: any) => {
+        const name = r?.role?.roleName || r?.roleName || r?.role?.name || r?.name || '';
+        return name === 'Chief Auditor' || name === 'Chief Audit Executive' || name === 'CAE' || name === 'Chief Audit Executive (CAE)';
+      });
+
+      if (hasCAERole) {
+        setUserRole('CAE');
         return;
       }
-      
+
       // Get the actual role name from the role object
-      // Handle different possible structures: role.role.name or role.name
-      const actualRole = roles[0]?.role?.name || 
-                        roles[0]?.name || 
-                        '';
-      
-      setUserRole(actualRole);
+      const actualRole = roles[0]?.role?.roleName ||
+        roles[0]?.roleName ||
+        roles[0]?.role?.name ||
+        roles[0]?.name ||
+        'Auditor';
+
+      // Map to consistent frontend roles
+      if (actualRole === 'Audit Manager') setUserRole('Manager');
+      else if (actualRole === 'Process Owner') setUserRole('ProcessOwner');
+      else if (actualRole === 'Executive / Board Viewer' || actualRole === 'Board Member' || actualRole === 'Executive') setUserRole('Executive');
+      else setUserRole(actualRole);
+    } else {
+      setUserRole('Auditor');
     }
   };
 
@@ -76,33 +95,9 @@ const FindingsModule: React.FC = () => {
     }
   };
 
-  const handleAssignAction = async (findingId: number) => {
-    try {
-      const result: any = await api.assignActionToFinding(findingId);
-      
-      if (result.success) {
-        await MySwal.fire({
-          title: 'Success!',
-          text: result.message,
-          icon: 'success',
-          confirmButtonText: 'Create Action Plan'
-        }).then((swalResult) => {
-          if (swalResult.isConfirmed) {
-            // Redirect to action plan creation page
-            window.location.href = result.redirectTo.path;
-          }
-        });
-      }
-    } catch (error: any) {
-      console.error('Error assigning action:', error);
-      MySwal.fire({
-        title: 'Error',
-        text: 'Failed to assign action to finding',
-        icon: 'error',
-        confirmButtonText: 'OK'
-      });
-    }
-    setAnchorEl(null);
+  const handleAssignAction = (findingId: number) => {
+    setSelectedFindingId(findingId);
+    setActionPlansOpen(true);
   };
 
   const getSeverityColor = (severity: string) => {
@@ -135,27 +130,27 @@ const FindingsModule: React.FC = () => {
       width: 180,
       valueGetter: (_value, row) => row.auditProgram?.procedureName || 'N/A'
     },
-    { 
-      field: 'severity', 
-      headerName: 'Severity', 
+    {
+      field: 'severity',
+      headerName: 'Severity',
       width: 130,
       renderCell: (params: GridRenderCellParams) => (
-        <Chip 
-          label={params.value} 
-          color={getSeverityColor(params.value as string) as any} 
-          size="small" 
+        <Chip
+          label={params.value}
+          color={getSeverityColor(params.value as string) as any}
+          size="small"
           variant="filled"
         />
       )
     },
     { field: 'description', headerName: 'Description', flex: 1, minWidth: 250 },
     { field: 'root_cause', headerName: 'Root Cause', flex: 1, minWidth: 200 },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
+    {
+      field: 'status',
+      headerName: 'Status',
       width: 180,
       renderCell: (params: GridRenderCellParams) => (
-         <Chip label={params.value} size="small" variant="outlined" />
+        <Chip label={params.value} size="small" variant="outlined" />
       )
     },
     {
@@ -164,24 +159,27 @@ const FindingsModule: React.FC = () => {
       width: 200,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => {
-        const isChiefAuditor = userRole === 'Chief Auditor';
+        const isChiefAuditor = userRole === 'Chief Auditor' || userRole === 'CAE';
         const canAssignAction = params.row.status === 'Validated' && isChiefAuditor;
-        
+
         return (
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            <Button 
-              variant="contained" 
-              size="small" 
-              onClick={() => MySwal.fire(`Finding #${params.row.id}`, `View Action Plans for Finding #${params.row.id}`, 'info')}
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => {
+                setSelectedFindingId(params.row.id);
+                setActionPlansOpen(true);
+              }}
               sx={{ textTransform: 'none' }}
             >
-              Manage Actions
+              {isChiefAuditor ? 'Manage Actions' : 'View Actions'}
             </Button>
-            
+
             {canAssignAction && (
-              <Button 
-                variant="contained" 
-                size="small" 
+              <Button
+                variant="contained"
+                size="small"
                 color="primary"
                 onClick={() => handleAssignAction(params.row.id)}
                 sx={{ textTransform: 'none' }}
@@ -230,6 +228,14 @@ const FindingsModule: React.FC = () => {
           },
         }}
       />
+
+      {selectedFindingId && (
+        <ActionPlansModule
+          findingId={selectedFindingId}
+          open={actionPlansOpen}
+          onClose={() => setActionPlansOpen(false)}
+        />
+      )}
     </Box>
   );
 };

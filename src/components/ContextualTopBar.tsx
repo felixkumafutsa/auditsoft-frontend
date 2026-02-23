@@ -57,7 +57,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   const [fieldWorkAnchor, setFieldWorkAnchor] = React.useState<null | HTMLElement>(null);
 
   const isSystemAdmin = userRole === 'System Administrator' || userRole === 'Admin';
-  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
+  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Auditor';
   const isAuditor = userRole === 'Auditor';
   const isManager = userRole === 'Manager' || userRole === 'Audit Manager';
   const isProcessOwner = userRole === 'ProcessOwner' || userRole === 'Process Owner';

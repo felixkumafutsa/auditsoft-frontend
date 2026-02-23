@@ -231,7 +231,7 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
       {/* Middle Section: Quick Actions */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Button
             variant="contained"
             size="large"
@@ -240,10 +240,10 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             onClick={() => onNavigate("audit-plans")}
             sx={{ py: 2, bgcolor: "#1976d2" }}
           >
-            View All Audit Plans
+            Audit Plans
           </Button>
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Button
             variant="contained"
             size="large"
@@ -252,7 +252,19 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             onClick={() => onNavigate("audit-programs")}
             sx={{ py: 2, bgcolor: "#2e7d32" }}
           >
-            Manage Audit Programs
+            Programs
+          </Button>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<GavelIcon />}
+            fullWidth
+            onClick={() => onNavigate("remediation")}
+            sx={{ py: 2, bgcolor: "#ed6c02" }}
+          >
+            Remediation
           </Button>
         </Grid>
       </Grid>
@@ -1508,13 +1520,13 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   <TableCell>{audit.auditName}</TableCell>
                   <TableCell>{audit.auditType}</TableCell>
                   <TableCell>
-                    <Chip 
-                      label={audit.status} 
-                      size="small" 
+                    <Chip
+                      label={audit.status}
+                      size="small"
                       color={
                         audit.status === 'Completed' || audit.status === 'Closed' ? 'success' :
-                        audit.status === 'In Progress' ? 'warning' :
-                        audit.status === 'Planned' ? 'info' : 'default'
+                          audit.status === 'In Progress' ? 'warning' :
+                            audit.status === 'Planned' ? 'info' : 'default'
                       }
                     />
                   </TableCell>
@@ -1522,10 +1534,10 @@ const ProcessOwnerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   <TableCell>{audit.startDate ? new Date(audit.startDate).toLocaleDateString() : 'N/A'}</TableCell>
                   <TableCell>{audit.endDate ? new Date(audit.endDate).toLocaleDateString() : 'N/A'}</TableCell>
                   <TableCell>
-                    <Button 
-                      size="small" 
+                    <Button
+                      size="small"
                       variant="outlined"
-                      onClick={() => window.location.href = `/audits/${audit.id}`}
+                      onClick={() => onNavigate("audits")}
                     >
                       View Details
                     </Button>

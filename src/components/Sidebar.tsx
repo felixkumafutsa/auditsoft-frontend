@@ -85,10 +85,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
         </ListItemButton>
 
         {isRestricted && (
-          <ListItemButton selected={currentPage === 'reports-executive'} onClick={() => onNavigate('reports-executive')}>
-            <ListItemIcon><PieChartIcon sx={{ color: 'white' }} /></ListItemIcon>
-            <ListItemText primary="Executive Reports" />
-          </ListItemButton>
+          <>
+            <ListItemButton selected={currentPage === 'reports-executive'} onClick={() => onNavigate('reports-executive')}>
+              <ListItemIcon><PieChartIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="Executive Reports" />
+            </ListItemButton>
+          </>
         )}
 
         {!isRestricted && (
@@ -273,6 +275,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
               <ListItemIcon><FactCheckIcon sx={{ color: 'white' }} /></ListItemIcon>
               <ListItemText primary="Findings" />
             </ListItemButton>
+            <ListItemButton selected={currentPage === 'remediation'} onClick={() => onNavigate('remediation')}>
+              <ListItemIcon><GavelIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="Remediation" />
+            </ListItemButton>
 
             <ListItemButton selected={currentPage === 'evidence'} onClick={() => onNavigate('evidence')}>
               <ListItemIcon><FolderIcon sx={{ color: 'white' }} /></ListItemIcon>
@@ -366,6 +372,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                 <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'findings'} onClick={() => onNavigate('findings')}>
                   <ListItemIcon><FactCheckIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Findings" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'remediation'} onClick={() => onNavigate('remediation')}>
+                  <ListItemIcon><GavelIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Remediation" />
                 </ListItemButton>
                 {isAuditor && (
                   <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'findings-draft'} onClick={() => onNavigate('findings-draft')}>

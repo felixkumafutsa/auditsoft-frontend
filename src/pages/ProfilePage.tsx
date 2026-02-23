@@ -83,11 +83,11 @@ const ProfilePage: React.FC = () => {
     const formData = new FormData();
     formData.append('name', name);
     if (password) {
-        if (password !== confirmPassword) {
-            setSnackbar({ open: true, message: 'Passwords do not match.', severity: 'error' });
-            return;
-        }
-        formData.append('password', password);
+      if (password !== confirmPassword) {
+        setSnackbar({ open: true, message: 'Passwords do not match.', severity: 'error' });
+        return;
+      }
+      formData.append('password', password);
     }
     if (profilePicture) {
       formData.append('profilePicture', profilePicture);
@@ -107,7 +107,7 @@ const ProfilePage: React.FC = () => {
   const roleSet = new Set(roles);
   const isAuditor = roleSet.has('Auditor');
   const isManager = roleSet.has('Audit Manager') || roleSet.has('Manager');
-  const isCAE = roleSet.has('Chief Audit Executive') || roleSet.has('Chief Audit Executive (CAE)') || roleSet.has('CAE');
+  const isCAE = roleSet.has('Chief Audit Executive') || roleSet.has('Chief Audit Executive (CAE)') || roleSet.has('CAE') || roleSet.has('Chief Auditor');
   const isSysAdmin = roleSet.has('System Administrator');
 
   const quickLinks = useMemo(() => {

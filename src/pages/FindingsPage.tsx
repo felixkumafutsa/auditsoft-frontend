@@ -58,50 +58,47 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
   const [transitionDialog, setTransitionDialog] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [allowedTransitions, setAllowedTransitions] = useState<string[]>([]);
-  
+
   // Properly parse user role from user object
+  // Robust role detection
   const getUserRole = () => {
+    // 1. Try to get the already mapped role from localStorage
+    const savedRole = localStorage.getItem('userRole');
+    if (savedRole) return savedRole;
+
+    // 2. Fallback to parsing the user object
     const userStr = localStorage.getItem('user');
     const user = userStr ? JSON.parse(userStr) : null;
-    
-    console.log('DEBUG - User object:', user);
-    
-    // Check for both userRoles and roles properties
+
+    if (user?.role) return user.role;
+
     const userRoles = user?.userRoles || user?.roles;
-    console.log('DEBUG - User roles property:', userRoles);
-    
     if (user && userRoles) {
       const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
-      console.log('DEBUG - Roles array:', roles);
-      
-      // Check if user has Chief Auditor role
-      const chiefAuditorRole = roles.find((role: any) => 
-        role?.role?.name === 'Chief Auditor' || 
-        role?.name === 'Chief Auditor' || 
-        role?.role?.name === 'Chief Audit Executive' ||
-        role?.name === 'Chief Audit Executive'
-      );
-      
-      if (chiefAuditorRole) {
-        console.log('DEBUG - Returning Chief Auditor');
-        return 'Chief Auditor';
-      }
-      
-      // Get the actual role name from the role object
-      // Handle different possible structures: role.role.name or role.name
-      const actualRole = roles[0]?.role?.name || 
-                        roles[0]?.name || 
-                        'Auditor';
-      
-      console.log('DEBUG - Detected actual role:', actualRole);
-      return actualRole;
+
+      // Check for Chief Auditor/CAE
+      const hasCAERole = roles.some((r: any) => {
+        const name = r?.role?.roleName || r?.roleName || r?.role?.name || r?.name || '';
+        return name === 'Chief Auditor' || name === 'Chief Audit Executive' || name === 'CAE' || name === 'Chief Audit Executive (CAE)';
+      });
+
+      if (hasCAERole) return 'CAE';
+
+      // Get the first role name
+      const firstRole = roles[0];
+      const actualRoleName = firstRole?.role?.roleName || firstRole?.roleName || firstRole?.role?.name || firstRole?.name;
+
+      if (actualRoleName === 'Audit Manager') return 'Manager';
+      if (actualRoleName === 'Process Owner') return 'ProcessOwner';
+      if (actualRoleName === 'Executive / Board Viewer' || actualRoleName === 'Board Member' || actualRoleName === 'Executive') return 'Executive';
+
+      return actualRoleName || 'Auditor';
     }
-    console.log('DEBUG - No roles found, defaulting to Auditor');
     return 'Auditor';
   };
-  
+
   const userRole = getUserRole();
-  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
+  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Auditor';
   const isManager = userRole === 'Audit Manager' || userRole === 'Manager';
   const isAuditor = userRole === 'Auditor';
   const isProcessOwner = userRole === 'ProcessOwner' || userRole === 'Process Owner';
@@ -188,27 +185,14 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
     try {
       // Use assignActionToFinding for Action Assigned transition
       if (newStatus === 'Action Assigned') {
-        const result: any = await api.assignActionToFinding(selectedFinding.id);
-        
-        if (result.success) {
-          await MySwal.fire({
-            title: 'Success!',
-            text: result.message,
-            icon: 'success',
-            confirmButtonText: 'Create Action Plan'
-          }).then((swalResult) => {
-            if (swalResult.isConfirmed) {
-              // Redirect to action plan creation page
-              window.location.href = result.redirectTo.path;
-            }
-          });
-        }
+        setSelectedFindingIdForActions(selectedFinding.id);
+        setActionPlansOpen(true);
       } else {
         // Use regular transition for other status changes
         await api.transitionFinding?.(selectedFinding.id, newStatus, userRole);
         MySwal.fire('Success', 'Finding status updated successfully!', 'success');
       }
-      
+
       setTransitionDialog(false);
       setNewStatus('');
       fetchFindings();
@@ -277,6 +261,23 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
       width: 160,
       renderCell: (params) => (
         <Chip label={params.value} size="small" color={getStatusColor(params.value) as any} />
+      ),
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      renderCell: (params) => (
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleManageActions(params.row.id);
+          }}
+        >
+          {['CAE', 'Chief Auditor', 'Chief Audit Executive'].includes(userRole || '') ? 'Manage Actions' : 'View Actions'}
+        </Button>
       ),
     },
   ];

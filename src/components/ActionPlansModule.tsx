@@ -17,11 +17,15 @@ import {
   Select,
   MenuItem,
   Stack,
-  CircularProgress
+  CircularProgress,
+  Chip
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import AttachmentIcon from '@mui/icons-material/Attachment';
+import DownloadIcon from '@mui/icons-material/Download';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
@@ -47,25 +51,59 @@ interface ActionPlansModuleProps {
 const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, onClose }) => {
   const [actionPlans, setActionPlans] = useState<ActionPlan[]>([]);
   const [loading, setLoading] = useState(false);
+  const [finding, setFinding] = useState<any>(null);
+  const [evidence, setEvidence] = useState<any[]>([]);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [currentActionPlan, setCurrentActionPlan] = useState<Partial<ActionPlan>>({});
   const [isEditing, setIsEditing] = useState(false);
+  const userRole = localStorage.getItem('userRole');
+  const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Auditor';
+  const isManager = userRole === 'Manager' || userRole === 'Audit Manager';
 
   useEffect(() => {
     if (open && findingId) {
-      fetchActionPlans();
+      fetchData();
     }
   }, [open, findingId]);
 
-  const fetchActionPlans = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const data = await api.getActionPlans(findingId);
-      setActionPlans(Array.isArray(data) ? data : []);
+      // 1. Fetch Finding to get AuditProgram ID
+      const findingData = await api.getFinding(findingId);
+      setFinding(findingData);
+
+      // 2. Fetch Action Plans
+      const apData = await api.getActionPlans(findingId);
+      setActionPlans(Array.isArray(apData) ? apData : []);
+
+      // 3. Fetch Evidence if we have an audit program
+      if (findingData.auditProgramId) {
+        const evidenceData = await api.getEvidenceList(findingData.auditProgramId);
+        setEvidence(Array.isArray(evidenceData) ? evidenceData : []);
+      }
     } catch (error) {
-      console.error('Failed to fetch action plans', error);
+      console.error('Failed to fetch action plan data', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (id: number, newStatus: string) => {
+    try {
+      // Send ONLY the status field to comply with strict backend Manager checks
+      await api.updateActionPlan(id, { status: newStatus });
+      MySwal.fire({
+        title: 'Success',
+        text: `Action plan marked as ${newStatus}`,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+      fetchData();
+    } catch (error: any) {
+      console.error('Failed to update status', error);
+      MySwal.fire('Error', `Failed to update status: ${error.message}`, 'error');
     }
   };
 
@@ -100,7 +138,7 @@ const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, 
       try {
         await api.deleteActionPlan(id);
         MySwal.fire('Deleted!', 'Action plan has been deleted.', 'success');
-        fetchActionPlans();
+        fetchData();
       } catch (error) {
         console.error('Failed to delete action plan', error);
         MySwal.fire('Error', 'Failed to delete action plan.', 'error');
@@ -110,20 +148,55 @@ const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, 
 
   const handleSave = async () => {
     try {
+      // Role-aware payload construction to comply with backend restrictions
+      // Managers can only update status, CAEs can update everything
+      let updatePayload: any = {
+        status: currentActionPlan.status,
+      };
+
+      if (isCAE) {
+        updatePayload = {
+          ...updatePayload,
+          description: currentActionPlan.description,
+          dueDate: currentActionPlan.dueDate ? new Date(currentActionPlan.dueDate) : undefined,
+          ownerId: currentActionPlan.ownerId
+        };
+      }
+
       if (isEditing && currentActionPlan.id) {
-        await api.updateActionPlan(currentActionPlan.id, currentActionPlan);
+        // If Manager, we only send status to avoid "Managers can only update the status" backend error
+        // We explicitly construct the object to avoid any extra fields
+        const payloadToSend = isCAE ? updatePayload : { status: currentActionPlan.status || 'Open' };
+        await api.updateActionPlan(currentActionPlan.id, payloadToSend);
       } else {
+        // Only CAEs can create
         await api.createActionPlan({
-          ...currentActionPlan,
+          ...updatePayload,
           findingId: findingId
         });
       }
       MySwal.fire('Success', 'Action plan saved successfully!', 'success');
       setEditDialogOpen(false);
-      fetchActionPlans();
-    } catch (error) {
+      fetchData();
+    } catch (error: any) {
       console.error('Failed to save action plan', error);
-      MySwal.fire('Error', 'Failed to save action plan.', 'error');
+      MySwal.fire('Error', `Failed to save action plan: ${error.message}`, 'error');
+    }
+  };
+
+  const handleDownloadEvidence = async (evidenceId: number, fileName: string) => {
+    try {
+      const blob = await api.downloadEvidence(evidenceId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Download failed', error);
+      MySwal.fire('Error', 'Failed to download evidence.', 'error');
     }
   };
 
@@ -139,11 +212,13 @@ const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, 
           </Box>
         ) : (
           <Box>
-            <Box display="flex" justifyContent="flex-end" mb={2}>
-              <Button startIcon={<AddIcon />} variant="contained" onClick={handleAdd}>
-                Add Action Plan
-              </Button>
-            </Box>
+            {isCAE && (
+              <Box display="flex" justifyContent="flex-end" mb={2}>
+                <Button startIcon={<AddIcon />} variant="contained" onClick={handleAdd}>
+                  Add Action Plan
+                </Button>
+              </Box>
+            )}
             {actionPlans.length === 0 ? (
               <Typography color="textSecondary" align="center">
                 No action plans found.
@@ -154,13 +229,35 @@ const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, 
                   <ListItem
                     key={plan.id}
                     secondaryAction={
-                      <Box>
-                        <IconButton onClick={() => handleEdit(plan)}>
-                          <EditIcon color="primary" />
-                        </IconButton>
-                        <IconButton onClick={() => handleDelete(plan.id)}>
-                          <DeleteIcon color="error" />
-                        </IconButton>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {isCAE && (
+                          <Box>
+                            <IconButton onClick={() => handleEdit(plan)}>
+                              <EditIcon color="primary" />
+                            </IconButton>
+                            <IconButton onClick={() => handleDelete(plan.id)}>
+                              <DeleteIcon color="error" />
+                            </IconButton>
+                          </Box>
+                        )}
+                        {!isCAE && isManager && plan.status === 'Open' && (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => handleStatusUpdate(plan.id, 'In Progress')}
+                            sx={{ textTransform: 'none', borderRadius: '20px', px: 2 }}
+                          >
+                            Mark In Progress
+                          </Button>
+                        )}
+                        {!isCAE && isManager && plan.status !== 'Open' && (
+                          <Chip
+                            label={plan.status}
+                            color={plan.status === 'In Progress' ? 'info' : 'success'}
+                            variant="outlined"
+                            size="small"
+                          />
+                        )}
                       </Box>
                     }
                     sx={{ bgcolor: '#f5f5f5', mb: 1, borderRadius: 1 }}
@@ -169,10 +266,40 @@ const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, 
                       primary={plan.description}
                       secondary={
                         <React.Fragment>
-                           <Typography component="span" variant="body2" color="text.primary">
-                             Status: {plan.status}
-                           </Typography>
-                           {plan.dueDate && ` | Due: ${new Date(plan.dueDate).toLocaleDateString()}`}
+                          <Typography component="span" variant="body2" color="text.primary">
+                            Status: {plan.status}
+                          </Typography>
+                          {plan.dueDate && ` | Due: ${new Date(plan.dueDate).toLocaleDateString()}`}
+
+                          {/* Remediation Evidence Section for CAE */}
+                          {isCAE && (
+                            <Box sx={{ mt: 1, pt: 1, borderTop: '1px dashed #ccc' }}>
+                              <Typography variant="caption" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                <AttachmentIcon fontSize="inherit" /> Remediation Evidence:
+                              </Typography>
+                              {evidence.filter(ev => ev.description?.includes(plan.description) || ev.description?.includes(`Action Plan #${plan.id}`)).length > 0 ? (
+                                <Stack direction="row" spacing={1} flexWrap="wrap">
+                                  {evidence
+                                    .filter(ev => ev.description?.includes(plan.description) || ev.description?.includes(`Action Plan #${plan.id}`))
+                                    .map(ev => (
+                                      <Chip
+                                        key={ev.id}
+                                        icon={<VisibilityIcon />}
+                                        label={ev.fileName}
+                                        size="small"
+                                        onClick={() => handleDownloadEvidence(ev.id, ev.fileName)}
+                                        onDelete={() => handleDownloadEvidence(ev.id, ev.fileName)}
+                                        deleteIcon={<DownloadIcon />}
+                                        sx={{ cursor: 'pointer', mb: 0.5 }}
+                                      />
+                                    ))
+                                  }
+                                </Stack>
+                              ) : (
+                                <Typography variant="caption" color="text.secondary">No evidence provided yet.</Typography>
+                              )}
+                            </Box>
+                          )}
                         </React.Fragment>
                       }
                     />
@@ -199,6 +326,7 @@ const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, 
               rows={3}
               value={currentActionPlan.description || ''}
               onChange={(e) => setCurrentActionPlan({ ...currentActionPlan, description: e.target.value })}
+              disabled={!isCAE}
             />
             <TextField
               label="Due Date"
@@ -207,6 +335,7 @@ const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, 
               InputLabelProps={{ shrink: true }}
               value={currentActionPlan.dueDate ? new Date(currentActionPlan.dueDate).toISOString().split('T')[0] : ''}
               onChange={(e) => setCurrentActionPlan({ ...currentActionPlan, dueDate: e.target.value })}
+              disabled={!isCAE}
             />
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
@@ -217,15 +346,15 @@ const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, 
               >
                 <MenuItem value="Open">Open</MenuItem>
                 <MenuItem value="In Progress">In Progress</MenuItem>
-                <MenuItem value="Verified">Verified</MenuItem>
-                <MenuItem value="Closed">Closed</MenuItem>
+                {isCAE && <MenuItem value="Verified">Verified</MenuItem>}
+                {isCAE && <MenuItem value="Closed">Closed</MenuItem>}
               </Select>
             </FormControl>
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained" disabled={!currentActionPlan.description}>
+          <Button onClick={handleSave} variant="contained" disabled={!currentActionPlan.description && isCAE}>
             Save
           </Button>
         </DialogActions>

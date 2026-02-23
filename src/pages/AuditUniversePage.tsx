@@ -56,7 +56,7 @@ const AuditUniversePage: React.FC = () => {
   const userRole = localStorage.getItem('userRole');
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
   const isManager = userRole === 'Manager' || userRole === 'Audit Manager';
-  const canModify = isCAE || isManager;
+  const canModify = isCAE;
 
   const fetchUniverse = async () => {
     setLoading(true);
@@ -310,6 +310,7 @@ const AuditUniversePage: React.FC = () => {
                   value={formData.entityName}
                   onChange={(e) => setFormData({ ...formData, entityName: e.target.value })}
                   required
+                  disabled={!canModify}
                 />
               </Grid>
               <Grid size={{ xs: 12 } as any}>
@@ -320,6 +321,7 @@ const AuditUniversePage: React.FC = () => {
                   value={formData.ownerId}
                   onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
                   required
+                  disabled={!canModify}
                 >
                   {processOwners.map((owner) => (
                     <MenuItem key={owner.id} value={owner.id}>
@@ -335,6 +337,7 @@ const AuditUniversePage: React.FC = () => {
                   label="Entity Type"
                   value={formData.entityType}
                   onChange={(e) => setFormData({ ...formData, entityType: e.target.value })}
+                  disabled={!canModify}
                 >
                   <MenuItem value="Business Unit">Business Unit</MenuItem>
                   <MenuItem value="Process">Process</MenuItem>
@@ -350,6 +353,7 @@ const AuditUniversePage: React.FC = () => {
                   label="Risk Rating"
                   value={formData.riskRating}
                   onChange={(e) => setFormData({ ...formData, riskRating: e.target.value })}
+                  disabled={!canModify}
                 >
                   <MenuItem value="Low">Low</MenuItem>
                   <MenuItem value="Medium">Medium</MenuItem>
@@ -362,9 +366,11 @@ const AuditUniversePage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained" color="primary">
-            Save
-          </Button>
+          {canModify && (
+            <Button onClick={handleSave} variant="contained" color="primary">
+              Save
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

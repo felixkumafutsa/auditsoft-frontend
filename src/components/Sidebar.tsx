@@ -40,6 +40,7 @@ import {
   Article as ArticleIcon
 } from '@mui/icons-material';
 import { Page } from '../types/navigation';
+import logo from '../assets/logo.png';
 
 interface SidebarProps {
   userRole: string;
@@ -72,7 +73,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
         {/* System Logo */}
         <Box
           component="img"
-          src="/logo.png"
+          src={logo}
           alt="AuditSoft Logo"
           sx={{ height: 40, mr: 1, objectFit: 'contain' }}
         />

@@ -14,6 +14,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import AccountCircle from '@mui/icons-material/AccountCircle';
+import logo from '../assets/logo.png';
 
 interface GlobalTopBarProps {
   user: { name: string; role: string } | null;
@@ -69,7 +70,7 @@ const GlobalTopBar: React.FC<GlobalTopBarProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', mr: 4, cursor: 'pointer' }} onClick={() => onNavigate('dashboard')}>
           <Box
             component="img"
-            src="/logo.png"
+            src={logo}
             alt="AuditSoft Logo"
             sx={{ height: 32, mr: 1, objectFit: 'contain' }}
           />

@@ -10,6 +10,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import api from '../services/api';
+import logo from '../assets/logo.png';
 
 interface LoginFormProps {
   onLoginSuccess: () => void;
@@ -78,7 +79,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         <Paper elevation={3} sx={{ p: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <Box
             component="img"
-            src="/logo.png"
+            src={logo}
             alt="AuditSoft Logo"
             sx={{
               height: 80,

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Button, 
-  TextField, 
-  Typography, 
-  Paper, 
-  Container, 
-  Alert, 
-  CircularProgress 
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Paper,
+  Container,
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import api from '../services/api';
 
@@ -32,7 +32,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       const response = await api.login(email, password);
       const user = response.user || response;
       const token = response.token || 'mock-token';
-      
+
       // --- Robust Role Mapping ---
       // This logic handles different possible shapes of the user object from the backend.
       let role = 'Auditor'; // Default fallback
@@ -43,7 +43,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       } else if (user.userRoles && user.userRoles.length > 0 && user.userRoles[0].role) { // Case 2: A nested object from Prisma 'include'
         backendRoleName = user.userRoles[0].role.roleName;
       }
-      
+
       if (backendRoleName === 'System Administrator') role = 'Admin';
       else if (backendRoleName === 'Chief Audit Executive (CAE)' || backendRoleName === 'Chief Auditor') role = 'CAE';
       else if (backendRoleName === 'Executive / Board Viewer' || backendRoleName === 'Board Member') role = 'Executive';
@@ -76,10 +76,24 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         }}
       >
         <Paper elevation={3} sx={{ p: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Box
+            component="img"
+            src="/logo.png"
+            alt="AuditSoft Logo"
+            sx={{
+              height: 80,
+              width: 80,
+              mb: 2,
+              objectFit: 'cover',
+              borderRadius: '50%',
+              border: '2px solid #f0f2f5',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          />
           <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 'bold', color: '#0F1A2B' }}>
             AuditSoft Login
           </Typography>
-          
+
           {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
           {status && <Alert severity="success" sx={{ width: '100%', mb: 2 }}>{status}</Alert>}
 

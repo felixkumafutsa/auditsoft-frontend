@@ -70,8 +70,13 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
     <>
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 64, bgcolor: '#0a121e' }}>
         {/* System Logo */}
-        <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box component="span" sx={{ bgcolor: '#1976d2', width: 32, height: 32, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>A</Box>
+        <Box
+          component="img"
+          src="/logo.png"
+          alt="AuditSoft Logo"
+          sx={{ height: 40, mr: 1, objectFit: 'contain' }}
+        />
+        <Typography variant="h6" fontWeight="bold" sx={{ color: 'white' }}>
           AuditSoft
         </Typography>
       </Box>

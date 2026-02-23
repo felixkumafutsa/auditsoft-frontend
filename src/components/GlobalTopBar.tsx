@@ -64,13 +64,18 @@ const GlobalTopBar: React.FC<GlobalTopBarProps> = ({
         >
           <MenuIcon />
         </IconButton>
-        
+
         {/* Logo */}
         <Box sx={{ display: 'flex', alignItems: 'center', mr: 4, cursor: 'pointer' }} onClick={() => onNavigate('dashboard')}>
-           <Box component="span" sx={{ bgcolor: '#1976d2', width: 32, height: 32, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 1, fontWeight: 'bold', color: 'white' }}>A</Box>
-           <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-             AUDITSOFT
-           </Typography>
+          <Box
+            component="img"
+            src="/logo.png"
+            alt="AuditSoft Logo"
+            sx={{ height: 32, mr: 1, objectFit: 'contain' }}
+          />
+          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', color: 'white' }}>
+            AUDITSOFT
+          </Typography>
         </Box>
 
         {/* Global Navigation - Could be broad sections if needed, for now spacer */}
@@ -83,17 +88,17 @@ const GlobalTopBar: React.FC<GlobalTopBarProps> = ({
               <NotificationsIcon />
             </Badge>
           </IconButton>
-          
+
           <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={handleMenu}>
             <Box sx={{ textAlign: 'right', mr: 1, display: { xs: 'none', sm: 'block' } }}>
-                <Typography variant="subtitle2" sx={{ lineHeight: 1.2 }}>{user?.name}</Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>{user?.role}</Typography>
+              <Typography variant="subtitle2" sx={{ lineHeight: 1.2 }}>{user?.name}</Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>{user?.role}</Typography>
             </Box>
             <Avatar sx={{ width: 32, height: 32, bgcolor: '#1976d2' }}>
-                {user?.name ? user.name.charAt(0).toUpperCase() : <AccountCircle />}
+              {user?.name ? user.name.charAt(0).toUpperCase() : <AccountCircle />}
             </Avatar>
           </Box>
-          
+
           <Menu
             id="menu-appbar"
             anchorEl={anchorEl}

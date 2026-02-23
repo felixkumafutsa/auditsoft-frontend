@@ -489,7 +489,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
         </Box>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
           {/* Contextual Action Buttons */}
-          {!isAuditor && onEdit && (selectedAudit.status === 'Planned' || selectedAudit.status === 'Approved') && (
+          {(isManager || isCAE) && onEdit && (selectedAudit.status === 'Planned' || selectedAudit.status === 'Approved') && (
             <Button
               variant="outlined"
               size="small"
@@ -548,16 +548,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </Button>
           )}
 
-          {/* Chief Auditor Actions when audit is Finalized */}
-          {(() => {
-            console.log('Chief Auditor Debug:', { 
-              isCAE, 
-              userRole: currentUser?.role, 
-              auditStatus: selectedAudit?.status,
-              shouldShow: isCAE && selectedAudit?.status === 'Finalized'
-            });
-            return isCAE && selectedAudit?.status === 'Finalized';
-          })() && (
+          {isCAE && selectedAudit?.status === 'Finalized' && (
             <>
               <Button
                 variant="outlined"
@@ -565,17 +556,16 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                 color="info"
                 startIcon={<VisibilityIcon />}
                 onClick={() => {
-                  console.log('Review Report clicked');
                   if (onPreview) {
                     onPreview(selectedAudit.id);
                   } else {
-                    console.error('onPreview function not available');
+                    MySwal.fire('Error', 'Preview function not available', 'error');
                   }
                 }}
               >
                 Review Report
               </Button>
-              
+
               <Button
                 variant="contained"
                 size="small"
@@ -593,7 +583,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
               >
                 Approve Report
               </Button>
-              
+
               <Button
                 variant="contained"
                 size="small"
@@ -606,16 +596,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </>
           )}
 
-          {/* Icon-only secondary actions */}
-          {(() => {
-            console.log('Manager Debug:', { 
-              isManager, 
-              userRole: currentUser?.role, 
-              auditStatus: selectedAudit?.status,
-              shouldShow: isManager && selectedAudit?.status === 'Finalized' && onPreview
-            });
-            return isManager && selectedAudit?.status === 'Finalized' && onPreview;
-          })() && (
+          {isManager && selectedAudit?.status === 'Finalized' && onPreview && (
             <Tooltip title="View Audit Report">
               <Button
                 variant="outlined"
@@ -628,16 +609,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             </Tooltip>
           )}
 
-          {/* Save Report button for Managers when audit is Finalized */}
-          {(() => {
-            console.log('Save Report Debug:', { 
-              isManager, 
-              userRole: currentUser?.role, 
-              auditStatus: selectedAudit?.status,
-              shouldShow: isManager && selectedAudit?.status === 'Finalized'
-            });
-            return isManager && selectedAudit?.status === 'Finalized';
-          })() && (
+          {isManager && selectedAudit?.status === 'Finalized' && (
             <Tooltip title="Save Report">
               <Button
                 variant="contained"
@@ -955,7 +927,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           {activeTab === 3 && (
             <Box>
               <Typography variant="h6" gutterBottom>Chief Auditor Review & Comments</Typography>
-              
+
               {/* Chief Auditor Comment Section */}
               {isCAE && (
                 <Paper variant="outlined" sx={{ mb: 3, p: 2 }}>

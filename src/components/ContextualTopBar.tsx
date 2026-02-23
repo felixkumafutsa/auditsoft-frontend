@@ -333,7 +333,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             <Button
               startIcon={<WorkIcon />}
               endIcon={<KeyboardArrowDownIcon />}
-              color={['findings', 'evidence', 'workpapers', 'timesheets'].includes(currentPage) ? 'primary' : 'inherit'}
+              color={['findings', 'evidence', 'workpapers', 'timesheets', 'remediation'].includes(currentPage) ? 'primary' : 'inherit'}
               onClick={(e) => setFieldWorkAnchor(e.currentTarget)}
             >
               Field Work
@@ -346,6 +346,10 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
               <MenuItem onClick={() => { onNavigate('findings'); setFieldWorkAnchor(null); }}>
                 <ListItemIcon><FactCheckIcon fontSize="small" /></ListItemIcon>
                 <ListItemText>Findings</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={() => { onNavigate('remediation'); setFieldWorkAnchor(null); }}>
+                <ListItemIcon><GavelIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>Remediation</ListItemText>
               </MenuItem>
               <MenuItem onClick={() => { onNavigate('evidence'); setFieldWorkAnchor(null); }}>
                 <ListItemIcon><FolderIcon fontSize="small" /></ListItemIcon>
@@ -457,7 +461,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
           <Button
             startIcon={<WorkIcon />}
             endIcon={<KeyboardArrowDownIcon />}
-            color={['findings', 'evidence', 'workpapers', 'timesheets'].includes(currentPage) ? 'primary' : 'inherit'}
+            color={['findings', 'evidence', 'workpapers', 'timesheets', 'remediation'].includes(currentPage) ? 'primary' : 'inherit'}
             onClick={(e) => setFieldWorkAnchor(e.currentTarget)}
           >
             Field Work
@@ -470,6 +474,10 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             <MenuItem onClick={() => { onNavigate('findings'); setFieldWorkAnchor(null); }}>
               <ListItemIcon><FactCheckIcon fontSize="small" /></ListItemIcon>
               <ListItemText>Findings</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { onNavigate('remediation'); setFieldWorkAnchor(null); }}>
+              <ListItemIcon><GavelIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Remediation</ListItemText>
             </MenuItem>
             <MenuItem onClick={() => { onNavigate('evidence'); setFieldWorkAnchor(null); }}>
               <ListItemIcon><FolderIcon fontSize="small" /></ListItemIcon>

@@ -70,7 +70,7 @@ const MessagingPage: React.FC = () => {
     severity: 'info',
   });
   const socketRef = useRef<Socket | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -94,11 +94,11 @@ const MessagingPage: React.FC = () => {
       socketRef.current = socket;
 
       socket.on('connect', () => {
-        console.log('Connected to WebSocket server');
+        // Connected
       });
 
       socket.on('disconnect', () => {
-        console.log('Disconnected from WebSocket server');
+        // Disconnected
       });
 
       socket.on(`recMessage_${currentUserId}`, (message: Message) => {
@@ -146,9 +146,9 @@ const MessagingPage: React.FC = () => {
     try {
       const data = await api.getMessages(contactId);
       setMessages(Array.isArray(data) ? data : []);
-      
+
       await api.markMessagesAsRead(contactId);
-      setConversations(prev => prev.map(c => 
+      setConversations(prev => prev.map(c =>
         c.id === contactId ? { ...c, unreadCount: 0 } : c
       ));
 
@@ -250,7 +250,7 @@ const MessagingPage: React.FC = () => {
             }}
           />
         </Box>
-        
+
         <List sx={{ flexGrow: 1, overflowY: 'auto', p: 0 }}>
           {loadingConversations ? (
             <Box display="flex" justifyContent="center" p={3}>
@@ -348,17 +348,17 @@ const MessagingPage: React.FC = () => {
                 messages.map((msg) => {
                   const isMe = msg.senderId === currentUserId;
                   return (
-                    <Box 
-                      key={msg.id} 
-                      sx={{ 
-                        display: 'flex', 
+                    <Box
+                      key={msg.id}
+                      sx={{
+                        display: 'flex',
                         justifyContent: isMe ? 'flex-end' : 'flex-start',
                         mb: 2
                       }}
                     >
-                      <Box 
-                        sx={{ 
-                          maxWidth: '70%', 
+                      <Box
+                        sx={{
+                          maxWidth: '70%',
                           bgcolor: isMe ? '#1976d2' : '#fff',
                           color: isMe ? '#fff' : '#000',
                           borderRadius: 2,
@@ -397,11 +397,11 @@ const MessagingPage: React.FC = () => {
                   multiline
                   maxRows={3}
                 />
-                <IconButton 
-                    color="primary" 
-                    onClick={handleSendMessage}
-                    disabled={!newMessage.trim()}
-                    sx={{ bgcolor: '#e3f2fd', '&:hover': { bgcolor: '#bbdefb' } }}
+                <IconButton
+                  color="primary"
+                  onClick={handleSendMessage}
+                  disabled={!newMessage.trim()}
+                  sx={{ bgcolor: '#e3f2fd', '&:hover': { bgcolor: '#bbdefb' } }}
                 >
                   <SendIcon />
                 </IconButton>

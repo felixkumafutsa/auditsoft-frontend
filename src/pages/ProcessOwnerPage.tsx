@@ -37,7 +37,7 @@ const ProcessOwnerPage: React.FC = () => {
   const [version] = useState(Date.now()); // Force re-render
   const navigate = useNavigate();
 
-  console.log('🔄 ProcessOwnerPage v2.0 - New Dashboard Loading', { version });
+  // Dashboard Loading
 
   useEffect(() => {
     const fetchCurrentUserAndAudits = async () => {

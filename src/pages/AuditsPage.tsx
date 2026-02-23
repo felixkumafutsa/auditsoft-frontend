@@ -1457,8 +1457,8 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                   </Button>
                 )}
 
-                {/* Edit Plan - Managers when not closed */}
-                {isManager && auditToEdit.status !== 'Closed' && (
+                {/* Edit Plan - Managers/CAE when not closed - Process Owners EXCLUDED */}
+                {(isManager || isCAE) && auditToEdit.status !== 'Closed' && (
                   <Button
                     fullWidth
                     variant="outlined"

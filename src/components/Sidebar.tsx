@@ -271,29 +271,36 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
               </List>
             </Collapse>
 
-            <ListItemButton selected={currentPage === 'findings'} onClick={() => onNavigate('findings')}>
-              <ListItemIcon><FactCheckIcon sx={{ color: 'white' }} /></ListItemIcon>
-              <ListItemText primary="Findings" />
+            {/* Field Work */}
+            <ListItemButton onClick={() => setFieldWorkOpen(!fieldWorkOpen)}>
+              <ListItemIcon><WorkIcon sx={{ color: 'white' }} /></ListItemIcon>
+              <ListItemText primary="Field Work" />
+              {fieldWorkOpen ? <ExpandLess /> : <ExpandMore />}
             </ListItemButton>
-            <ListItemButton selected={currentPage === 'remediation'} onClick={() => onNavigate('remediation')}>
-              <ListItemIcon><GavelIcon sx={{ color: 'white' }} /></ListItemIcon>
-              <ListItemText primary="Remediation" />
-            </ListItemButton>
-
-            <ListItemButton selected={currentPage === 'evidence'} onClick={() => onNavigate('evidence')}>
-              <ListItemIcon><FolderIcon sx={{ color: 'white' }} /></ListItemIcon>
-              <ListItemText primary="Evidence" />
-            </ListItemButton>
-
-            <ListItemButton selected={currentPage === 'workpapers'} onClick={() => onNavigate('workpapers')}>
-              <ListItemIcon><ArticleIcon sx={{ color: 'white' }} /></ListItemIcon>
-              <ListItemText primary="Workpapers" />
-            </ListItemButton>
-
-            <ListItemButton selected={currentPage === 'timesheets'} onClick={() => onNavigate('timesheets')}>
-              <ListItemIcon><AccessTimeIcon sx={{ color: 'white' }} /></ListItemIcon>
-              <ListItemText primary="Timesheets" />
-            </ListItemButton>
+            <Collapse in={fieldWorkOpen} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'findings'} onClick={() => onNavigate('findings')}>
+                  <ListItemIcon><FactCheckIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Findings" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'remediation'} onClick={() => onNavigate('remediation')}>
+                  <ListItemIcon><GavelIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Remediation" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'evidence'} onClick={() => onNavigate('evidence')}>
+                  <ListItemIcon><FolderIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Evidence" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'workpapers'} onClick={() => onNavigate('workpapers')}>
+                  <ListItemIcon><ArticleIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Workpapers" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'timesheets'} onClick={() => onNavigate('timesheets')}>
+                  <ListItemIcon><AccessTimeIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Timesheets" />
+                </ListItemButton>
+              </List>
+            </Collapse>
           </>
         )}
 

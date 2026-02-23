@@ -16,7 +16,7 @@ class ApiClient {
 
   constructor() {
     // Debugging: Log API URL to help troubleshoot cloud connection issues
-    console.log('AuditSoft API Client Initialized. Base URL:', BASE_URL);
+    // API client initialized
 
     // You could load the token from localStorage here if persisting
     const storedToken = localStorage.getItem('token');

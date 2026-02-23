@@ -18,7 +18,11 @@ import {
   List,
   ListItem,
   ListItemButton,
-  ListItemText
+  ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -37,6 +41,15 @@ const RemediationPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
 
+  const [existingEvidence, setExistingEvidence] = useState<any[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const role = localStorage.getItem('userRole');
+  const isCAE = role === 'CAE' || role === 'Chief Auditor' || role === 'Chief Audit Executive (CAE)';
+  const isManager = role === 'Manager' || role === 'Audit Manager';
+  const isProcessOwner = role === 'ProcessOwner' || role === 'Process Owner';
+
   useEffect(() => {
     fetchAssignedFindings();
   }, []);
@@ -44,11 +57,29 @@ const RemediationPage: React.FC = () => {
   useEffect(() => {
     if (selectedFindingId) {
       fetchActionPlans(selectedFindingId as number);
+      fetchExistingEvidence(selectedFindingId as number);
     } else {
       setActionPlans([]);
       setSelectedActionPlanId('');
+      setExistingEvidence([]);
     }
   }, [selectedFindingId]);
+
+  const fetchExistingEvidence = async (findingId: number) => {
+    try {
+      const finding = findings.find(f => f.id === findingId);
+      if (finding?.auditProgramId) {
+        const data = await api.getEvidenceList(finding.auditProgramId);
+        // Filter evidence specifically for this finding or linked action plans
+        setExistingEvidence(Array.isArray(data) ? data.filter((ev: any) =>
+          ev.description?.includes(`Finding #${findingId}`) ||
+          ev.description?.includes(`Remediation for Action Plan`)
+        ) : []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch existing evidence', err);
+    }
+  };
 
   const fetchActionPlans = async (findingId: number) => {
     setLoadingPlans(true);
@@ -70,11 +101,6 @@ const RemediationPage: React.FC = () => {
 
       const data = await api.getFindings();
       const findingsArray = Array.isArray(data) ? data : [];
-
-      const role = localStorage.getItem('userRole');
-      const isCAE = role === 'CAE' || role === 'Chief Auditor';
-      const isManager = role === 'Manager' || role === 'Audit Manager';
-      const isProcessOwner = role === 'ProcessOwner' || role === 'Process Owner';
 
       // Filter findings
       const filtered = findingsArray.filter((f: any) => {
@@ -124,7 +150,7 @@ const RemediationPage: React.FC = () => {
       }
 
       // Upload evidence linked to the audit program of the finding
-      const desc = `Remediation for Action Plan: ${actionPlan?.description || ''} (Finding #${finding.id}): ${description}`;
+      const desc = `Remediation for Action Plan #${actionPlan.id}: ${actionPlan?.description || ''} (Finding #${finding.id}): ${description}`;
       await api.uploadEvidence(finding.auditProgramId, file, desc);
 
       // Transition action plan status to 'In Progress' if it was 'Open'
@@ -231,50 +257,97 @@ const RemediationPage: React.FC = () => {
                   </Select>
                 </FormControl>
 
-                <TextField
-                  fullWidth
-                  label="Description of Remediation"
-                  multiline
-                  rows={4}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  sx={{ mb: 3 }}
-                  required
-                />
-
-                <Box sx={{ mb: 3 }}>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<CloudUploadIcon />}
-                    fullWidth
-                    sx={{ height: 56 }}
-                  >
-                    {file ? file.name : 'Upload Evidence File'}
-                    <input
-                      type="file"
-                      hidden
-                      onChange={handleFileChange}
-                      accept=".pdf,.jpg,.png,.docx,.xlsx"
+                {!isCAE ? (
+                  <Box>
+                    <TextField
+                      fullWidth
+                      label="Description of Remediation"
+                      multiline
+                      rows={4}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      sx={{ mb: 3 }}
+                      required
                     />
-                  </Button>
-                  {file && (
-                    <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
-                      Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
-                    </Typography>
-                  )}
-                </Box>
 
-                <Button
-                  type="submit"
-                  variant="contained"
-                  size="large"
-                  disabled={submitting || !file}
-                  startIcon={submitting ? <CircularProgress size={20} color="inherit" /> : <CheckCircleIcon />}
-                  sx={{ bgcolor: '#0F1A2B' }}
-                >
-                  {submitting ? 'Submitting...' : 'Submit Remediation'}
-                </Button>
+                    <Box sx={{ mb: 3 }}>
+                      <Button
+                        variant="outlined"
+                        component="label"
+                        startIcon={<CloudUploadIcon />}
+                        fullWidth
+                        sx={{ height: 56 }}
+                      >
+                        {file ? file.name : 'Upload Evidence File'}
+                        <input
+                          type="file"
+                          hidden
+                          onChange={handleFileChange}
+                          accept=".pdf,.jpg,.png,.docx,.xlsx"
+                        />
+                      </Button>
+                      {file && (
+                        <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+                          Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                        </Typography>
+                      )}
+                    </Box>
+
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      size="large"
+                      disabled={submitting || !file}
+                      startIcon={submitting ? <CircularProgress size={20} color="inherit" /> : <CheckCircleIcon />}
+                      sx={{ bgcolor: '#0F1A2B' }}
+                    >
+                      {submitting ? 'Submitting...' : 'Submit Remediation'}
+                    </Button>
+                  </Box>
+                ) : (
+                  <Box sx={{ p: 2, bgcolor: '#e3f2fd', borderRadius: 1, mb: 3 }}>
+                    <Typography variant="body2" color="primary" fontWeight="bold">
+                      Review Mode (Chief Auditor)
+                    </Typography>
+                    <Typography variant="caption">
+                      You are in review mode. You can view existing remediation evidence below but cannot upload new files from this page.
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Existing Evidence Section */}
+                {existingEvidence.length > 0 && (
+                  <Box sx={{ mt: 4 }}>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Remediation Evidence
+                    </Typography>
+                    <List>
+                      {existingEvidence.map((ev) => (
+                        <ListItem
+                          key={ev.id}
+                          sx={{ border: '1px solid #eee', mb: 1, borderRadius: 1 }}
+                          secondaryAction={
+                            <Button size="small" onClick={async () => {
+                              try {
+                                const blob = await api.downloadEvidence(ev.id);
+                                const url = window.URL.createObjectURL(blob);
+                                setPreviewUrl(url);
+                                setPreviewOpen(true);
+                              } catch (err) {
+                                console.error('Failed to preview', err);
+                              }
+                            }}>Preview</Button>
+                          }
+                        >
+                          <ListItemText
+                            primary={ev.fileName}
+                            secondary={ev.description || 'No description'}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
 
                 <Box mt={4}>
                   <Typography variant="body2" color="textSecondary">
@@ -290,12 +363,27 @@ const RemediationPage: React.FC = () => {
               </Box>
             ) : (
               <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-                <Typography color="textSecondary">Select a finding to upload evidence.</Typography>
+                <Typography color="textSecondary">Select a finding to review remediation.</Typography>
               </Box>
             )}
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Preview Dialog */}
+      <Dialog open={previewOpen} onClose={() => { if (previewUrl) window.URL.revokeObjectURL(previewUrl); setPreviewOpen(false); setPreviewUrl(null); }} maxWidth="lg" fullWidth>
+        <DialogTitle>Evidence Preview</DialogTitle>
+        <DialogContent dividers sx={{ p: 0, height: '70vh' }}>
+          {previewUrl ? (
+            <iframe src={previewUrl} title="Evidence Preview" style={{ width: '100%', height: '100%', border: 'none' }} />
+          ) : (
+            <Box p={3}><Typography>No preview available</Typography></Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { if (previewUrl) window.URL.revokeObjectURL(previewUrl); setPreviewOpen(false); setPreviewUrl(null); }}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

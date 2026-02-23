@@ -440,7 +440,13 @@ const FindingsPage: React.FC<FindingsPageProps> = ({ viewMode = 'all' }) => {
             initialState={{
               pagination: { paginationModel: { pageSize: 10 } },
             }}
-            onRowClick={(params) => handleOpenTransitionDialog(params.row)}
+            onRowClick={(params) => {
+              if (isCAE) {
+                handleManageActions(params.row.id);
+              } else {
+                handleOpenTransitionDialog(params.row);
+              }
+            }}
             sx={{ height: 600, cursor: 'pointer' }}
           />
         )}

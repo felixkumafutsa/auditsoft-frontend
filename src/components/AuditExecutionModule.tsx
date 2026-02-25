@@ -200,9 +200,15 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
   };
 
   const handleSelectAudit = async (audit: Audit) => {
-    setSelectedAudit(audit);
+    // Load full audit details and associated programs/evidence
+    setSelectedAudit(null);
     setLoading(true);
     try {
+      // Fetch full audit (includes chiefAuditorComments)
+      const auditDetail = await api.getAudit(audit.id);
+      setSelectedAudit(auditDetail);
+      setChiefAuditorComments(auditDetail?.chiefAuditorComments || '');
+
       const data = await api.getAuditPrograms(audit.id);
       const mappedPrograms = Array.isArray(data) ? data.map((p: any) => ({ ...p, expanded: false })) : [];
       setPrograms(mappedPrograms);
@@ -213,7 +219,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
         data.forEach((p: any) => fetchEvidence(p.id));
       }
     } catch (error) {
-      console.error('Failed to fetch audit programs', error);
+      console.error('Failed to fetch audit programs or audit details', error);
       const cached = localStorage.getItem(`cached_programs_${audit.id}`);
       if (cached) {
         setPrograms(JSON.parse(cached));
@@ -928,8 +934,15 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             <Box>
               <Typography variant="h6" gutterBottom>Chief Auditor Review & Comments</Typography>
 
-              {/* Chief Auditor Comment Section */}
-              {isCAE && (
+                  {/* Chief Auditor Comment Section (view for Auditor/Audit Manager; edit for CAE) */}
+                  {(isAuditor || isManager) && selectedAudit?.chiefAuditorComments && (
+                    <Paper variant="outlined" sx={{ mb: 3, p: 2 }}>
+                      <Typography variant="subtitle1" gutterBottom>Chief Auditor Comments</Typography>
+                      <Typography variant="body2">{selectedAudit?.chiefAuditorComments}</Typography>
+                    </Paper>
+                  )}
+
+                  {isCAE && (
                 <Paper variant="outlined" sx={{ mb: 3, p: 2 }}>
                   <Typography variant="subtitle1" gutterBottom>Add Chief Auditor Comments</Typography>
                   <TextField
@@ -949,6 +962,8 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                     onClick={async () => {
                       try {
                         await (api as any).saveChiefAuditorComments(selectedAudit.id, chiefAuditorComments);
+                        // Update local state so other roles can immediately view the saved comments
+                        setSelectedAudit(prev => prev ? { ...prev, chiefAuditorComments: chiefAuditorComments } : prev);
                         MySwal.fire('Success', 'Comments saved successfully!', 'success');
                       } catch (e) {
                         console.error(e);

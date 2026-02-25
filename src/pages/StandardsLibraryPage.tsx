@@ -84,40 +84,23 @@ const StandardsLibraryPage: React.FC = () => {
   const fetchPolicyPapers = async () => {
     setLoading(true);
     try {
-      // Mock data for policy papers - replace with actual API call
-      const mockPolicyPapers: PolicyPaper[] = [
-        {
-          id: 1,
-          title: 'Information Security Policy',
-          version: '2.1',
-          category: 'Security',
-          status: 'Active',
-          effectiveDate: '2024-01-15',
-          description: 'Comprehensive information security policy covering data protection, access control, and incident response.',
-          documentUrl: '/documents/security-policy-v2.1.pdf'
-        },
-        {
-          id: 2,
-          title: 'Risk Management Framework',
-          version: '1.5',
-          category: 'Risk',
-          status: 'Active',
-          effectiveDate: '2024-02-01',
-          description: 'Framework for identifying, assessing, and mitigating organizational risks.',
-          documentUrl: '/documents/risk-framework-v1.5.pdf'
-        },
-        {
-          id: 3,
-          title: 'Compliance Monitoring Procedure',
-          version: '1.0',
-          category: 'Compliance',
-          status: 'Under Review',
-          effectiveDate: '2024-03-01',
-          description: 'Procedures for ongoing compliance monitoring and reporting.',
-          documentUrl: '/documents/compliance-procedure-v1.0.pdf'
-        }
-      ];
-      setPolicyPapers(mockPolicyPapers);
+      // Fetch persisted policies from backend
+      const data = await api.getPolicies();
+      if (Array.isArray(data)) {
+        const mapped = data.map((p: any) => ({
+          id: p.id,
+          title: p.policyName,
+          version: p.version || '1.0',
+          category: 'General',
+          status: p.status || 'Draft',
+          effectiveDate: p.effectiveDate ? new Date(p.effectiveDate).toISOString().split('T')[0] : '',
+          description: p.description || '',
+          documentUrl: p.fileUrl,
+        } as PolicyPaper));
+        setPolicyPapers(mapped);
+      } else {
+        setPolicyPapers([]);
+      }
     } catch (error) {
       console.error('Error fetching policy papers:', error);
     } finally {
@@ -222,35 +205,75 @@ const StandardsLibraryPage: React.FC = () => {
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', fileToUpload);
+      // Use centralized API client to ensure base URL and auth headers
+      const result = editingFramework
+        ? await api.uploadPolicyDocument(fileToUpload, editingFramework.id)
+        : await api.uploadPolicyDocument(fileToUpload);
 
-      // Add framework ID if editing
-      if (editingFramework) {
-        formData.append('frameworkId', editingFramework.id.toString());
-      }
-
-      const response = await fetch('/api/upload/policy-document', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        // File uploaded successfully
-        setSelectedFile(null);
-        alert('Policy document uploaded successfully!');
+      // If backend returned created policy, refresh list from server
+      if (result && result.policy) {
+        await fetchPolicyPapers();
       } else {
-        throw new Error('Upload failed');
+        // Fallback: append minimal entry to UI
+        const newPaper: PolicyPaper = {
+          id: Date.now(),
+          title: result?.originalName || fileToUpload.name,
+          version: '1.0',
+          category: editingFramework?.frameworkName || 'General',
+          status: 'Draft',
+          effectiveDate: new Date().toISOString().split('T')[0],
+          description: '',
+          documentUrl: result?.url,
+        };
+        setPolicyPapers((prev) => [newPaper, ...prev]);
       }
-    } catch (error) {
+
+      setSelectedFile(null);
+      alert('Policy document uploaded successfully!');
+    } catch (error: any) {
       console.error('Upload failed:', error);
-      alert('File upload failed. Please try again.');
+      alert(error.message || 'File upload failed. Please try again.');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const extractFilenameFromUrl = (url?: string) => {
+    if (!url) return '';
+    try {
+      const parsed = new URL(url, window.location.origin);
+      const parts = parsed.pathname.split('/');
+      return parts.pop() || '';
+    } catch (err) {
+      const parts = url.split('/');
+      return parts.pop() || url;
+    }
+  };
+
+  const handleDeletePolicyPaper = async (paper: PolicyPaper) => {
+    if (!paper.documentUrl) {
+      // Just remove from UI if no document URL
+      setPolicyPapers((prev) => prev.filter((p) => p.id !== paper.id));
+      alert('Policy paper removed from the list');
+      return;
+    }
+
+    if (!window.confirm('Delete this policy document from server and list?')) return;
+
+    try {
+      if (paper.id) {
+        await api.deletePolicy(paper.id);
+      } else {
+        const filename = extractFilenameFromUrl(paper.documentUrl);
+        if (!filename) throw new Error('Invalid document URL');
+        await api.deletePolicyDocument(filename);
+      }
+      // Refresh list
+      await fetchPolicyPapers();
+      alert('Policy document deleted');
+    } catch (err: any) {
+      console.error('Failed to delete policy document', err);
+      alert(err.message || 'Failed to delete policy document');
     }
   };
 
@@ -354,6 +377,11 @@ const StandardsLibraryPage: React.FC = () => {
               size="small"
             >
               <DescriptionIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete">
+            <IconButton onClick={() => handleDeletePolicyPaper(params.row)} color="error" size="small">
+              <DeleteIcon />
             </IconButton>
           </Tooltip>
         </Box>

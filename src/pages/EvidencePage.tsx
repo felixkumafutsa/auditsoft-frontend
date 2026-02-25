@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -126,6 +127,47 @@ const EvidencePage: React.FC = () => {
     fetchAudits();
   }, []);
 
+  // 0. Check URL for programId query and preselect program/audit
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const pid = params.get('programId');
+    if (!pid) return;
+    const programIdNum = Number(pid);
+    if (Number.isNaN(programIdNum)) return;
+
+    const preselect = async () => {
+      try {
+        const prog = await api.getAuditProgram(programIdNum);
+        if (prog) {
+          // If program has an audit relationship, preselect that audit
+          if (prog.audit && prog.audit.id) {
+            setSelectedAuditId(prog.audit.id);
+          }
+
+          // Add the program into the programs list so the UI can show it
+          const mappedProg = {
+            id: prog.id,
+            procedureName: prog.procedureName,
+            controlReference: prog.controlReference || null,
+            expectedOutcome: prog.expectedOutcome || null,
+            actualResult: prog.actualResult || null,
+            reviewerComment: prog.reviewerComment || null,
+          };
+          setPrograms((prev) => (prev.some(p => p.id === mappedProg.id) ? prev : [mappedProg, ...prev]));
+          setSelectedProgramId(programIdNum);
+        }
+      } catch (e) {
+        console.error('Failed to preselect program from URL', e);
+        setSelectedProgramId(programIdNum);
+      }
+    };
+
+    preselect();
+    // Only run when the search string changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
   // 2. Fetch Programs when Audit Changes
   useEffect(() => {
     if (!selectedAuditId) {
@@ -147,8 +189,12 @@ const EvidencePage: React.FC = () => {
         })) : [];
         setPrograms(mappedPrograms);
 
-        // Reset selected program if it's no longer in the list (though logically it won't be)
-        setSelectedProgramId('');
+        // Preserve selectedProgramId if it's still in the fetched list, otherwise clear it
+        if (selectedProgramId !== '' && mappedPrograms.some(p => p.id === selectedProgramId)) {
+          // keep existing selection
+        } else {
+          setSelectedProgramId('');
+        }
       } catch (error) {
         console.error("Failed to fetch programs", error);
         setPrograms([]);

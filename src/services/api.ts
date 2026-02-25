@@ -175,6 +175,16 @@ class ApiClient {
   updateAuditProgram = (id: number, data: any) => this.put(`/audit-programs/${id}`, data);
   deleteAuditProgram = (id: number) => this.delete(`/audit-programs/${id}`);
 
+  // --- Strategic Audit Plan ---
+  getAnnualPlan = (year: number) => this.get(`/audit-plan/annual/${year}`);
+  getRiskBasedRecommendations = (limit?: number) => 
+    this.get(`/audit-plan/recommendations${limit ? `?limit=${limit}` : ''}`);
+  updateAuditStrategicInfo = (auditId: number, data: any) => 
+    this.put(`/audit-plan/strategic/${auditId}`, data);
+  executiveApproval = (auditId: number, approverId: number, approved: boolean, comments?: string) =>
+    this.post(`/audit-plan/executive-approval/${auditId}`, { approverId, approved, comments });
+  getResourceAllocation = (year: number) => this.get(`/audit-plan/resource-allocation/${year}`);
+
   // --- Workpapers ---
   getWorkpapers = () => this.get('/workpapers');
   getWorkpaper = (id: number) => this.get(`/workpapers/${id}`);
@@ -260,6 +270,17 @@ class ApiClient {
   deletePolicy = (id: number) => this.delete(`/policies/${id}`);
   mapPolicyToFramework = (policyId: number, frameworkId: number) => this.post(`/policies/${policyId}/map/${frameworkId}`, {});
   removePolicyMapping = (mappingId: number) => this.delete(`/policies/mappings/${mappingId}`);
+
+  // --- Policy Document Upload ---
+  uploadPolicyDocument = (file: File, frameworkId?: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (frameworkId) formData.append('frameworkId', frameworkId.toString());
+    return this.upload('/upload/policy-document', formData);
+  };
+
+  deletePolicyDocument = (filename: string) =>
+    this.delete(`/upload/policy-document?filename=${encodeURIComponent(filename)}`);
 
   getControlMappings = (programId: number) => this.get(`/audit-programs/${programId}/controls`);
   createControlMapping = (data: any) => this.post('/control-mappings', data);

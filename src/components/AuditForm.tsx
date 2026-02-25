@@ -27,6 +27,7 @@ interface AuditFormProps {
   auditors?: { id: number; name: string; role: string }[];
   managers?: { id: number; name: string; role: string }[];
   auditUniverseItems?: { id: number; entityName: string; entityType: string }[];
+  initialData?: any;
 }
 
 const AuditForm: React.FC<AuditFormProps> = ({ 
@@ -35,7 +36,8 @@ const AuditForm: React.FC<AuditFormProps> = ({
   auditToEdit, 
   auditors = [],
   managers = [],
-  auditUniverseItems = []
+  auditUniverseItems = [],
+  initialData
 }) => {
   const [auditName, setAuditName] = useState('');
   const [auditType, setAuditType] = useState('Operational');
@@ -48,6 +50,16 @@ const AuditForm: React.FC<AuditFormProps> = ({
   const [assignedManagerId, setAssignedManagerId] = useState<number | ''>('');
   const [assignedAuditorIds, setAssignedAuditorIds] = useState<number[]>([]);
   const [programTemplates, setProgramTemplates] = useState<{ id: number; auditName: string }[]>([]);
+
+  // Strategic Audit Plan Fields
+  const [riskScore, setRiskScore] = useState<number | ''>('');
+  const [riskLevel, setRiskLevel] = useState('');
+  const [priority, setPriority] = useState('');
+  const [quarter, setQuarter] = useState('');
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [resourceHours, setResourceHours] = useState<number | ''>('');
+  const [budgetAllocation, setBudgetAllocation] = useState<number | ''>('');
+  const [justification, setJustification] = useState('');
 
   const [loading, setLoading] = useState(false);
 
@@ -74,6 +86,16 @@ const AuditForm: React.FC<AuditFormProps> = ({
       setAuditUniverseId(auditToEdit.auditUniverseId || '');
       setAssignedManagerId(auditToEdit.assignedManagerId || '');
       
+      // Strategic Audit Plan Fields
+      setRiskScore(auditToEdit.riskScore || '');
+      setRiskLevel(auditToEdit.riskLevel || '');
+      setPriority(auditToEdit.priority || '');
+      setQuarter(auditToEdit.quarter || '');
+      setYear(auditToEdit.year || new Date().getFullYear());
+      setResourceHours(auditToEdit.resourceHours || '');
+      setBudgetAllocation(auditToEdit.budgetAllocation || '');
+      setJustification(auditToEdit.justification || '');
+      
       // Handle existing assigned auditors
       if (Array.isArray(auditToEdit.assignedAuditors)) {
         setAssignedAuditorIds(auditToEdit.assignedAuditors.map((a: any) => a.id));
@@ -81,13 +103,38 @@ const AuditForm: React.FC<AuditFormProps> = ({
         setAssignedAuditorIds([]);
       }
     } else {
-      // Reset form if we switch from edit to create
-      setAuditName('');
-      setAuditUniverseId('');
-      setAssignedManagerId('');
-      setAssignedAuditorIds([]);
+      // If an initialData prefill exists (e.g., from Strategic Planning), apply it.
+      if (initialData) {
+        setAuditName(initialData.auditName || '');
+        setAuditUniverseId(initialData.auditUniverseId ?? initialData.entityId ?? '');
+        setAssignedManagerId(initialData.assignedManagerId ?? '');
+        setAssignedAuditorIds(initialData.assignedAuditorIds ?? []);
+
+        setRiskScore(initialData.riskScore ?? '');
+        setRiskLevel(initialData.riskLevel ?? '');
+        setPriority(initialData.priority ?? '');
+        setQuarter(initialData.quarter ?? '');
+        setYear(initialData.year ?? new Date().getFullYear());
+        setResourceHours(initialData.resourceHours ?? '');
+        setBudgetAllocation(initialData.budgetAllocation ?? '');
+        setJustification(initialData.justification ?? '');
+      } else {
+        // Reset form if we switch from edit to create
+        setAuditName('');
+        setAuditUniverseId('');
+        setAssignedManagerId('');
+        setAssignedAuditorIds([]);
+        setRiskScore('');
+        setRiskLevel('');
+        setPriority('');
+        setQuarter('');
+        setYear(new Date().getFullYear());
+        setResourceHours('');
+        setBudgetAllocation('');
+        setJustification('');
+      }
     }
-  }, [auditToEdit]);
+  }, [auditToEdit, initialData]);
 
   const handleAuditorChange = (event: SelectChangeEvent<number[]>) => {
     const {
@@ -118,7 +165,16 @@ const AuditForm: React.FC<AuditFormProps> = ({
       auditUniverseId: auditUniverseId === '' ? undefined : Number(auditUniverseId),
       assignedManagerId: assignedManagerId === '' ? undefined : Number(assignedManagerId),
       assignedAuditorIds: assignedAuditorIds,
-      templateId: selectedProgramTemplateId === '' ? undefined : Number(selectedProgramTemplateId)
+      templateId: selectedProgramTemplateId === '' ? undefined : Number(selectedProgramTemplateId),
+      // Strategic Audit Plan Fields
+      riskScore: riskScore === '' ? undefined : Number(riskScore),
+      riskLevel: riskLevel || undefined,
+      priority: priority || undefined,
+      quarter: quarter || undefined,
+      year: year || undefined,
+      resourceHours: resourceHours === '' ? undefined : Number(resourceHours),
+      budgetAllocation: budgetAllocation === '' ? undefined : Number(budgetAllocation),
+      justification: justification || undefined
     };
 
     try {
@@ -133,6 +189,14 @@ const AuditForm: React.FC<AuditFormProps> = ({
       setAuditName('');
       setStartDate(null);
       setEndDate(null);
+      setRiskScore('');
+      setRiskLevel('');
+      setPriority('');
+      setQuarter('');
+      setYear(new Date().getFullYear());
+      setResourceHours('');
+      setBudgetAllocation('');
+      setJustification('');
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error creating audit:', error);
@@ -273,6 +337,125 @@ const AuditForm: React.FC<AuditFormProps> = ({
               value={endDate}
               onChange={(newValue) => setEndDate(newValue)}
               slotProps={{ textField: { fullWidth: true, required: true } }}
+            />
+          </Box>
+
+          {/* Strategic Audit Plan Fields */}
+          <Box sx={{ gridColumn: 'span 12', mt: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#0F1A2B', mb: 1 }}>
+              Strategic Planning Information
+            </Typography>
+          </Box>
+
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 3' } }}>
+            <TextField
+              select
+              fullWidth
+              label="Risk Level"
+              value={riskLevel}
+              onChange={(e) => setRiskLevel(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              <MenuItem value="Low">Low</MenuItem>
+              <MenuItem value="Medium">Medium</MenuItem>
+              <MenuItem value="High">High</MenuItem>
+              <MenuItem value="Critical">Critical</MenuItem>
+            </TextField>
+          </Box>
+
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 3' } }}>
+            <TextField
+              select
+              fullWidth
+              label="Priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              <MenuItem value="Low">Low</MenuItem>
+              <MenuItem value="Medium">Medium</MenuItem>
+              <MenuItem value="High">High</MenuItem>
+            </TextField>
+          </Box>
+
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 3' } }}>
+            <TextField
+              select
+              fullWidth
+              label="Quarter"
+              value={quarter}
+              onChange={(e) => setQuarter(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              <MenuItem value="Q1">Q1 (Jan-Mar)</MenuItem>
+              <MenuItem value="Q2">Q2 (Apr-Jun)</MenuItem>
+              <MenuItem value="Q3">Q3 (Jul-Sep)</MenuItem>
+              <MenuItem value="Q4">Q4 (Oct-Dec)</MenuItem>
+            </TextField>
+          </Box>
+
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 3' } }}>
+            <TextField
+              fullWidth
+              label="Year"
+              type="number"
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              inputProps={{ min: 2020, max: 2030 }}
+            />
+          </Box>
+
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
+            <TextField
+              fullWidth
+              label="Risk Score (1-10)"
+              type="number"
+              value={riskScore}
+              onChange={(e) => setRiskScore(Number(e.target.value))}
+              inputProps={{ min: 1, max: 10 }}
+              helperText="1 = Lowest Risk, 10 = Highest Risk"
+            />
+          </Box>
+
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
+            <TextField
+              fullWidth
+              label="Estimated Resource Hours"
+              type="number"
+              value={resourceHours}
+              onChange={(e) => setResourceHours(Number(e.target.value))}
+              inputProps={{ min: 0 }}
+              helperText="Total hours required for this audit"
+            />
+          </Box>
+
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
+            <TextField
+              fullWidth
+              label="Budget Allocation"
+              type="number"
+              value={budgetAllocation}
+              onChange={(e) => setBudgetAllocation(Number(e.target.value))}
+              inputProps={{ min: 0, step: 1000 }}
+              helperText="Budget in local currency"
+            />
+          </Box>
+
+          <Box sx={{ gridColumn: 'span 12' }}>
+            <TextField
+              fullWidth
+              label="Business Justification"
+              multiline
+              rows={3}
+              value={justification}
+              onChange={(e) => setJustification(e.target.value)}
+              helperText="Explain why this audit is important and what risks it addresses"
             />
           </Box>
       

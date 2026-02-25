@@ -323,6 +323,73 @@ const AuditPlansPage: React.FC = () => {
     },
     { field: 'assignedTo', headerName: 'Assigned To', width: 150 },
     {
+      field: 'riskLevel',
+      headerName: 'Risk Level',
+      width: 100,
+      renderCell: (params) => {
+        const riskColors = {
+          'Critical': '#d32f2f',
+          'High': '#f57c00',
+          'Medium': '#fbc02d',
+          'Low': '#388e3c'
+        };
+        return params.value ? (
+          <Chip 
+            label={params.value} 
+            size="small"
+            sx={{ 
+              backgroundColor: riskColors[params.value as keyof typeof riskColors] || '#757575',
+              color: 'white'
+            }}
+          />
+        ) : '-';
+      }
+    },
+    {
+      field: 'priority',
+      headerName: 'Priority',
+      width: 100,
+      renderCell: (params) => {
+        return params.value ? (
+          <Chip 
+            label={params.value} 
+            size="small"
+            color={params.value === 'High' ? 'error' : params.value === 'Medium' ? 'warning' : 'success'}
+          />
+        ) : '-';
+      }
+    },
+    {
+      field: 'quarter',
+      headerName: 'Quarter',
+      width: 80,
+      renderCell: (params) => params.value || '-'
+    },
+    {
+      field: 'resourceHours',
+      headerName: 'Hours',
+      width: 80,
+      renderCell: (params) => params.value ? params.value.toLocaleString() : '-'
+    },
+    {
+      field: 'budgetAllocation',
+      headerName: 'Budget',
+      width: 100,
+      renderCell: (params) => params.value ? `$${params.value.toLocaleString()}` : '-'
+    },
+    {
+      field: 'executiveApproval',
+      headerName: 'Exec Approval',
+      width: 120,
+      renderCell: (params) => (
+        <Chip 
+          label={params.value ? 'Approved' : 'Pending'} 
+          size="small"
+          color={params.value ? 'success' : 'warning'}
+        />
+      )
+    },
+    {
       field: 'startDate',
       headerName: 'Start Date',
       width: 120,
@@ -390,6 +457,14 @@ const AuditPlansPage: React.FC = () => {
         </Typography>
         {view === 'list' && (
           <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<VisibilityIcon />}
+              onClick={() => window.location.href = '/strategic-audit-plan'}
+              sx={{ color: '#0F1A2B', borderColor: '#0F1A2B' }}
+            >
+              Strategic Planning
+            </Button>
             <TextField
               variant="outlined"
               size="small"

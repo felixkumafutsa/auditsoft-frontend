@@ -181,6 +181,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                   <ListItemIcon><LibraryBooksIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Audit Programs" />
                 </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'strategic-audit-plan'} onClick={() => onNavigate('strategic-audit-plan')}>
+                  <ListItemIcon><PieChartIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Strategic Planning" />
+                </ListItemButton>
                 {(isCAE || isManager) && (
                   <>
                     <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audit-universe'} onClick={() => onNavigate('audit-universe')}>
@@ -330,6 +334,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                 <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'audit-programs'} onClick={() => onNavigate('audit-programs')}>
                   <ListItemIcon><LibraryBooksIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Audit Programs" />
+                </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'strategic-audit-plan'} onClick={() => onNavigate('strategic-audit-plan')}>
+                  <ListItemIcon><PieChartIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Strategic Planning" />
                 </ListItemButton>
                 {(isCAE || isManager) && (
                   <>

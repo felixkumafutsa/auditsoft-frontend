@@ -43,7 +43,16 @@ const AuditProgramsPage: React.FC = () => {
   const [formData, setFormData] = useState({
     procedureName: '',
     controlReference: '',
-    expectedOutcome: ''
+    expectedOutcome: '',
+    // Enhanced Operational Fields (match AuditProgramsModule)
+    samplingApproach: '',
+    sampleSize: '',
+    confidenceLevel: '',
+    materialityThreshold: '',
+    testMethod: '',
+    evidenceRequired: '',
+    documentationReq: '',
+    stepByStepProcedure: ''
   });
 
   const userRole = localStorage.getItem('userRole') || 'Auditor';
@@ -111,14 +120,30 @@ const AuditProgramsPage: React.FC = () => {
       setFormData({
         procedureName: program.procedureName,
         controlReference: program.controlReference || '',
-        expectedOutcome: program.expectedOutcome || ''
+        expectedOutcome: program.expectedOutcome || '',
+        samplingApproach: program.samplingApproach || '',
+        sampleSize: program.sampleSize?.toString() || '',
+        confidenceLevel: program.confidenceLevel?.toString() || '',
+        materialityThreshold: program.materialityThreshold?.toString() || '',
+        testMethod: program.testMethod || '',
+        evidenceRequired: program.evidenceRequired || '',
+        documentationReq: program.documentationReq || '',
+        stepByStepProcedure: program.stepByStepProcedure || ''
       });
     } else {
       setEditingProgram(null);
       setFormData({
         procedureName: '',
         controlReference: '',
-        expectedOutcome: ''
+        expectedOutcome: '',
+        samplingApproach: '',
+        sampleSize: '',
+        confidenceLevel: '',
+        materialityThreshold: '',
+        testMethod: '',
+        evidenceRequired: '',
+        documentationReq: '',
+        stepByStepProcedure: ''
       });
     }
     setDialogOpen(true);
@@ -311,6 +336,100 @@ const AuditProgramsPage: React.FC = () => {
               rows={3}
               value={formData.expectedOutcome}
               onChange={(e) => setFormData({ ...formData, expectedOutcome: e.target.value })}
+            />
+            
+            {/* Enhanced Operational Fields (same as AuditProgramsModule) */}
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mt: 1 }}>
+              Testing Details
+            </Typography>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <TextField
+                label="Sampling Approach"
+                fullWidth
+                select
+                value={formData.samplingApproach}
+                onChange={(e) => setFormData({ ...formData, samplingApproach: e.target.value })}
+              >
+                <MenuItem value="">None</MenuItem>
+                <MenuItem value="Statistical">Statistical</MenuItem>
+                <MenuItem value="Judgmental">Judgmental</MenuItem>
+                <MenuItem value="Random">Random</MenuItem>
+                <MenuItem value="Systematic">Systematic</MenuItem>
+              </TextField>
+              <TextField
+                label="Sample Size"
+                fullWidth
+                type="number"
+                value={formData.sampleSize}
+                onChange={(e) => setFormData({ ...formData, sampleSize: e.target.value })}
+                helperText="Number of items to test"
+              />
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <TextField
+                label="Confidence Level (%)"
+                fullWidth
+                type="number"
+                value={formData.confidenceLevel}
+                onChange={(e) => setFormData({ ...formData, confidenceLevel: e.target.value })}
+                inputProps={{ min: 90, max: 99.9, step: 0.1 }}
+                helperText="Statistical confidence level"
+              />
+              <TextField
+                label="Materiality Threshold"
+                fullWidth
+                type="number"
+                value={formData.materialityThreshold}
+                onChange={(e) => setFormData({ ...formData, materialityThreshold: e.target.value })}
+                helperText="Materiality threshold for testing"
+              />
+            </Box>
+
+            <TextField
+              label="Test Method"
+              fullWidth
+              select
+              value={formData.testMethod}
+              onChange={(e) => setFormData({ ...formData, testMethod: e.target.value })}
+            >
+              <MenuItem value="">None</MenuItem>
+              <MenuItem value="Inquiry">Inquiry</MenuItem>
+              <MenuItem value="Observation">Observation</MenuItem>
+              <MenuItem value="Inspection">Inspection</MenuItem>
+              <MenuItem value="Reperformance">Reperformance</MenuItem>
+              <MenuItem value="Analytical">Analytical Procedures</MenuItem>
+            </TextField>
+
+            <TextField
+              label="Evidence Required"
+              fullWidth
+              multiline
+              rows={2}
+              value={formData.evidenceRequired}
+              onChange={(e) => setFormData({ ...formData, evidenceRequired: e.target.value })}
+              helperText="Specific evidence requirements for this test"
+            />
+
+            <TextField
+              label="Documentation Requirements"
+              fullWidth
+              multiline
+              rows={2}
+              value={formData.documentationReq}
+              onChange={(e) => setFormData({ ...formData, documentationReq: e.target.value })}
+              helperText="Documentation requirements for this test"
+            />
+
+            <TextField
+              label="Step-by-Step Procedure"
+              fullWidth
+              multiline
+              rows={3}
+              value={formData.stepByStepProcedure}
+              onChange={(e) => setFormData({ ...formData, stepByStepProcedure: e.target.value })}
+              helperText="Detailed step-by-step testing procedures"
             />
           </Box>
         </DialogContent>

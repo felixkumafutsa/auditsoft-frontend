@@ -5,6 +5,7 @@ export type Page =
   | 'audits-executed'
   | 'my-audits'
   | 'audit-plans'
+  | 'strategic-audit-plan'
   | 'audit-programs'
   | 'audit-universe'
   | 'findings'

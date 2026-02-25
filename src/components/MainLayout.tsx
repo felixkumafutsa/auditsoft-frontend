@@ -10,6 +10,7 @@ import { Page } from '../types/navigation';
 import DashboardPage from '../pages/DashboardPage';
 import AuditsPage from '../pages/AuditsPage';
 import AuditPlansPage from '../pages/AuditPlansPage';
+import StrategicAuditPlanPage from '../pages/StrategicAuditPlanPage';
 import AuditProgramsPage from '../pages/AuditProgramsPage';
 import StandardsLibraryPage from '../pages/StandardsLibraryPage';
 import ControlMappingPage from '../pages/ControlMappingPage';
@@ -73,6 +74,36 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
         }
     }, [handleLogout]);
 
+    // Handle deep links (SPA paths that land directly on a page)
+    useEffect(() => {
+        try {
+            const path = window.location.pathname || '/';
+            if (path === '/' || !path) return;
+            const trimmed = path.replace(/^\/+|\/+$/g, '');
+
+            if (trimmed === 'strategic-audit-plan') {
+                setCurrentPage('strategic-audit-plan');
+                return;
+            }
+
+            // Support deep link to create audit (e.g. /audits/create?entityId=12&riskLevel=High)
+            if (trimmed.startsWith('audits/create')) {
+                const params = new URLSearchParams(window.location.search);
+                const prefill: any = {};
+                if (params.has('entityId')) prefill.auditUniverseId = Number(params.get('entityId'));
+                if (params.has('riskLevel')) prefill.riskLevel = params.get('riskLevel');
+                if (Object.keys(prefill).length > 0) {
+                    try { localStorage.setItem('createAuditPrefill', JSON.stringify(prefill)); } catch (e) { /* ignore */ }
+                }
+                setCurrentPage('audits');
+                return;
+            }
+        } catch (e) {
+            // Non-fatal
+            // console.error('Failed to parse deep link', e);
+        }
+    }, []);
+
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
     };
@@ -102,6 +133,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 return <AuditsPage filterType="my" />;
             case 'audit-plans':
                 return <AuditPlansPage />;
+            case 'strategic-audit-plan':
+                return <StrategicAuditPlanPage />;
             case 'audit-programs':
                 return <AuditProgramsPage />;
             case 'audit-universe':

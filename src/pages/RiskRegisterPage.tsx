@@ -46,8 +46,8 @@ const RiskRegisterPage: React.FC = () => {
     description: '',
     category: 'Operational',
     impact: 'Medium',
-    likelihood: 'Medium',
-    status: 'open'
+    likelihood: 'Possible',
+    status: 'Identified'
   });
 
   const fetchRisks = async () => {
@@ -84,8 +84,8 @@ const RiskRegisterPage: React.FC = () => {
         description: '',
         category: 'Operational',
         impact: 'Medium',
-        likelihood: 'Medium',
-        status: 'open'
+        likelihood: 'Possible',
+        status: 'Identified'
       });
     }
     setOpenDialog(true);
@@ -132,11 +132,37 @@ const RiskRegisterPage: React.FC = () => {
   };
 
   const getLikelihoodColor = (likelihood: string) => {
-    switch (likelihood.toLowerCase()) {
-      case 'high': return 'error';
-      case 'medium': return 'warning';
-      case 'low': return 'success';
-      default: return 'default';
+    // Map backend likelihood scale to visual severity
+    switch (likelihood) {
+      case 'Certain':
+        return 'error';
+      case 'Likely':
+        return 'error';
+      case 'Possible':
+        return 'warning';
+      case 'Unlikely':
+        return 'success';
+      case 'Rare':
+        return 'success';
+      default:
+        return 'default';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Identified':
+        return 'primary';
+      case 'Assessed':
+        return 'info';
+      case 'Mitigated':
+        return 'success';
+      case 'Accepted':
+        return 'warning';
+      case 'Closed':
+        return 'default';
+      default:
+        return 'default';
     }
   };
 
@@ -177,7 +203,7 @@ const RiskRegisterPage: React.FC = () => {
       renderCell: (params: GridRenderCellParams) => (
         <Chip 
           label={params.value} 
-          color={params.value === 'open' ? 'primary' : 'default'} 
+          color={getStatusColor(params.value as string) as any} 
           size="small" 
         />
       )
@@ -275,10 +301,11 @@ const RiskRegisterPage: React.FC = () => {
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 >
-                  <MenuItem value="open">Open</MenuItem>
-                  <MenuItem value="mitigated">Mitigated</MenuItem>
-                  <MenuItem value="accepted">Accepted</MenuItem>
-                  <MenuItem value="closed">Closed</MenuItem>
+                  <MenuItem value="Identified">Identified</MenuItem>
+                  <MenuItem value="Assessed">Assessed</MenuItem>
+                  <MenuItem value="Mitigated">Mitigated</MenuItem>
+                  <MenuItem value="Accepted">Accepted</MenuItem>
+                  <MenuItem value="Closed">Closed</MenuItem>
                 </TextField>
               </Grid>
               <Grid size={{ xs: 6 }}>
@@ -303,9 +330,11 @@ const RiskRegisterPage: React.FC = () => {
                   value={formData.likelihood}
                   onChange={(e) => setFormData({ ...formData, likelihood: e.target.value })}
                 >
-                  <MenuItem value="Low">Low</MenuItem>
-                  <MenuItem value="Medium">Medium</MenuItem>
-                  <MenuItem value="High">High</MenuItem>
+                  <MenuItem value="Rare">Rare</MenuItem>
+                  <MenuItem value="Unlikely">Unlikely</MenuItem>
+                  <MenuItem value="Possible">Possible</MenuItem>
+                  <MenuItem value="Likely">Likely</MenuItem>
+                  <MenuItem value="Certain">Certain</MenuItem>
                 </TextField>
               </Grid>
             </Grid>

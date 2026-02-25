@@ -112,6 +112,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const [auditors, setAuditors] = useState<{ id: number; name: string; role: string }[]>([]);
   const [managers, setManagers] = useState<{ id: number; name: string; role: string }[]>([]);
   const [auditUniverseItems, setAuditUniverseItems] = useState<{ id: number; entityName: string; entityType: string }[]>([]);
+  const [createPrefill, setCreatePrefill] = useState<any | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentUser, setCurrentUser] = useState<{ id?: number; name?: string; username?: string; role: string } | null>(null);
@@ -340,6 +341,22 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
       }
     };
     loadData();
+  }, []);
+
+  // Check for strategic-plan prefill (set by StrategicAuditPlanPage)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('createAuditPrefill');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setCreatePrefill(parsed);
+        setView('create');
+        // remove the prefill so it doesn't trigger repeatedly
+        localStorage.removeItem('createAuditPrefill');
+      }
+    } catch (e) {
+      console.error('Failed to parse createAuditPrefill', e);
+    }
   }, []);
 
   useEffect(() => {
@@ -1235,6 +1252,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           auditors={auditors}
           managers={managers}
           auditUniverseItems={auditUniverseItems}
+          initialData={createPrefill}
           onSuccess={() => {
             setView("list");
             fetchAudits();

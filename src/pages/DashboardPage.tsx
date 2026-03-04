@@ -62,6 +62,7 @@ import api from "../services/api";
 import { Page } from "../types/navigation";
 import ActionPlansModule from "../components/ActionPlansModule";
 import { getStatusColor, getStatusHexColor } from "../utils/statusColors";
+import RiskHeatmap from "../components/RiskHeatmap";
 
 type UserRole =
   | "Admin"
@@ -1005,6 +1006,7 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [tasks, setTasks] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [evidence, setEvidence] = useState<any[]>([]);
+  const [risks, setRisks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -1028,11 +1030,13 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         const auditsArray = Array.isArray(auditsData) ? auditsData : [];
         setAudits(auditsArray);
-        setKris(Array.isArray(krisData) ? krisData : []);
-        setTasks(Array.isArray(tasksData) ? tasksData : []);
         setNotifications(
           Array.isArray(notificationsData) ? notificationsData : [],
         );
+        const risksArray = Array.isArray(krisData) ? krisData : [];
+        setKris(risksArray);
+        const allRisks = await api.getRisks();
+        setRisks(Array.isArray(allRisks) ? allRisks : []);
         setEvidence(Array.isArray(evidenceData) ? evidenceData : []);
 
         const criticalCount = (findingsData || []).filter(
@@ -1098,258 +1102,186 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   );
 
   return (
-    <Box>
-      <Typography
-        variant="h4"
-        sx={{ color: "#0F1A2B", fontWeight: "bold", mb: 3 }}
-      >
-        Chief Audit Executive Dashboard
-      </Typography>
+    <Box sx={{ py: 2 }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
+        <Box>
+          <Typography
+            variant="h4"
+            sx={{ color: "#0F1A2B", fontWeight: "bold" }}
+          >
+            Chief Audit Executive Dashboard
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Real-time organizational risk and audit lifecycle overview.
+          </Typography>
+        </Box>
+        <Box display="flex" gap={2}>
+          <Button
+            variant="contained"
+            startIcon={<AssessmentIcon />}
+            onClick={() => onNavigate("reports-executive")}
+            sx={{ borderRadius: 2, px: 3, bgcolor: '#1A237E', '&:hover': { bgcolor: '#0D1440' } }}
+          >
+            Executive Summary
+          </Button>
+        </Box>
+      </Box>
 
-      {/* Navigation Cards */}
+      {/* Top Section: High Impact Stats */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
-            title="Audit Plans"
-            value="View"
+            title="Strategic Audit Plans"
+            value={stats.totalAudits}
             icon={<DescriptionIcon fontSize="large" />}
-            color="#1976d2"
+            color="#1A237E"
             onClick={() => onNavigate("audit-plans")}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
-            title="Risk Escalation"
-            value={stats.overallRisk === "High" ? "Action Req" : "Stable"}
-            icon={<WarningIcon fontSize="large" />}
-            color={stats.overallRisk === "High" ? "#d32f2f" : "#ed6c02"}
+            title="Audit Coverage Range"
+            value="Inter-Dept"
+            icon={<BusinessIcon fontSize="large" />}
+            color="#006064"
+            onClick={() => onNavigate("audit-universe")}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard
+            title="Escalated Critical Findings"
+            value={stats.criticalFindings}
+            icon={<ErrorIcon fontSize="large" />}
+            color={stats.criticalFindings > 0 ? "#D32F2F" : "#2E7D32"}
+            onClick={() => onNavigate("findings")}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard
+            title="Organizational Risk Rating"
+            value={stats.overallRisk}
+            icon={<SecurityIcon fontSize="large" />}
+            color={stats.overallRisk === "High" ? "#D32F2F" : "#ED6C02"}
             onClick={() => onNavigate("risk-register")}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard
-            title="Compliance"
-            value="Manage"
-            icon={<GavelIcon fontSize="large" />}
-            color="#2e7d32"
-            onClick={() => onNavigate("compliance-standards")}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard
-            title="Reports"
-            value="View"
-            icon={<BarChartIcon fontSize="large" />}
-            color="#9c27b0"
-            onClick={() => onNavigate("reports-executive")}
           />
         </Grid>
       </Grid>
 
-      {/* Main Executive Summary Grid */}
-      <Grid container spacing={3}>
-        {/* 1. Audit Progress Snapshot */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper
-            elevation={2}
-            sx={{ p: 3, display: "flex", flexDirection: "column" }}
-          >
-            <Typography
-              variant="h6"
-              fontWeight="bold"
-              sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}
-            >
-              <TrendingUpIcon color="primary" /> Audit Progress Snapshot
+      {/* Main Governance Content */}
+      <Grid container spacing={4}>
+        {/* Left Column: Risk & Strategy */}
+        <Grid size={{ xs: 12, lg: 8 }}>
+          <Box sx={{ mb: 4 }}>
+            <RiskHeatmap risks={risks} />
+          </Box>
+
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 3, display: "flex", alignItems: "center", gap: 1 }}>
+              <TrendingUpIcon color="primary" /> Audit Process & Performance
             </Typography>
-            <Box sx={{ height: 300, width: "100%" }}>
+            <Box sx={{ height: 350, width: "100%" }}>
               {auditStatusData.length > 0 ? (
                 <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={auditStatusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, percent }) =>
-                        `${name} ${((percent || 0) * 100).toFixed(0)}%`
-                      }
-                    >
-                      {auditStatusData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend verticalAlign="bottom" height={36} />
-                  </PieChart>
+                  <BarChart data={auditStatusData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} interval={0} />
+                    <YAxis />
+                    <Tooltip cursor={{ fill: 'transparent' }} />
+                    <Bar dataKey="value" fill="#1A237E" radius={[4, 4, 0, 0]} barSize={40} />
+                  </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <Box
-                  display="flex"
-                  justifyContent="center"
-                  alignItems="center"
-                  height="100%"
-                >
-                  <Typography color="textSecondary">
-                    No active audit data available.
-                  </Typography>
+                <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                  <Typography color="textSecondary">No data for audit status.</Typography>
                 </Box>
               )}
             </Box>
           </Paper>
         </Grid>
 
-        {/* 2. Risk Key Indicators (KRIs) */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper
-            elevation={2}
-            sx={{ p: 3, display: "flex", flexDirection: "column" }}
-          >
+        {/* Right Column: Execution & Pending Actions */}
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Paper elevation={2} sx={{ p: 3, mb: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Typography
               variant="h6"
               fontWeight="bold"
-              sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}
+              sx={{ mb: 3, display: "flex", alignItems: "center", gap: 1 }}
             >
-              <WarningIcon color="error" /> Key Risk Indicators (KRIs)
+              <AssignmentIcon color="primary" /> Executive Pending Actions
             </Typography>
-            <Box sx={{ height: 300, width: "100%" }}>
-              {kriStatusData.length > 0 ? (
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={kriStatusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, percent }) =>
-                        `${name} ${((percent || 0) * 100).toFixed(0)}%`
-                      }
-                    >
-                      {kriStatusData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={KRI_COLORS[entry.name] || "#8884d8"}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend verticalAlign="bottom" height={36} />
-                  </PieChart>
-                </ResponsiveContainer>
+
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="subtitle2" color="primary" fontWeight="bold" sx={{ borderBottom: '2px solid #1A237E', pb: 1, mb: 2 }}>
+                Audit Plans for Approval ({auditsPendingApproval.length})
+              </Typography>
+              {auditsPendingApproval.length > 0 ? (
+                <List dense sx={{ mb: 3 }}>
+                  {auditsPendingApproval.slice(0, 4).map((audit: any) => (
+                    <ListItem key={audit.id} sx={{ mb: 1, border: '1px solid #f0f0f0', borderRadius: 1 }}>
+                      <ListItemIcon sx={{ minWidth: 36 }}>
+                        <ScheduleIcon color="warning" fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={audit.auditName}
+                        sx={{ '& .MuiListItemText-primary': { fontSize: '0.85rem', fontWeight: 'bold' } }}
+                        secondary={`Created: ${audit.startDate ? new Date(audit.startDate).toLocaleDateString() : "N/A"}`}
+                      />
+                      <Button size="small" variant="outlined" onClick={() => onNavigate("audit-plans")}>Review</Button>
+                    </ListItem>
+                  ))}
+                </List>
               ) : (
-                <Box
-                  display="flex"
-                  justifyContent="center"
-                  alignItems="center"
-                  height="100%"
-                >
-                  <Typography color="textSecondary">
-                    No Key Risk Indicators tracked yet.
-                  </Typography>
+                <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>Clean Slate: No pending plans.</Alert>
+              )}
+
+              <Typography variant="subtitle2" color="error" fontWeight="bold" sx={{ borderBottom: '2px solid #D32F2F', pb: 1, mb: 2 }}>
+                Critical Review Requests ({findingsForReview.length + evidenceForReview.length})
+              </Typography>
+
+              <List dense>
+                {findingsForReview.slice(0, 2).map((notif: any) => (
+                  <ListItem key={notif.id} sx={{ mb: 1, bgcolor: '#fff5f5', borderRadius: 1 }}>
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      <WarningIcon color="error" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={notif.message}
+                      sx={{ '& .MuiListItemText-primary': { fontSize: '0.8rem' } }}
+                      secondary="Finding Validation"
+                    />
+                  </ListItem>
+                ))}
+                {evidenceForReview.slice(0, 2).map((item: any) => (
+                  <ListItem key={item.id} sx={{ mb: 1, bgcolor: '#f5f7ff', borderRadius: 1 }}>
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      <DescriptionIcon color="primary" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={`Sign-off: ${item.auditProgramId}`}
+                      sx={{ '& .MuiListItemText-primary': { fontSize: '0.8rem' } }}
+                      secondary="Evidence Quality Check"
+                    />
+                  </ListItem>
+                ))}
+              </List>
+
+              {(findingsForReview.length === 0 && evidenceForReview.length === 0) && (
+                <Box textAlign="center" py={4}>
+                  <CheckCircleIcon sx={{ fontSize: 40, color: 'success.light', mb: 1 }} />
+                  <Typography variant="body2" color="textSecondary">All caught up!</Typography>
                 </Box>
               )}
             </Box>
-          </Paper>
-        </Grid>
 
-        {/* 3. Pending Actions */}
-        <Grid size={{ xs: 12 }}>
-          <Paper elevation={2} sx={{ p: 3 }}>
-            <Typography
-              variant="h6"
-              fontWeight="bold"
-              sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}
+            <Divider sx={{ my: 2 }} />
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => onNavigate("notifications")}
+              sx={{ py: 1, borderRadius: 2 }}
             >
-              <AssignmentIcon color="secondary" /> Pending Actions
-            </Typography>
-            <Grid container spacing={3}>
-              {/* Audits Pending Approval Column */}
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Typography
-                  variant="subtitle2"
-                  color="textSecondary"
-                  gutterBottom
-                >
-                  Audits Pending Approval
-                </Typography>
-                {auditsPendingApproval.length > 0 ? (
-                  <List dense>
-                    {auditsPendingApproval.slice(0, 5).map((audit: any) => (
-                      <ListItem key={audit.id}>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <CheckCircleIcon color="action" fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={audit.auditName}
-                          secondary={`Due: ${audit.endDate || "N/A"}`}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Alert severity="info" sx={{ mt: 1 }}>
-                    No audits pending approval.
-                  </Alert>
-                )}
-              </Grid>
-
-              {/* Findings & Evidence for Review Column */}
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Typography
-                  variant="subtitle2"
-                  color="textSecondary"
-                  gutterBottom
-                >
-                  Findings & Evidence for Review
-                </Typography>
-                {findingsForReview.length > 0 || evidenceForReview.length > 0 ? (
-                  <List dense>
-                    {findingsForReview.slice(0, 3).map((notif: any) => (
-                      <ListItem key={notif.id}>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <ErrorIcon
-                            color={notif.read ? "disabled" : "error"}
-                            fontSize="small"
-                          />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={notif.message}
-                          primaryTypographyProps={{
-                            fontWeight: notif.read ? "normal" : "bold",
-                          }}
-                          secondary={`Finding: ${new Date(notif.createdAt).toLocaleDateString()}`}
-                        />
-                      </ListItem>
-                    ))}
-                    {evidenceForReview.slice(0, 2).map((item: any) => (
-                      <ListItem key={item.id}>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <DescriptionIcon color="action" fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={`Evidence for ${item.auditProgramId}`}
-                          secondary={`Status: ${item.status}`}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Alert severity="success" sx={{ mt: 1 }}>
-                    No items require review.
-                  </Alert>
-                )}
-              </Grid>
-            </Grid>
+              All Governance Alerts
+            </Button>
           </Paper>
         </Grid>
       </Grid>

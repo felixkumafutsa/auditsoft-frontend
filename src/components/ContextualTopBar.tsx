@@ -68,7 +68,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
 
   if (isRestricted) {
     return (
-      <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
+      <AppBar position="static" elevation={0} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', zIndex: theme.zIndex.drawer }}>
         <Toolbar variant="dense" sx={{ minHeight: 48 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
@@ -96,7 +96,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   // =========================================================================
   if (isAuditor) {
     return (
-      <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
+      <AppBar position="static" elevation={0} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', zIndex: theme.zIndex.drawer }}>
         <Toolbar variant="dense" sx={{ minHeight: 48 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
@@ -124,7 +124,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   // =========================================================================
   if (isSystemAdmin) {
     return (
-      <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
+      <AppBar position="static" elevation={0} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', zIndex: theme.zIndex.drawer }}>
         <Toolbar variant="dense" sx={{ minHeight: 48 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
             {/* 1. Dashboard */}
@@ -197,7 +197,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   // =========================================================================
   if (isCAE) {
     return (
-      <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
+      <AppBar position="static" elevation={0} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', zIndex: theme.zIndex.drawer }}>
         <Toolbar variant="dense" sx={{ minHeight: 48 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
             {/* 1. Dashboard */}
@@ -374,7 +374,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
   // DEFAULT / OTHER ROLES VIEW (e.g. Manager)
   // =========================================================================
   return (
-    <AppBar position="static" color="default" sx={{ bgcolor: 'white', boxShadow: 1, zIndex: theme.zIndex.drawer }}>
+    <AppBar position="static" elevation={0} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', zIndex: theme.zIndex.drawer }}>
       <Toolbar variant="dense" sx={{ minHeight: 48 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {/* 1. Dashboard */}

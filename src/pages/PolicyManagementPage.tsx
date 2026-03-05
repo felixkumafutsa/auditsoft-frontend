@@ -33,8 +33,11 @@ import {
     Delete as DeleteIcon,
     Link as LinkIcon,
     Description as DescriptionIcon,
-    FileDownload as FileDownloadIcon
+    FileDownload as FileDownloadIcon,
+    Visibility as VisibilityIcon
 } from '@mui/icons-material';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
 import { Policy } from '../types/policy';
 
@@ -47,6 +50,7 @@ interface PolicyFormData {
 }
 
 const PolicyManagementPage: React.FC = () => {
+    const MySwal = withReactContent(Swal);
     const [policies, setPolicies] = useState<Policy[]>([]);
     const [frameworks, setFrameworks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -67,6 +71,11 @@ const PolicyManagementPage: React.FC = () => {
 
     // Snackbar state
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+
+    // Preview state
+    const [previewOpen, setPreviewOpen] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState('');
+    const [previewTitle, setPreviewTitle] = useState('');
 
     const fetchData = async () => {
         setLoading(true);
@@ -96,8 +105,8 @@ const PolicyManagementPage: React.FC = () => {
                 version: policy.version,
                 description: policy.description || '',
                 status: policy.status,
-                effectiveDate: typeof policy.effectiveDate === 'string' 
-                    ? policy.effectiveDate.split('T')[0] 
+                effectiveDate: typeof policy.effectiveDate === 'string'
+                    ? policy.effectiveDate.split('T')[0]
                     : new Date(policy.effectiveDate).toISOString().split('T')[0]
             });
         } else {
@@ -122,26 +131,35 @@ const PolicyManagementPage: React.FC = () => {
         try {
             if (selectedPolicy) {
                 await api.updatePolicy(selectedPolicy.id, formData);
-                setSnackbar({ open: true, message: 'Policy updated successfully', severity: 'success' });
+                MySwal.fire('Updated', 'Policy updated successfully', 'success');
             } else {
                 await api.createPolicy(formData);
-                setSnackbar({ open: true, message: 'Policy created successfully', severity: 'success' });
+                MySwal.fire('Created', 'Policy created successfully', 'success');
             }
             handleCloseDialog();
             fetchData();
         } catch (err: any) {
-            setSnackbar({ open: true, message: err.message || 'Failed to save policy', severity: 'error' });
+            MySwal.fire('Error', err.message || 'Failed to save policy', 'error');
         }
     };
 
     const handleDelete = async (id: number) => {
-        if (window.confirm('Are you sure you want to delete this policy?')) {
+        const result = await MySwal.fire({
+            title: 'Delete Policy?',
+            text: "This action cannot be undone.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        });
+
+        if (result.isConfirmed) {
             try {
                 await api.deletePolicy(id);
-                setSnackbar({ open: true, message: 'Policy deleted successfully', severity: 'success' });
+                MySwal.fire('Deleted!', 'Policy has been deleted.', 'success');
                 fetchData();
             } catch (err: any) {
-                setSnackbar({ open: true, message: err.message || 'Failed to delete policy', severity: 'error' });
+                MySwal.fire('Error', err.message || 'Failed to delete policy', 'error');
             }
         }
     };
@@ -156,11 +174,11 @@ const PolicyManagementPage: React.FC = () => {
         if (!selectedPolicy || !selectedFrameworkId) return;
         try {
             await api.mapPolicyToFramework(selectedPolicy.id, parseInt(selectedFrameworkId));
-            setSnackbar({ open: true, message: 'Policy mapped successfully', severity: 'success' });
+            MySwal.fire('Linked', 'Policy mapped to framework successfully', 'success');
             setOpenMappingDialog(false);
             fetchData();
         } catch (err: any) {
-            setSnackbar({ open: true, message: err.message || 'Failed to map policy', severity: 'error' });
+            MySwal.fire('Error', err.message || 'Failed to map policy', 'error');
         }
     };
 
@@ -235,15 +253,18 @@ const PolicyManagementPage: React.FC = () => {
                                             <DescriptionIcon sx={{ mr: 1, color: '#1a237e', opacity: 0.7 }} />
                                             <Box>
                                                 <Typography variant="body2" fontWeight="medium">{policy.policyName}</Typography>
-                                                <Typography variant="caption" color="textSecondary">{policy.description?.substring(0, 50)}{policy.description && policy.description.length > 50 ? '...' : ''}</Typography>
+                                                <Typography variant="caption" color="textSecondary">
+                                                    {policy.description?.substring(0, 50)}
+                                                    {policy.description && policy.description.length > 50 ? '...' : ''}
+                                                </Typography>
                                             </Box>
                                         </Box>
                                     </TableCell>
                                     <TableCell>{policy.version}</TableCell>
                                     <TableCell>
-                                        <Chip 
-                                            label={policy.status} 
-                                            size="small" 
+                                        <Chip
+                                            label={policy.status}
+                                            size="small"
                                             color={getStatusColor(policy.status) as any}
                                             variant="outlined"
                                         />
@@ -267,8 +288,46 @@ const PolicyManagementPage: React.FC = () => {
                                         </Box>
                                     </TableCell>
                                     <TableCell align="right">
+                                        <Tooltip title="Preview">
+                                            <IconButton
+                                                size="small"
+                                                color="info"
+                                                onClick={() => {
+                                                    let url = policy.fileUrl || (policy as any).documentUrl;
+                                                    if (!url) {
+                                                        MySwal.fire('No File', 'No document file associated with this policy.', 'info');
+                                                        return;
+                                                    }
+
+                                                    if (!url.startsWith('http')) {
+                                                        const apiBase = api.baseURL.replace('/api', '');
+                                                        url = `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+                                                    }
+
+                                                    setPreviewUrl(url);
+                                                    setPreviewTitle(policy.policyName);
+                                                    setPreviewOpen(true);
+                                                }}
+                                            >
+                                                <VisibilityIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
                                         <Tooltip title="Download">
-                                            <IconButton size="small" color="primary">
+                                            <IconButton
+                                                size="small"
+                                                color="primary"
+                                                onClick={() => {
+                                                    let url = policy.fileUrl || (policy as any).documentUrl;
+                                                    if (!url) return;
+
+                                                    if (!url.startsWith('http')) {
+                                                        const apiBase = api.baseURL.replace('/api', '');
+                                                        url = `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+                                                    }
+
+                                                    window.open(url, '_blank');
+                                                }}
+                                            >
                                                 <FileDownloadIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
@@ -290,7 +349,6 @@ const PolicyManagementPage: React.FC = () => {
                 </Table>
             </TableContainer>
 
-            {/* Create/Edit Dialog */}
             <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
                 <DialogTitle>{selectedPolicy ? 'Edit Policy' : 'Create New Policy'}</DialogTitle>
                 <DialogContent dividers>
@@ -312,7 +370,7 @@ const PolicyManagementPage: React.FC = () => {
                                 onChange={(e) => setFormData({ ...formData, version: e.target.value })}
                             />
                         </Grid>
-                        <Grid size={12}>
+                        <Grid size={{ xs: 12 }}>
                             <TextField
                                 fullWidth
                                 label="Description"
@@ -351,9 +409,9 @@ const PolicyManagementPage: React.FC = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseDialog}>Cancel</Button>
-                    <Button 
-                        variant="contained" 
-                        onClick={handleSubmit} 
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmit}
                         disabled={!formData.policyName}
                         sx={{ bgcolor: '#1a237e' }}
                     >
@@ -362,7 +420,6 @@ const PolicyManagementPage: React.FC = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Mapping Dialog */}
             <Dialog open={openMappingDialog} onClose={() => setOpenMappingDialog(false)}>
                 <DialogTitle>Link Policy to Framework</DialogTitle>
                 <DialogContent dividers>
@@ -386,8 +443,8 @@ const PolicyManagementPage: React.FC = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenMappingDialog(false)}>Cancel</Button>
-                    <Button 
-                        variant="contained" 
+                    <Button
+                        variant="contained"
                         onClick={handleAddMapping}
                         disabled={!selectedFrameworkId}
                         sx={{ bgcolor: '#1a237e' }}
@@ -406,6 +463,36 @@ const PolicyManagementPage: React.FC = () => {
                     {snackbar.message}
                 </Alert>
             </Snackbar>
+
+            <Dialog
+                open={previewOpen}
+                onClose={() => setPreviewOpen(false)}
+                maxWidth="lg"
+                fullWidth
+                PaperProps={{ sx: { height: '85vh' } }}
+            >
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6">{previewTitle}</Typography>
+                    <IconButton onClick={() => setPreviewOpen(false)} size="small">
+                        <DescriptionIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers sx={{ p: 0, bgcolor: '#525659' }}>
+                    {previewUrl ? (
+                        <iframe
+                            src={previewUrl}
+                            title="Policy Preview"
+                            width="100%"
+                            height="100%"
+                            style={{ border: 'none' }}
+                        />
+                    ) : (
+                        <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                            <Typography color="white">Document preview not available.</Typography>
+                        </Box>
+                    )}
+                </DialogContent>
+            </Dialog>
         </Box>
     );
 };

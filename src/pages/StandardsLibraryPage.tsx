@@ -26,9 +26,15 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DescriptionIcon from '@mui/icons-material/Description';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import LinkIcon from '@mui/icons-material/Link';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
+
+const MySwal = withReactContent(Swal);
 
 interface ComplianceFramework {
   id: number;
@@ -67,6 +73,11 @@ const StandardsLibraryPage: React.FC = () => {
   // File Upload State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Preview State
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewTitle, setPreviewTitle] = useState('');
 
   const fetchFrameworks = async () => {
     setLoading(true);
@@ -173,12 +184,23 @@ const StandardsLibraryPage: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this standard?')) {
+    const result = await MySwal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
       try {
         await api.deleteFramework(id);
+        MySwal.fire('Deleted!', 'The standard has been deleted.', 'success');
         fetchFrameworks();
-      } catch (error) {
-        console.error("Failed to delete framework", error);
+      } catch (error: any) {
+        MySwal.fire('Error', error.message || 'Failed to delete framework', 'error');
       }
     }
   };
@@ -193,7 +215,7 @@ const StandardsLibraryPage: React.FC = () => {
         // Auto-upload immediately after selection
         await handleFileUpload(file);
       } else {
-        alert('Please select a PDF, DOC, or DOCX file');
+        MySwal.fire('Invalid File', 'Please select a PDF, DOC, or DOCX file', 'error');
         event.target.value = '';
       }
     }
@@ -229,10 +251,10 @@ const StandardsLibraryPage: React.FC = () => {
       }
 
       setSelectedFile(null);
-      alert('Policy document uploaded successfully!');
+      MySwal.fire('Uploaded!', 'Policy document uploaded successfully.', 'success');
     } catch (error: any) {
       console.error('Upload failed:', error);
-      alert(error.message || 'File upload failed. Please try again.');
+      MySwal.fire('Upload Failed', error.message || 'File upload failed. Please try again.', 'error');
     } finally {
       setUploading(false);
     }
@@ -251,29 +273,29 @@ const StandardsLibraryPage: React.FC = () => {
   };
 
   const handleDeletePolicyPaper = async (paper: PolicyPaper) => {
-    if (!paper.documentUrl) {
-      // Just remove from UI if no document URL
-      setPolicyPapers((prev) => prev.filter((p) => p.id !== paper.id));
-      alert('Policy paper removed from the list');
-      return;
-    }
+    const result = await MySwal.fire({
+      title: 'Delete Policy document?',
+      text: "This will remove the file from the server.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete'
+    });
 
-    if (!window.confirm('Delete this policy document from server and list?')) return;
-
-    try {
-      if (paper.id) {
-        await api.deletePolicy(paper.id);
-      } else {
-        const filename = extractFilenameFromUrl(paper.documentUrl);
-        if (!filename) throw new Error('Invalid document URL');
-        await api.deletePolicyDocument(filename);
+    if (result.isConfirmed) {
+      try {
+        if (paper.id) {
+          await api.deletePolicy(paper.id);
+        } else if (paper.documentUrl) {
+          const filename = extractFilenameFromUrl(paper.documentUrl);
+          if (!filename) throw new Error('Invalid document URL');
+          await api.deletePolicyDocument(filename);
+        }
+        MySwal.fire('Deleted', 'Policy document deleted', 'success');
+        fetchPolicyPapers();
+      } catch (err: any) {
+        MySwal.fire('Error', err.message || 'Failed to delete policy document', 'error');
       }
-      // Refresh list
-      await fetchPolicyPapers();
-      alert('Policy document deleted');
-    } catch (err: any) {
-      console.error('Failed to delete policy document', err);
-      alert(err.message || 'Failed to delete policy document');
     }
   };
 
@@ -338,35 +360,45 @@ const StandardsLibraryPage: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 120,
+      width: 150,
       sortable: false,
       renderCell: (params) => (
         <Box>
-          <Tooltip title="View Document">
+          <Tooltip title="Preview Policy">
             <IconButton
               onClick={() => {
-                // Prevent redirect by using proper URL handling
-                const url = params.row.documentUrl;
-                if (url.startsWith('http')) {
-                  window.open(url, '_blank', 'noopener,noreferrer');
-                } else {
-                  // For relative URLs, construct full path
-                  const fullUrl = `${window.location.origin}${url}`;
-                  window.open(fullUrl, '_blank', 'noopener,noreferrer');
+                let url = params.row.documentUrl;
+                if (!url) return;
+
+                // Construct absolute URL from backend base if relative
+                if (!url.startsWith('http')) {
+                  const apiBase = api.baseURL.replace('/api', '');
+                  url = `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
                 }
+
+                setPreviewUrl(url);
+                setPreviewTitle(params.row.title);
+                setPreviewOpen(true);
               }}
-              color="primary"
+              color="info"
               size="small"
             >
-              <LinkIcon />
+              <VisibilityIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="Download">
             <IconButton
               onClick={() => {
-                // Create download link
+                let url = params.row.documentUrl;
+                if (!url) return;
+
+                if (!url.startsWith('http')) {
+                  const apiBase = api.baseURL.replace('/api', '');
+                  url = `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+                }
+
                 const link = document.createElement('a');
-                link.href = params.row.documentUrl;
+                link.href = url;
                 link.download = `${params.row.title.replace(/\s+/g, '_')}_v${params.row.version}.pdf`;
                 link.target = '_blank';
                 document.body.appendChild(link);
@@ -376,7 +408,7 @@ const StandardsLibraryPage: React.FC = () => {
               color="success"
               size="small"
             >
-              <DescriptionIcon />
+              <FileDownloadIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete">
@@ -536,6 +568,35 @@ const StandardsLibraryPage: React.FC = () => {
             Save Standard
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Modern Preview Dialog */}
+      <Dialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{ sx: { height: '90vh' } }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">{previewTitle}</Typography>
+          <Button onClick={() => setPreviewOpen(false)} size="small">Close</Button>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0, bgcolor: '#525659' }}>
+          {previewUrl ? (
+            <iframe
+              src={previewUrl}
+              title="Policy Preview"
+              width="100%"
+              height="100%"
+              style={{ border: 'none' }}
+            />
+          ) : (
+            <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+              <Typography color="white">No document content available for preview.</Typography>
+            </Box>
+          )}
+        </DialogContent>
       </Dialog>
     </Box>
   );

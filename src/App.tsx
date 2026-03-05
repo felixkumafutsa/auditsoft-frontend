@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import MainLayout from './components/MainLayout';
 import AuditWorkpaperPage from './pages/AuditWorkpaperPage';
+import { ColorModeProvider } from './contexts/ColorModeContext';
 
 const App: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -29,17 +29,8 @@ const App: React.FC = () => {
         setIsAuthenticated(false);
     };
 
-    const theme = useMemo(() => createTheme({
-        palette: {
-            primary: {
-                main: '#0F1A2B',
-            },
-        },
-    }), []);
-
     return (
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
+        <ColorModeProvider>
             {isAuthenticated ? (
                 <Routes>
                     <Route path="/workpaper/:programId" element={<AuditWorkpaperPage />} />
@@ -48,7 +39,7 @@ const App: React.FC = () => {
             ) : (
                 <LoginPage onLoginSuccess={handleLoginSuccess} />
             )}
-        </ThemeProvider>
+        </ColorModeProvider>
     );
 };
 

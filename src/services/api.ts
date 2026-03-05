@@ -131,6 +131,7 @@ class ApiClient {
 
   // --- Audits ---
   getAudits = () => this.get('/audits');
+  getAuditsLightweight = () => this.get('/audits/lightweight');
   getOwnerAudits = () => this.get('/audits/owner');
   getAuditTemplates = () => this.get('/audits/templates');
   getAudit = (id: number) => this.get(`/audits/${id}`);
@@ -177,9 +178,9 @@ class ApiClient {
 
   // --- Strategic Audit Plan ---
   getAnnualPlan = (year: number) => this.get(`/audit-plan/annual/${year}`);
-  getRiskBasedRecommendations = (limit?: number) => 
+  getRiskBasedRecommendations = (limit?: number) =>
     this.get(`/audit-plan/recommendations${limit ? `?limit=${limit}` : ''}`);
-  updateAuditStrategicInfo = (auditId: number, data: any) => 
+  updateAuditStrategicInfo = (auditId: number, data: any) =>
     this.put(`/audit-plan/strategic/${auditId}`, data);
   executiveApproval = (auditId: number, approverId: number, approved: boolean, comments?: string) =>
     this.post(`/audit-plan/executive-approval/${auditId}`, { approverId, approved, comments });

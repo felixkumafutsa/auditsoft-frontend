@@ -40,6 +40,7 @@ import OperationalReportsPage from '../pages/OperationalReportsPage';
 import CustomReportsPage from '../pages/CustomReportsPage';
 import ReportsFilesPage from '../pages/ReportsFilesPage';
 import AuditWorkpaperPage from '../pages/AuditWorkpaperPage';
+import WorkpapersPage from '../pages/WorkpapersPage';
 import TimesheetsPage from '../pages/TimesheetsPage';
 import GlobalTopBar from './GlobalTopBar';
 import ContextualTopBar from './ContextualTopBar';
@@ -160,7 +161,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
 
             // Workpapers & Time Tracking
             case 'workpapers':
-                return <AuditWorkpaperPage />;
+                return <WorkpapersPage />;
             case 'timesheets':
                 return <TimesheetsPage />;
 
@@ -232,7 +233,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
     }
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
             <CssBaseline />
 
             {/* Global Top Bar */}

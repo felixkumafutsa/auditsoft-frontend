@@ -9,12 +9,16 @@ import {
   Menu,
   MenuItem,
   Badge,
+  Tooltip,
   useTheme
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import AccountCircle from '@mui/icons-material/AccountCircle';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
 import logo from '../assets/logo.png';
+import { useColorMode } from '../contexts/ColorModeContext';
 
 interface GlobalTopBarProps {
   user: { name: string; role: string } | null;
@@ -33,6 +37,9 @@ const GlobalTopBar: React.FC<GlobalTopBarProps> = ({
 }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const theme = useTheme();
+  const { mode, toggleColorMode } = useColorMode();
+
+  const isDark = mode === 'dark';
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -53,7 +60,7 @@ const GlobalTopBar: React.FC<GlobalTopBarProps> = ({
   };
 
   return (
-    <AppBar position="fixed" sx={{ bgcolor: '#0F1A2B', zIndex: theme.zIndex.drawer + 1 }}>
+    <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
       <Toolbar>
         <IconButton
           size="large"
@@ -74,23 +81,47 @@ const GlobalTopBar: React.FC<GlobalTopBarProps> = ({
             alt="AuditSoft Logo"
             sx={{ height: 32, mr: 1, objectFit: 'contain' }}
           />
-          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', color: 'white' }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', color: 'inherit' }}>
             AUDITSOFT
           </Typography>
         </Box>
 
-        {/* Global Navigation - Could be broad sections if needed, for now spacer */}
+        {/* Spacer */}
         <Box sx={{ flexGrow: 1 }} />
 
         {/* Right Side Icons */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton color="inherit" onClick={() => onNavigate('notifications')}>
-            <Badge badgeContent={unreadCount} color="error">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={handleMenu}>
+          {/* 🔔 Notifications */}
+          <Tooltip title="Notifications">
+            <IconButton color="inherit" onClick={() => onNavigate('notifications')}>
+              <Badge badgeContent={unreadCount} color="error">
+                <NotificationsIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+
+          {/* 🌙 / ☀️ Dark / Light Mode Toggle */}
+          <Tooltip title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+            <IconButton
+              color="inherit"
+              onClick={toggleColorMode}
+              aria-label="toggle dark/light mode"
+              sx={{
+                transition: 'transform 0.3s ease',
+                '&:hover': { transform: 'rotate(20deg)' },
+              }}
+            >
+              {isDark ? (
+                <LightModeIcon sx={{ color: '#FFD54F' }} />
+              ) : (
+                <DarkModeIcon />
+              )}
+            </IconButton>
+          </Tooltip>
+
+          {/* User Avatar / Menu */}
+          <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', ml: 0.5 }} onClick={handleMenu}>
             <Box sx={{ textAlign: 'right', mr: 1, display: { xs: 'none', sm: 'block' } }}>
               <Typography variant="subtitle2" sx={{ lineHeight: 1.2 }}>{user?.name}</Typography>
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>{user?.role}</Typography>

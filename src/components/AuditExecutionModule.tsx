@@ -678,8 +678,8 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           <Tab icon={<AssignmentIcon />} label="Audit Programs" />
           <Tab icon={<FactCheckIcon />} label="Fieldwork & Testing" />
           <Tab icon={<FolderIcon />} label="Working Papers" />
-          {isCAE && selectedAudit.status === 'Finalized' && (
-            <Tab icon={<RateReviewIcon />} label="Chief Auditor Review" />
+          {(isCAE || isManager || isAuditor) && (
+            <Tab icon={<RateReviewIcon />} label="Audit Review" />
           )}
         </Tabs>
       </Paper>
@@ -768,8 +768,8 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                           </ToggleButton>
                         </ToggleButtonGroup>
 
-                        {/* Reviewer Comments - Manager Only */}
-                        {isManager && (
+                        {/* Reviewer Comments - Manager Edit, Auditor View */}
+                        {isManager ? (
                           <TextField
                             label="Reviewer Comments"
                             multiline
@@ -778,10 +778,19 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                             value={program.reviewerComment || ''}
                             onChange={(e) => handleCommentChange(program.id, e.target.value)}
                             onBlur={(e) => saveComment(program.id, e.target.value)}
-                            placeholder="Add comments..."
+                            placeholder="Add review feedback for the auditor..."
                             variant="outlined"
                             sx={{ mb: 2, bgcolor: 'white' }}
                           />
+                        ) : (
+                          program.reviewerComment && (
+                            <Box sx={{ mb: 2, p: 2, bgcolor: '#fff4e5', borderLeft: '4px solid #ffa726', borderRadius: 1 }}>
+                              <Typography variant="subtitle2" color="warning.main" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <RateReviewIcon fontSize="small" /> Reviewer Feedback:
+                              </Typography>
+                              <Typography variant="body2">{program.reviewerComment}</Typography>
+                            </Box>
+                          )
                         )}
 
                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
@@ -934,15 +943,19 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
             <Box>
               <Typography variant="h6" gutterBottom>Chief Auditor Review & Comments</Typography>
 
-                  {/* Chief Auditor Comment Section (view for Auditor/Audit Manager; edit for CAE) */}
-                  {(isAuditor || isManager) && selectedAudit?.chiefAuditorComments && (
-                    <Paper variant="outlined" sx={{ mb: 3, p: 2 }}>
-                      <Typography variant="subtitle1" gutterBottom>Chief Auditor Comments</Typography>
-                      <Typography variant="body2">{selectedAudit?.chiefAuditorComments}</Typography>
-                    </Paper>
-                  )}
+              {/* Chief Auditor Comment Section (view for Auditor/Audit Manager; edit for CAE) */}
+              {(isAuditor || isManager) && (
+                <Paper variant="outlined" sx={{ mb: 3, p: 2, bgcolor: '#f5f7ff', borderLeft: '4px solid #1A237E' }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="primary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <AssignmentIcon fontSize="small" /> Chief Auditor's Guidance
+                  </Typography>
+                  <Typography variant="body2">
+                    {selectedAudit?.chiefAuditorComments || "No high-level review comments from the Chief Auditor yet."}
+                  </Typography>
+                </Paper>
+              )}
 
-                  {isCAE && (
+              {isCAE && (
                 <Paper variant="outlined" sx={{ mb: 3, p: 2 }}>
                   <Typography variant="subtitle1" gutterBottom>Add Chief Auditor Comments</Typography>
                   <TextField

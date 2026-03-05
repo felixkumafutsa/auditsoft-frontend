@@ -61,33 +61,27 @@ const AuditWorkpaperPage: React.FC = () => {
         try {
             const pId = parseInt(programId!);
 
-            // Load Program Info
-            const programData = await api.getAuditProgram(pId);
-            setAuditProgram(programData);
+            // Load all three in parallel
+            const [programData, evidenceData, wpDataResult] = await Promise.all([
+                api.getAuditProgram(pId),
+                api.getEvidenceList(pId),
+                api.getWorkpaperByProgram(pId).catch(e => null) // Handle 404 gracefully
+            ]);
 
-            // Load Evidence
-            const evidenceData = await api.getEvidenceList(pId);
+            setAuditProgram(programData);
             setEvidenceList(Array.isArray(evidenceData) ? evidenceData : []);
 
-            // Load Workpaper if exists
-            // The API should ideally return null or 404 if not found, we handle both
-            try {
-                const wpData = await api.getWorkpaperByProgram(pId);
-                if (wpData) {
-                    setWorkpaper(wpData);
-                    setTitle(wpData.title);
-                    setDescription(wpData.description || '');
-                    setTestResults(wpData.testResults || '');
-                    setConclusion(wpData.conclusion || '');
-                    setStatus(wpData.status || 'Draft');
-                } else {
-                    // Pre-fill from program if new
-                    setTitle(`Workpaper: ${programData.procedureName}`);
-                    setDescription(`Testing procedure: ${programData.procedureName}`);
-                }
-            } catch (e) {
-                // Likely 404, just new workpaper
-                setTitle(`Workpaper: ${programData?.procedureName || 'New Procedure'}`);
+            if (wpDataResult) {
+                setWorkpaper(wpDataResult);
+                setTitle(wpDataResult.title);
+                setDescription(wpDataResult.description || '');
+                setTestResults(wpDataResult.testResults || '');
+                setConclusion(wpDataResult.conclusion || '');
+                setStatus(wpDataResult.status || 'Draft');
+            } else {
+                // Pre-fill from program if new
+                setTitle(`Workpaper: ${programData?.procedureName}`);
+                setDescription(`Testing procedure: ${programData?.procedureName}`);
             }
 
         } catch (err) {

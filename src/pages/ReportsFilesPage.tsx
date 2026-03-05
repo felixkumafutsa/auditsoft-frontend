@@ -15,7 +15,7 @@ import {
     Container,
     Alert
 } from '@mui/material';
-import { Download as DownloadIcon, Description as FileIcon } from '@mui/icons-material';
+import { Download as DownloadIcon, Description as FileIcon, Visibility as PreviewIcon, Share as ShareIcon } from '@mui/icons-material';
 import api from '../services/api';
 
 interface ReportFile {
@@ -34,6 +34,10 @@ const ReportsFilesPage: React.FC = () => {
     const [reports, setReports] = useState<ReportFile[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const userRole = localStorage.getItem('userRole') || '';
+    const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Auditor';
+    const isManager = userRole === 'Manager' || userRole === 'Audit Manager';
 
     useEffect(() => {
         fetchReports();
@@ -97,6 +101,39 @@ const ReportsFilesPage: React.FC = () => {
         }
     };
 
+    const handlePreview = async (report: ReportFile) => {
+        try {
+            if (report.fileType === 'pdf') {
+                const blob = await api.downloadStoredAuditReport(report.auditId);
+                const url = window.URL.createObjectURL(blob);
+                window.open(url, '_blank');
+                // Set timeout to revoke URL
+                setTimeout(() => window.URL.revokeObjectURL(url), 15000);
+            } else if (report.fileType === 'docx') {
+                alert('DOCX files cannot be previewed natively in the browser. Please download the file to view.');
+            } else {
+                alert('Preview not implemented for this file type.');
+            }
+        } catch (err) {
+            console.error("Preview failed", err);
+            alert("Failed to load file for preview.");
+        }
+    };
+
+    const handleShare = (report: ReportFile) => {
+        // Displaying a simple alert simulation for sharing behavior.
+        // In a real application, you might use the navigator.share API or open a modal wrapper
+        if (navigator.share) {
+            navigator.share({
+                title: `${report.title || report.auditName} Report`,
+                text: `Please review the attached audit report for ${report.auditName}.`,
+                url: window.location.href, // Or secure file link if generated
+            }).catch(console.error);
+        } else {
+            alert(`Share dialogue initiated for: ${report.title || report.auditName} Report.\nIn a production environment, this would open an email draft or copy a secure link.`);
+        }
+    };
+
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -148,8 +185,8 @@ const ReportsFilesPage: React.FC = () => {
                                             <Chip
                                                 label={report.auditStatus || 'Unknown'}
                                                 size="small"
-                                                color={report.auditStatus === 'Pending CAE Approval' ? 'warning' : 
-                                                       report.auditStatus === 'Closed' ? 'success' : 'default'}
+                                                color={report.auditStatus === 'Pending CAE Approval' ? 'warning' :
+                                                    report.auditStatus === 'Closed' ? 'success' : 'default'}
                                             />
                                         </TableCell>
                                         <TableCell>{new Date(report.generatedAt).toLocaleDateString()} {new Date(report.generatedAt).toLocaleTimeString()}</TableCell>
@@ -163,15 +200,42 @@ const ReportsFilesPage: React.FC = () => {
                                             />
                                         </TableCell>
                                         <TableCell align="right">
-                                            <Button
-                                                variant="contained"
-                                                size="small"
-                                                startIcon={<DownloadIcon />}
-                                                onClick={() => handleDownload(report)}
-                                                sx={{ textTransform: 'none' }}
-                                            >
-                                                Download
-                                            </Button>
+                                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                                {(isCAE || isManager) && (
+                                                    <Button
+                                                        variant="outlined"
+                                                        size="small"
+                                                        color="info"
+                                                        startIcon={<PreviewIcon />}
+                                                        onClick={() => handlePreview(report)}
+                                                        sx={{ textTransform: 'none' }}
+                                                    >
+                                                        Preview
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    color="primary"
+                                                    startIcon={<DownloadIcon />}
+                                                    onClick={() => handleDownload(report)}
+                                                    sx={{ textTransform: 'none' }}
+                                                >
+                                                    Download
+                                                </Button>
+                                                {isCAE && (
+                                                    <Button
+                                                        variant="contained"
+                                                        size="small"
+                                                        color="secondary"
+                                                        startIcon={<ShareIcon />}
+                                                        onClick={() => handleShare(report)}
+                                                        sx={{ textTransform: 'none' }}
+                                                    >
+                                                        Share
+                                                    </Button>
+                                                )}
+                                            </Box>
                                         </TableCell>
                                     </TableRow>
                                 ))

@@ -14,11 +14,16 @@ import {
   MenuItem,
   TextField,
   Typography,
-  useTheme
+  useTheme,
+  Divider
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams, GridToolbar } from '@mui/x-data-grid';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
+
+const MySwal = withReactContent(Swal);
 
 interface Risk {
   id: number;
@@ -29,7 +34,13 @@ interface Risk {
   impact: string;
   likelihood: string;
   status: string;
+  inherentScore?: number;
+  residualScore?: number;
   owner?: { name: string };
+  residualImpact?: string;
+  residualLikelihood?: string;
+  inherentImpact?: string;
+  inherentLikelihood?: string;
   createdAt: string;
 }
 
@@ -39,7 +50,7 @@ const RiskRegisterPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingRisk, setEditingRisk] = useState<Risk | null>(null);
-  
+
   // Form State
   const [formData, setFormData] = useState({
     title: '',
@@ -47,6 +58,10 @@ const RiskRegisterPage: React.FC = () => {
     category: 'Operational',
     impact: 'Medium',
     likelihood: 'Possible',
+    inherentImpact: 'Medium',
+    inherentLikelihood: 'Possible',
+    residualImpact: 'Low',
+    residualLikelihood: 'Unlikely',
     status: 'Identified'
   });
 
@@ -75,6 +90,10 @@ const RiskRegisterPage: React.FC = () => {
         category: risk.category,
         impact: risk.impact,
         likelihood: risk.likelihood,
+        inherentImpact: risk.inherentImpact || risk.impact,
+        inherentLikelihood: risk.inherentLikelihood || risk.likelihood,
+        residualImpact: risk.residualImpact || risk.impact,
+        residualLikelihood: risk.residualLikelihood || risk.likelihood,
         status: risk.status
       });
     } else {
@@ -85,6 +104,10 @@ const RiskRegisterPage: React.FC = () => {
         category: 'Operational',
         impact: 'Medium',
         likelihood: 'Possible',
+        inherentImpact: 'Medium',
+        inherentLikelihood: 'Possible',
+        residualImpact: 'Low',
+        residualLikelihood: 'Unlikely',
         status: 'Identified'
       });
     }
@@ -105,18 +128,31 @@ const RiskRegisterPage: React.FC = () => {
       }
       handleCloseDialog();
       fetchRisks();
-    } catch (error) {
+      MySwal.fire('Saved', 'Risk updated successfully', 'success');
+    } catch (error: any) {
       console.error('Failed to save risk:', error);
+      MySwal.fire('Error', error.message || 'Failed to save risk', 'error');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this risk?')) {
+    const result = await MySwal.fire({
+      title: 'Delete Risk?',
+      text: "This action cannot be undone.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
       try {
         await api.deleteRisk(id);
+        MySwal.fire('Deleted', 'Risk has been deleted.', 'success');
         fetchRisks();
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to delete risk:', error);
+        MySwal.fire('Error', error.message || 'Failed to delete risk', 'error');
       }
     }
   };
@@ -170,41 +206,67 @@ const RiskRegisterPage: React.FC = () => {
     { field: 'riskId', headerName: 'ID', width: 100 },
     { field: 'title', headerName: 'Risk Title', flex: 1 },
     { field: 'category', headerName: 'Category', width: 150 },
-    { 
-      field: 'impact', 
-      headerName: 'Impact', 
+    {
+      field: 'impact',
+      headerName: 'Impact',
       width: 120,
       renderCell: (params: GridRenderCellParams) => (
-        <Chip 
-          label={params.value} 
-          color={getImpactColor(params.value as string) as any} 
-          size="small" 
+        <Chip
+          label={params.value}
+          color={getImpactColor(params.value as string) as any}
+          size="small"
           variant="outlined"
         />
       )
     },
-    { 
-      field: 'likelihood', 
-      headerName: 'Likelihood', 
+    {
+      field: 'likelihood',
+      headerName: 'Likelihood',
       width: 120,
       renderCell: (params: GridRenderCellParams) => (
-        <Chip 
-          label={params.value} 
-          color={getLikelihoodColor(params.value as string) as any} 
-          size="small" 
+        <Chip
+          label={params.value}
+          color={getLikelihoodColor(params.value as string) as any}
+          size="small"
           variant="outlined"
         />
       )
     },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
+    {
+      field: 'inherentScore',
+      headerName: 'Inherent',
+      width: 90,
+      type: 'number',
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          {params.value || '-'}
+        </Typography>
+      )
+    },
+    {
+      field: 'residualScore',
+      headerName: 'Residual',
+      width: 90,
+      type: 'number',
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          {params.value || '-'}
+        </Typography>
+      )
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
       width: 120,
       renderCell: (params: GridRenderCellParams) => (
-        <Chip 
-          label={params.value} 
-          color={getStatusColor(params.value as string) as any} 
-          size="small" 
+        <Chip
+          label={params.value}
+          color={getStatusColor(params.value as string) as any}
+          size="small"
         />
       )
     },
@@ -232,9 +294,9 @@ const RiskRegisterPage: React.FC = () => {
         <Typography variant="h4" component="h1">
           Risk Register
         </Typography>
-        <Button 
-          variant="contained" 
-          color="primary" 
+        <Button
+          variant="contained"
+          color="primary"
           startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
         >
@@ -308,13 +370,16 @@ const RiskRegisterPage: React.FC = () => {
                   <MenuItem value="Closed">Closed</MenuItem>
                 </TextField>
               </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Divider sx={{ my: 1 }}><Chip label="Inherent Risk Assessment" size="small" /></Divider>
+              </Grid>
               <Grid size={{ xs: 6 }}>
                 <TextField
                   fullWidth
                   select
-                  label="Impact"
-                  value={formData.impact}
-                  onChange={(e) => setFormData({ ...formData, impact: e.target.value })}
+                  label="Inherent Impact"
+                  value={formData.inherentImpact}
+                  onChange={(e) => setFormData({ ...formData, inherentImpact: e.target.value })}
                 >
                   <MenuItem value="Low">Low</MenuItem>
                   <MenuItem value="Medium">Medium</MenuItem>
@@ -326,9 +391,42 @@ const RiskRegisterPage: React.FC = () => {
                 <TextField
                   fullWidth
                   select
-                  label="Likelihood"
-                  value={formData.likelihood}
-                  onChange={(e) => setFormData({ ...formData, likelihood: e.target.value })}
+                  label="Inherent Likelihood"
+                  value={formData.inherentLikelihood}
+                  onChange={(e) => setFormData({ ...formData, inherentLikelihood: e.target.value })}
+                >
+                  <MenuItem value="Rare">Rare</MenuItem>
+                  <MenuItem value="Unlikely">Unlikely</MenuItem>
+                  <MenuItem value="Possible">Possible</MenuItem>
+                  <MenuItem value="Likely">Likely</MenuItem>
+                  <MenuItem value="Certain">Certain</MenuItem>
+                </TextField>
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <Divider sx={{ my: 1 }}><Chip label="Residual Risk Assessment" size="small" /></Divider>
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Residual Impact"
+                  value={formData.residualImpact}
+                  onChange={(e) => setFormData({ ...formData, residualImpact: e.target.value })}
+                >
+                  <MenuItem value="Low">Low</MenuItem>
+                  <MenuItem value="Medium">Medium</MenuItem>
+                  <MenuItem value="High">High</MenuItem>
+                  <MenuItem value="Critical">Critical</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Residual Likelihood"
+                  value={formData.residualLikelihood}
+                  onChange={(e) => setFormData({ ...formData, residualLikelihood: e.target.value })}
                 >
                   <MenuItem value="Rare">Rare</MenuItem>
                   <MenuItem value="Unlikely">Unlikely</MenuItem>

@@ -26,14 +26,18 @@ import {
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import api from '../services/api';
 
+/* --- Types --- */
+interface TimesheetEntryAudit {
+  title: string;
+  auditName: string;
+  status: string;
+}
+
 interface TimesheetEntry {
   id: number;
   userId: number;
   auditId: number;
-  audit?: {
-    title: string;
-    status: string;
-  };
+  audit?: TimesheetEntryAudit;
   hours: number;
   workDate: string;
   activity?: string;
@@ -69,7 +73,7 @@ const TimesheetsPage: React.FC = () => {
       const userStr = localStorage.getItem('user');
       const user = userStr ? JSON.parse(userStr) : null;
       const userId = user?.id || 1;
-      
+
       const data = await api.getMyTimesheets(userId);
       setTimesheets(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -82,8 +86,13 @@ const TimesheetsPage: React.FC = () => {
 
   const fetchAudits = async () => {
     try {
-      const data = await api.getAudits();
-      setAudits(Array.isArray(data) ? data : []);
+      const data = await api.getAuditsLightweight();
+      // Map auditName (backend) to title (frontend state)
+      const mapped = Array.isArray(data) ? data.map((a: any) => ({
+        ...a,
+        title: a.auditName || a.title || 'Untitled Audit'
+      })) : [];
+      setAudits(mapped);
     } catch (error) {
       console.error('Failed to fetch audits:', error);
     }
@@ -131,7 +140,7 @@ const TimesheetsPage: React.FC = () => {
     try {
       const userStr = localStorage.getItem('user');
       const user = userStr ? JSON.parse(userStr) : null;
-      
+
       const submitData = {
         userId: user?.id || 1,
         auditId: parseInt(formData.auditId),
@@ -141,7 +150,6 @@ const TimesheetsPage: React.FC = () => {
       };
 
       if (editingEntry) {
-        // Update not implemented in API yet
         setSuccess('Update not available yet');
       } else {
         await api.logTime(submitData);
@@ -159,7 +167,6 @@ const TimesheetsPage: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this timesheet entry?')) {
       try {
-        // Delete not implemented in API yet
         setSuccess('Delete not available yet');
         fetchTimesheets();
       } catch (error) {
@@ -176,7 +183,7 @@ const TimesheetsPage: React.FC = () => {
   const getHoursByAudit = () => {
     const auditHours: { [key: string]: number } = {};
     timesheets.forEach(entry => {
-      const auditName = entry.audit?.title || 'Unknown Audit';
+      const auditName = entry.audit?.auditName || entry.audit?.title || 'Unknown Audit';
       auditHours[auditName] = (auditHours[auditName] || 0) + entry.hours;
     });
     return auditHours;
@@ -196,9 +203,9 @@ const TimesheetsPage: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
           My Timesheets
         </Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<AddIcon />} 
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
         >
           Log Time
@@ -208,7 +215,6 @@ const TimesheetsPage: React.FC = () => {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
-      {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, md: 4 }}>
           <Card>
@@ -225,7 +231,7 @@ const TimesheetsPage: React.FC = () => {
             <CardContent>
               <Typography variant="h6" gutterBottom>Hours by Audit</Typography>
               {Object.entries(getHoursByAudit()).map(([audit, hours]) => (
-                <Chip 
+                <Chip
                   key={audit}
                   label={`${audit}: ${hours.toFixed(1)}h`}
                   sx={{ m: 0.5 }}
@@ -236,7 +242,6 @@ const TimesheetsPage: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* Timesheets Table */}
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
         <TableContainer sx={{ maxHeight: 440 }}>
           <Table stickyHeader>
@@ -253,7 +258,7 @@ const TimesheetsPage: React.FC = () => {
               {timesheets.map((entry) => (
                 <TableRow key={entry.id}>
                   <TableCell>{new Date(entry.workDate).toLocaleDateString()}</TableCell>
-                  <TableCell>{entry.audit?.title || 'Unknown Audit'}</TableCell>
+                  <TableCell>{entry.audit?.auditName || entry.audit?.title || 'Unknown Audit'}</TableCell>
                   <TableCell>{entry.hours}</TableCell>
                   <TableCell>{entry.activity || '-'}</TableCell>
                   <TableCell>
@@ -280,7 +285,6 @@ const TimesheetsPage: React.FC = () => {
         </TableContainer>
       </Paper>
 
-      {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{editingEntry ? 'Edit Timesheet' : 'Log Time'}</DialogTitle>
         <DialogContent>

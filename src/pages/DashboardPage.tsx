@@ -190,41 +190,34 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card elevation={2}>
+          <Card elevation={2} sx={{ height: "100%" }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Audit Status Distribution
               </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={stats.auditStatusDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({
-                      name,
-                      percent,
-                    }: {
-                      name?: string | number;
-                      percent?: number;
-                    }) =>
-                      `${name || ""} ${(percent ? percent * 100 : 0).toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {stats.auditStatusDistribution.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <Box sx={{ width: "100%", py: 2 }}>
+                {stats.auditStatusDistribution.length > 0 ? (
+                  <Grid container spacing={2} justifyContent="center" alignItems="center">
+                    {stats.auditStatusDistribution.map((status) => {
+                      const totalAudits = stats.auditStatusDistribution.reduce((sum, item) => sum + (item.value as number), 0);
+                      return (
+                        <Grid size={{ xs: 6, sm: 4, md: 4 }} key={status.name}>
+                          <GaugeChart
+                            title={status.name}
+                            value={status.value as number}
+                            total={totalAudits}
+                            color={getStatusHexColor(status.name)}
+                          />
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                ) : (
+                  <Box display="flex" justifyContent="center" alignItems="center" height={150}>
+                    <Typography color="textSecondary">No data for audit status.</Typography>
+                  </Box>
+                )}
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -618,13 +611,13 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   const statusData = Object.entries(auditsByStatus).map(([status, count]) => ({
     name: status,
-    value: count,
+    value: count as number,
   }));
 
   const severityData = Object.entries(findingsBySeverity).map(
     ([severity, count]) => ({
       name: severity,
-      value: count,
+      value: count as number,
     }),
   );
 
@@ -689,44 +682,36 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
       {/* Charts */}
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12 }}>
           <Paper elevation={2} sx={{ p: 3 }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-              Audit Status Overview
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 3, display: "flex", alignItems: "center", gap: 1 }}>
+              <TrendingUpIcon color="primary" /> Audit Process & Performance
             </Typography>
-            {statusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
+            <Box sx={{ width: "100%", py: 2 }}>
+              {statusData.length > 0 ? (
+                <Grid container spacing={2} justifyContent="center" alignItems="center">
+                  {statusData.map((status) => (
+                    <Grid size={{ xs: 6, sm: 4, md: 2.4 }} key={status.name}>
+                      <GaugeChart
+                        title={status.name}
+                        value={status.value}
+                        total={audits.length}
+                        color={getStatusHexColor(status.name)}
                       />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <Typography color="textSecondary">
-                No audit data available
-              </Typography>
-            )}
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : (
+                <Box display="flex" justifyContent="center" alignItems="center" height={150}>
+                  <Typography color="textSecondary">No data for audit status.</Typography>
+                </Box>
+              )}
+            </Box>
           </Paper>
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <Paper elevation={2} sx={{ p: 3 }}>
+          <Paper elevation={2} sx={{ p: 3, height: "100%" }}>
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
               Findings by Severity
             </Typography>
@@ -747,60 +732,60 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             )}
           </Paper>
         </Grid>
-      </Grid>
 
-      {/* Recent Audits */}
-      <Box sx={{ mt: 3 }}>
-        <Paper elevation={2} sx={{ p: 3 }}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{ mb: 2 }}
-          >
-            <Typography variant="h6" fontWeight="bold">
-              Recent Audits
-            </Typography>
-            <Button onClick={() => onNavigate("audits")} size="small">
-              View All
-            </Button>
-          </Box>
-          <Divider sx={{ mb: 2 }} />
-          {loading ? (
-            <CircularProgress />
-          ) : audits.slice(0, 5).length > 0 ? (
-            <List>
-              {audits.slice(0, 5).map((audit, idx) => (
-                <React.Fragment key={audit.id}>
-                  {idx > 0 && <Divider component="li" />}
-                  <ListItem>
-                    <ListItemIcon>
-                      <AssignmentIcon color="primary" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={audit.auditName}
-                      secondary={
-                        <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
-                          <Chip label={audit.auditType} size="small" />
-                          <Chip
-                            label={audit.status}
-                            size="small"
-                            color={getStatusColor(audit.status)}
-                          />
-                        </Box>
-                      }
-                    />
-                  </ListItem>
-                </React.Fragment>
-              ))}
-            </List>
-          ) : (
-            <Typography color="textSecondary">
-              No audits assigned yet
-            </Typography>
-          )}
-        </Paper>
-      </Box>
+        {/* Recent Audits */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Paper elevation={2} sx={{ p: 3, height: "100%" }}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{ mb: 2 }}
+            >
+              <Typography variant="h6" fontWeight="bold">
+                Recent Audits
+              </Typography>
+              <Button onClick={() => onNavigate("audits")} size="small">
+                View All
+              </Button>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+            {loading ? (
+              <CircularProgress />
+            ) : audits.slice(0, 5).length > 0 ? (
+              <List>
+                {audits.slice(0, 5).map((audit, idx) => (
+                  <React.Fragment key={audit.id}>
+                    {idx > 0 && <Divider component="li" />}
+                    <ListItem>
+                      <ListItemIcon>
+                        <AssignmentIcon color="primary" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={audit.auditName}
+                        secondary={
+                          <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
+                            <Chip label={audit.auditType} size="small" />
+                            <Chip
+                              label={audit.status}
+                              size="small"
+                              color={getStatusColor(audit.status)}
+                            />
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  </React.Fragment>
+                ))}
+              </List>
+            ) : (
+              <Typography color="textSecondary">
+                No audits assigned yet
+              </Typography>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
     </Box >
   );
 };
@@ -994,6 +979,77 @@ const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   );
 };
 
+// Custom Gauge component utilizing Recharts PieChart
+// Custom Authentic SVG Speed Gauge
+const GaugeChart = ({ value, total, title, color }: { value: number, total: number, title: string, color: string }) => {
+  const percentage = total > 0 ? value / total : 0;
+
+  const dashArray = 157.1; // Circumference of semicircle (r=50) -> Math.PI * 50
+  const dashOffset = dashArray - (percentage * dashArray);
+
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let startTimestamp: number | null = null;
+    const duration = 1500; // Animation duration in milliseconds
+    const startValue = 0;
+    const endValue = value;
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+
+      // easeOutCubic easing function
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      const currentVal = Math.floor(startValue + easeProgress * (endValue - startValue));
+
+      setDisplayValue(currentVal);
+
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      } else {
+        setDisplayValue(endValue); // Ensure it ends exactly on the value
+      }
+    };
+
+    window.requestAnimationFrame(step);
+  }, [value]);
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 140, mx: 'auto', my: 1 }}>
+      <svg width="140" height="90" viewBox="0 0 140 90">
+        {/* Background track */}
+        <path
+          d="M 20 80 A 50 50 0 0 1 120 80"
+          fill="none"
+          stroke="#f0f2f5"
+          strokeWidth="12"
+          strokeLinecap="round"
+        />
+        {/* Value track */}
+        <path
+          d="M 20 80 A 50 50 0 0 1 120 80"
+          fill="none"
+          stroke={color}
+          strokeWidth="12"
+          strokeLinecap="round"
+          strokeDasharray={`${dashArray} ${dashArray}`}
+          strokeDashoffset={dashOffset}
+          style={{ transition: 'stroke-dashoffset 1.5s ease-out' }}
+        />
+      </svg>
+      <Box sx={{ textAlign: 'center', mt: -3 }}>
+        <Typography variant="h4" fontWeight="900" sx={{ color: '#0F1A2B', lineHeight: 1 }}>
+          {displayValue}
+        </Typography>
+        <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.65rem', mt: 0.5, display: 'block' }}>
+          {title}
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
 const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [stats, setStats] = useState({
     totalAudits: 0,
@@ -1067,7 +1123,7 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   }, {});
 
   const auditStatusData = Object.entries(auditStatusCounts).map(
-    ([name, value]) => ({ name, value }),
+    ([name, value]) => ({ name, value: value as number }),
   );
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
@@ -1179,19 +1235,22 @@ const CAEDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 3, display: "flex", alignItems: "center", gap: 1 }}>
               <TrendingUpIcon color="primary" /> Audit Process & Performance
             </Typography>
-            <Box sx={{ height: 350, width: "100%" }}>
+            <Box sx={{ width: "100%", py: 2 }}>
               {auditStatusData.length > 0 ? (
-                <ResponsiveContainer>
-                  <BarChart data={auditStatusData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} interval={0} />
-                    <YAxis />
-                    <Tooltip cursor={{ fill: 'transparent' }} />
-                    <Bar dataKey="value" fill="#1A237E" radius={[4, 4, 0, 0]} barSize={40} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <Grid container spacing={2} justifyContent="center" alignItems="center">
+                  {auditStatusData.map((status, index) => (
+                    <Grid size={{ xs: 6, sm: 4, md: 3 }} key={index}>
+                      <GaugeChart
+                        title={status.name}
+                        value={status.value}
+                        total={stats.totalAudits}
+                        color={getStatusHexColor(status.name)}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
               ) : (
-                <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                <Box display="flex" justifyContent="center" alignItems="center" height={150}>
                   <Typography color="textSecondary">No data for audit status.</Typography>
                 </Box>
               )}

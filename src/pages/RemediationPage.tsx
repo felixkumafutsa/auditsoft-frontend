@@ -26,7 +26,12 @@ import {
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
 import api from '../services/api';
+
+const MySwal = withReactContent(Swal);
 
 const RemediationPage: React.FC = () => {
   const [findings, setFindings] = useState<any[]>([]);
@@ -158,14 +163,18 @@ const RemediationPage: React.FC = () => {
         await api.updateActionPlan(actionPlan.id, { status: 'In Progress' });
       }
 
-      setSuccessMessage('Remediation evidence submitted and link to action plan updated!');
+      MySwal.fire({
+        title: 'Submitted!',
+        text: 'Remediation evidence submitted and action plan status updated.',
+        icon: 'success',
+        confirmButtonColor: '#0F1A2B'
+      });
       setFile(null);
       setDescription('');
       setSelectedActionPlanId('');
-      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err: any) {
       console.error('Upload failed', err);
-      setError(err.message || 'Failed to upload evidence.');
+      MySwal.fire('Error', err.message || 'Failed to upload evidence.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -230,8 +239,7 @@ const RemediationPage: React.FC = () => {
                   </CardContent>
                 </Card>
 
-                {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
-                {successMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage('')}>{successMessage}</Alert>}
+                {/* UI Feedback handled via SweetAlerts */}
 
                 <FormControl fullWidth sx={{ mb: 3 }} required>
                   <InputLabel id="action-plan-label">Select Action Plan</InputLabel>
@@ -327,16 +335,30 @@ const RemediationPage: React.FC = () => {
                           key={ev.id}
                           sx={{ border: '1px solid #eee', mb: 1, borderRadius: 1 }}
                           secondaryAction={
-                            <Button size="small" onClick={async () => {
-                              try {
-                                const blob = await api.downloadEvidence(ev.id);
-                                const url = window.URL.createObjectURL(blob);
-                                setPreviewUrl(url);
-                                setPreviewOpen(true);
-                              } catch (err) {
-                                console.error('Failed to preview', err);
-                              }
-                            }}>Preview</Button>
+                            <Button
+                              size="small"
+                              startIcon={<VisibilityIcon />}
+                              onClick={async () => {
+                                try {
+                                  let url = ev.fileUrl || ev.documentUrl;
+                                  if (!url) {
+                                    // Try to fetch via download blob if no direct URL
+                                    const blob = await api.downloadEvidence(ev.id);
+                                    url = window.URL.createObjectURL(blob);
+                                  } else if (!url.startsWith('http')) {
+                                    const apiBase = api.baseURL.replace('/api', '');
+                                    url = `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+                                  }
+                                  setPreviewUrl(url);
+                                  setPreviewOpen(true);
+                                } catch (err) {
+                                  console.error('Failed to preview', err);
+                                  MySwal.fire('Error', 'Failed to generate preview', 'error');
+                                }
+                              }}
+                            >
+                              Preview
+                            </Button>
                           }
                         >
                           <ListItemText

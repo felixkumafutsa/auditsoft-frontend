@@ -104,7 +104,7 @@ const ReportsFilesPage: React.FC = () => {
     const handlePreview = async (report: ReportFile) => {
         try {
             if (report.fileType === 'pdf') {
-                const blob = await api.downloadStoredAuditReport(report.auditId);
+                const blob = await api.previewAuditReport(report.auditId);
                 const url = window.URL.createObjectURL(blob);
                 window.open(url, '_blank');
                 // Set timeout to revoke URL

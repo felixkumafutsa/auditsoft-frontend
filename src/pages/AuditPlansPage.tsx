@@ -61,6 +61,11 @@ const AuditPlansPage: React.FC = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // Rejection State
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [auditToReject, setAuditToReject] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Auditor';
   const isAuditor = userRole === 'Auditor' || userRole === 'auditor';
   const isManager = userRole === 'Audit Manager' || userRole === 'Manager';
@@ -168,22 +173,37 @@ const AuditPlansPage: React.FC = () => {
     }
   };
 
-  const handleReject = async (id: number) => {
-    try {
-      const audit = audits.find(a => a.id === id);
-      if (audit) {
-        // Only send the fields that should be updated
-        await api.updateAudit(id, { 
-          status: 'Rejected'
-        });
-        setAudits(audits.map(a => a.id === id ? { ...a, status: 'Rejected' } : a));
-        if (selectedAudit?.id === id) {
-          setSelectedAudit({ ...audit, status: 'Rejected' });
-        }
+  const handleRejectClick = (id: number) => {
+    setAuditToReject(id);
+    setRejectDialogOpen(true);
+    setRejectionReason('');
+  };
+
+  const handleRejectConfirm = async () => {
+    if (auditToReject !== null) {
+      if (!rejectionReason.trim()) {
+        MySwal.fire('Error', 'Please provide a reason for rejection.', 'error');
+        return;
       }
-    } catch (error) {
-      console.error("Failed to reject audit", error);
+      
+      try {
+        const audit = audits.find(a => a.id === auditToReject);
+        if (audit) {
+          await api.transitionAudit(auditToReject, 'Rejected', userRole);
+          setAudits(audits.map(a => a.id === auditToReject ? { ...a, status: 'Rejected' } : a));
+          if (selectedAudit?.id === auditToReject) {
+            setSelectedAudit({ ...audit, status: 'Rejected' });
+          }
+          MySwal.fire('Rejected', 'Audit plan has been rejected.', 'success');
+        }
+      } catch (error) {
+        console.error("Failed to reject audit", error);
+        MySwal.fire('Error', "Failed to reject audit.", 'error');
+      }
     }
+    setRejectDialogOpen(false);
+    setAuditToReject(null);
+    setRejectionReason('');
   };
 
   const handleFinalize = async (id: number) => {
@@ -378,18 +398,6 @@ const AuditPlansPage: React.FC = () => {
       renderCell: (params) => params.value ? `$${params.value.toLocaleString()}` : '-'
     },
     {
-      field: 'executiveApproval',
-      headerName: 'Exec Approval',
-      width: 120,
-      renderCell: (params) => (
-        <Chip 
-          label={params.value ? 'Approved' : 'Pending'} 
-          size="small"
-          color={params.value ? 'success' : 'warning'}
-        />
-      )
-    },
-    {
       field: 'startDate',
       headerName: 'Start Date',
       width: 120,
@@ -418,7 +426,7 @@ const AuditPlansPage: React.FC = () => {
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Reject">
-                  <IconButton onClick={(e) => { e.stopPropagation(); handleReject(params.row.id); }} color="error" size="small">
+                  <IconButton onClick={(e) => { e.stopPropagation(); handleRejectClick(params.row.id); }} color="error" size="small">
                     <CancelIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
@@ -574,6 +582,7 @@ const AuditPlansPage: React.FC = () => {
           onDelete={handleDeleteAudit}
           onAssign={handleAssignClick}
           onApprove={handleApprove}
+          onReject={handleRejectClick}
           onManagePrograms={(audit: Audit) => { setSelectedAudit(audit); setView("programs"); }}
           onFinalize={(audit: Audit) => handleFinalize(audit.id)}
           onClose={(audit: Audit) => handleClose(audit.id)}
@@ -595,7 +604,10 @@ const AuditPlansPage: React.FC = () => {
           </Box>
           <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
             {selectedAudit?.status === 'Planned' && isCAE && (
-              <Button variant="contained" color="success" onClick={() => handleApprove(selectedAudit.id)}>Approve</Button>
+              <>
+                <Button variant="contained" color="success" onClick={() => handleApprove(selectedAudit.id)}>Approve</Button>
+                <Button variant="contained" color="error" onClick={() => handleRejectClick(selectedAudit.id)}>Reject</Button>
+              </>
             )}
             {selectedAudit?.status === 'Under Review' && isManager && (
               <Button variant="contained" color="success" onClick={() => handleFinalize(selectedAudit.id)}>Finalize</Button>
@@ -670,7 +682,7 @@ const AuditPlansPage: React.FC = () => {
                 {isCAE && selectedAudit.status === 'Planned' && (
                   <Button
                     fullWidth
-                    variant="outlined"
+                    variant="contained"
                     color="success"
                     startIcon={<CheckCircleIcon />}
                     onClick={() => {
@@ -679,6 +691,22 @@ const AuditPlansPage: React.FC = () => {
                     }}
                   >
                     Approve Audit Plan
+                  </Button>
+                )}
+
+                {/* Reject Plan - CAE when Planned */}
+                {isCAE && selectedAudit.status === 'Planned' && (
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="error"
+                    startIcon={<CancelIcon />}
+                    onClick={() => {
+                      setActionsModalOpen(false);
+                      handleRejectClick(selectedAudit.id);
+                    }}
+                  >
+                    Reject Audit Plan
                   </Button>
                 )}
 
@@ -814,6 +842,27 @@ const AuditPlansPage: React.FC = () => {
             />
           )}
         </DialogContent>
+      </Dialog>
+
+      {/* Reject Audit Dialog */}
+      <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Reject Audit Plan</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>Please provide a reason for rejecting this audit plan:</Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Rejection Reason"
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            placeholder="Enter detailed reason for rejection..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleRejectConfirm} variant="contained" color="error" autoFocus>Reject</Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

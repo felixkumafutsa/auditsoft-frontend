@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Auditsoft
+ * All rights reserved.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography, Alert, Paper } from '@mui/material';
@@ -5,12 +10,17 @@ import api from '../services/api';
 
 interface AuditLog {
   id: number;
-  user_id: number;
+  userId: number;
   action: string;
-  entity_type: string;
-  entity_id: number;
+  entityType: string;
+  entityId: number;
   timestamp: string;
-  ip_address: string;
+  ipAddress?: string;
+  deviceInfo?: string;
+  user?: {
+    name: string;
+    email: string;
+  };
 }
 
 const AuditLogsPage: React.FC = () => {
@@ -38,12 +48,40 @@ const AuditLogsPage: React.FC = () => {
 
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 70 },
-    { field: 'timestamp', headerName: 'Timestamp', width: 180 },
+    { 
+      field: 'timestamp', 
+      headerName: 'Timestamp', 
+      width: 180,
+      type: 'dateTime',
+      valueFormatter: (params: any) => {
+        if (!params.value) return 'N/A';
+        try {
+          const date = new Date(params.value);
+          // Check if date is valid
+          if (isNaN(date.getTime())) {
+            return 'Invalid Date';
+          }
+          return date.toLocaleString();
+        } catch (error) {
+          console.error('Timestamp formatting error:', error);
+          return 'Invalid Date';
+        }
+      }
+    },
     { field: 'action', headerName: 'Action', width: 200 },
-    { field: 'user_id', headerName: 'User ID', width: 100 },
-    { field: 'entity_type', headerName: 'Entity Type', width: 150 },
-    { field: 'entity_id', headerName: 'Entity ID', width: 100 },
-    { field: 'ip_address', headerName: 'IP Address', width: 150 },
+    { 
+      field: 'user', 
+      headerName: 'User', 
+      width: 200,
+      renderCell: (params) => {
+        const user = params.row.user;
+        return user ? `${user.name} (${user.email})` : `User ID: ${params.row.userId}`;
+      }
+    },
+    { field: 'entityType', headerName: 'Entity Type', width: 150 },
+    { field: 'entityId', headerName: 'Entity ID', width: 100 },
+    { field: 'ipAddress', headerName: 'IP Address', width: 150 },
+    { field: 'deviceInfo', headerName: 'Device Info', width: 200 },
   ];
 
   return (

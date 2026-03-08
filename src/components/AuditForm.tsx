@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Box, 
   TextField, 
@@ -30,15 +30,32 @@ interface AuditFormProps {
   initialData?: any;
 }
 
-const AuditForm: React.FC<AuditFormProps> = ({ 
-  onSuccess, 
-  onCancel, 
-  auditToEdit, 
+const AuditForm: React.FC<AuditFormProps> = ({
+  onSuccess,
+  onCancel,
+  auditToEdit,
   auditors = [],
   managers = [],
   auditUniverseItems = [],
   initialData
 }) => {
+  // Get current user and role
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string>('');
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setCurrentUser(user);
+        setUserRole(user.role || '');
+      } catch (e) {
+        console.error("Failed to parse user from local storage", e);
+      }
+    }
+  }, []);
+
   const [auditName, setAuditName] = useState('');
   const [auditType, setAuditType] = useState('Operational');
   const [startDate, setStartDate] = useState<Dayjs | null>(null);
@@ -161,7 +178,12 @@ const AuditForm: React.FC<AuditFormProps> = ({
       auditType,
       startDate: startDate ? startDate.toISOString() : null,
       endDate: endDate ? endDate.toISOString() : null,
-      status: auditToEdit ? auditToEdit.status : 'Planned',
+      // If audit is rejected and being updated by Manager or Chief Auditor, change status back to Planned
+      status: auditToEdit ? 
+        (auditToEdit.status === 'Rejected' && (userRole.includes('Manager') || userRole.includes('Chief') || userRole.includes('CAE')) 
+          ? 'Planned' 
+          : auditToEdit.status) 
+        : 'Planned',
       auditUniverseId: auditUniverseId === '' ? undefined : Number(auditUniverseId),
       assignedManagerId: assignedManagerId === '' ? undefined : Number(assignedManagerId),
       assignedAuditorIds: assignedAuditorIds,

@@ -1,9 +1,15 @@
+/*
+ * Copyright (c) 2026 Auditsoft
+ * All rights reserved.
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     CircularProgress,
     CssBaseline,
-    Drawer
+    Drawer,
+    Typography
 } from '@mui/material';
 import Sidebar from './Sidebar';
 import { Page } from '../types/navigation';
@@ -34,7 +40,6 @@ import AuditUniversePage from '../pages/AuditUniversePage';
 import ContinuousAuditsPage from '../pages/ContinuousAuditsPage';
 import IntegrationsPage from '../pages/IntegrationsPage';
 import MessagingPage from '../pages/MessagingPage';
-import ProcessOwnerPage from '../pages/ProcessOwnerPage';
 import BoardViewerPage from '../pages/BoardViewerPage';
 import OperationalReportsPage from '../pages/OperationalReportsPage';
 import CustomReportsPage from '../pages/CustomReportsPage';
@@ -215,8 +220,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 return <NotificationsPage />;
             case 'messaging':
                 return <MessagingPage />;
-            case 'process-owner':
-                return <ProcessOwnerPage />;
             case 'board-viewer':
                 return <BoardViewerPage />;
             default:
@@ -279,8 +282,35 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             </Box>
 
             {/* Main Content Area */}
-            <Box component="main" sx={{ flexGrow: 1, p: 3, width: '100%' }}>
-                {renderPage()}
+            <Box component="main" sx={{ flexGrow: 1, p: 3, width: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                    {renderPage()}
+                </Box>
+                
+                {/* Footer */}
+                <Box
+                    component="footer"
+                    sx={{
+                        mt: 'auto',
+                        py: 2,
+                        px: 3,
+                        backgroundColor: 'background.paper',
+                        borderTop: '1px solid',
+                        borderColor: 'divider',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 1
+                    }}
+                >
+                    <Typography variant="body2" color="text.primary" sx={{ order: { xs: 2, sm: 1 } }}>
+                        © 2026 Auditsoft. All rights reserved.
+                    </Typography>
+                    <Typography variant="body2" color="text.primary" sx={{ order: { xs: 1, sm: 2 } }}>
+                        Developed by Kapeleta
+                    </Typography>
+                </Box>
             </Box>
         </Box>
     );

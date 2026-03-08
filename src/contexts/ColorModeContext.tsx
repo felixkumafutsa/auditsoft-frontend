@@ -40,10 +40,10 @@ export const ColorModeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                         primary: { main: '#90caf9' },
                         secondary: { main: '#ce93d8' },
                         background: { default: '#0d1117', paper: '#161b22' },
-                        text: { primary: '#e6edf3', secondary: '#8b949e' },
+                        text: { primary: '#ffffff', secondary: '#c9d1d9' },
                         divider: 'rgba(255,255,255,0.12)',
                         action: {
-                            active: '#e6edf3',
+                            active: '#ffffff',
                             hover: 'rgba(255,255,255,0.08)',
                         },
                     }
@@ -74,7 +74,60 @@ export const ColorModeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                             '&.MuiButton-colorInherit': {
                                 color: t.palette.text.primary,
                             },
+                            // Enhanced button text visibility in dark mode
+                            ...(isDark && {
+                                color: '#ffffff',
+                                '&:hover': {
+                                    color: '#ffffff',
+                                },
+                                '&.MuiButton-contained': {
+                                    color: '#ffffff',
+                                    '&:hover': {
+                                        color: '#ffffff',
+                                    },
+                                },
+                                '&.MuiButton-outlined': {
+                                    color: '#ffffff',
+                                    borderColor: 'rgba(255,255,255,0.23)',
+                                    '&:hover': {
+                                        color: '#ffffff',
+                                        borderColor: '#90caf9',
+                                    },
+                                },
+                            }),
                         }),
+                    },
+                },
+                // ── Typography (Headings) ───────────────────────────────────────────
+                MuiTypography: {
+                    styleOverrides: {
+                        root: isDark ? {
+                            color: '#ffffff',
+                        } : {},
+                        h1: isDark ? {
+                            color: '#ffffff',
+                            fontWeight: 600,
+                        } : {},
+                        h2: isDark ? {
+                            color: '#ffffff',
+                            fontWeight: 600,
+                        } : {},
+                        h3: isDark ? {
+                            color: '#ffffff',
+                            fontWeight: 600,
+                        } : {},
+                        h4: isDark ? {
+                            color: '#ffffff',
+                            fontWeight: 600,
+                        } : {},
+                        h5: isDark ? {
+                            color: '#ffffff',
+                            fontWeight: 600,
+                        } : {},
+                        h6: isDark ? {
+                            color: '#ffffff',
+                            fontWeight: 600,
+                        } : {},
                     },
                 },
                 // ── Drawer ─────────────────────────────────────────────────────────
@@ -104,13 +157,13 @@ export const ColorModeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                         root: isDark
                             ? {
                                 borderBottomColor: 'rgba(255,255,255,0.12)',
-                                color: '#e6edf3',
+                                color: '#ffffff',
                             }
                             : {},
                         head: isDark
                             ? {
                                 backgroundColor: '#1c2128',
-                                color: '#e6edf3',
+                                color: '#ffffff',
                                 fontWeight: 600,
                             }
                             : {},
@@ -126,13 +179,32 @@ export const ColorModeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 },
                 MuiInputLabel: {
                     styleOverrides: {
-                        root: isDark ? { color: '#8b949e' } : {},
+                        root: isDark ? { color: '#c9d1d9' } : {},
                     },
                 },
                 // ── Chips ──────────────────────────────────────────────────────────
                 MuiChip: {
                     styleOverrides: {
-                        root: isDark ? { borderColor: 'rgba(255,255,255,0.23)' } : {},
+                        root: isDark ? { 
+                            borderColor: 'rgba(255,255,255,0.23)',
+                            color: '#ffffff',
+                        } : {},
+                    },
+                },
+                // ── Dialog ─────────────────────────────────────────────────────────
+                MuiDialogTitle: {
+                    styleOverrides: {
+                        root: isDark ? {
+                            color: '#ffffff',
+                            fontWeight: 600,
+                        } : {},
+                    },
+                },
+                MuiDialogContentText: {
+                    styleOverrides: {
+                        root: isDark ? {
+                            color: '#c9d1d9',
+                        } : {},
                     },
                 },
             },

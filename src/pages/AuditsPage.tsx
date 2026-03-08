@@ -225,6 +225,11 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [auditToApprove, setAuditToApprove] = useState<number | null>(null);
 
+  // Rejection State
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [auditToReject, setAuditToReject] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+
   // Check roles
   const isAuditor = currentUser?.role?.toLowerCase().includes('auditor');
   const isCAE = currentUser?.role?.toLowerCase().includes('cae') || currentUser?.role?.toLowerCase().includes('chief');
@@ -508,6 +513,36 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
     }
     setApproveDialogOpen(false);
     setAuditToApprove(null);
+  };
+
+  const handleRejectClick = useCallback((id: number) => {
+    setAuditToReject(id);
+    setRejectDialogOpen(true);
+    setRejectionReason('');
+  }, []);
+
+  const handleRejectConfirm = async () => {
+    if (auditToReject !== null) {
+      if (!rejectionReason.trim()) {
+        MySwal.fire('Error', 'Please provide a reason for rejection.', 'error');
+        return;
+      }
+      
+      try {
+        const audit = audits.find((a) => a.id === auditToReject);
+        if (audit) {
+          await api.transitionAudit(auditToReject, "Rejected", currentUser?.role);
+          setAudits(audits.map((a) => (a.id === auditToReject ? { ...a, status: "Rejected" } : a)));
+          MySwal.fire('Rejected', 'Audit plan has been rejected.', 'success');
+        }
+      } catch (err) {
+        console.error("Failed to reject audit", err);
+        MySwal.fire('Error', "Failed to reject audit.", 'error');
+      }
+    }
+    setRejectDialogOpen(false);
+    setAuditToReject(null);
+    setRejectionReason('');
   };
 
   const handleStartAudit = useCallback(async (audit: Audit) => {
@@ -1239,6 +1274,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
           onDelete={handleDeleteAudit}
           onAssign={handleAssignClick}
           onApprove={handleApproveClick}
+          onReject={handleRejectClick}
           onManagePrograms={(audit) => { setAuditToEdit(audit); setView("programs"); }}
           onFinalize={handleFinalizeAudit}
           onClose={handleCloseAudit}
@@ -1316,6 +1352,27 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
         <DialogActions>
           <Button onClick={() => setApproveDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleApproveConfirm} variant="contained" color="success" autoFocus>Approve</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reject Audit Dialog */}
+      <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Reject Audit Plan</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>Please provide a reason for rejecting this audit plan:</Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Rejection Reason"
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            placeholder="Enter detailed reason for rejection..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleRejectConfirm} variant="contained" color="error" autoFocus>Reject</Button>
         </DialogActions>
       </Dialog>
 
@@ -1416,7 +1473,7 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                 {isCAE && auditToEdit.status === 'Planned' && (
                   <Button
                     fullWidth
-                    variant="outlined"
+                    variant="contained"
                     color="success"
                     startIcon={<CheckCircleIcon />}
                     onClick={() => {
@@ -1425,6 +1482,22 @@ const AuditsPage: React.FC<AuditsPageProps> = ({ filterType = 'all' }) => {
                     }}
                   >
                     Approve Audit Plan
+                  </Button>
+                )}
+
+                {/* Reject Plan - CAE when Planned */}
+                {isCAE && auditToEdit.status === 'Planned' && (
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="error"
+                    startIcon={<CloseIcon />}
+                    onClick={() => {
+                      setActionsModalOpen(false);
+                      handleRejectClick(auditToEdit.id);
+                    }}
+                  >
+                    Reject Audit Plan
                   </Button>
                 )}
 

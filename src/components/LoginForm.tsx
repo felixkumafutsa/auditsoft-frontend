@@ -4,7 +4,6 @@ import {
   Button,
   TextField,
   Typography,
-  Paper,
   Container,
   Alert,
   CircularProgress
@@ -76,7 +75,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           alignItems: 'center',
         }}
       >
-        <Paper elevation={3} sx={{ p: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Box sx={{ p: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <Box
             component="img"
             src={logo}
@@ -87,8 +86,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
               mb: 2,
               objectFit: 'cover',
               borderRadius: '50%',
-              border: '2px solid #f0f2f5',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}
           />
           <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 'bold', color: '#0F1A2B' }}>
@@ -129,7 +126,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
               {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
             </Button>
           </Box>
-        </Paper>
+        </Box>
       </Box>
     </Container>
   );

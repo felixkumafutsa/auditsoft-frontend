@@ -24,7 +24,8 @@ import {
 } from '@mui/material';
 import {
     Save as SaveIcon,
-    AttachFile as AttachFileIcon,
+    Visibility as VisibilityIcon,
+    Download as DownloadIcon,
     CheckCircle as CheckCircleIcon,
     Description as DescriptionIcon
 } from '@mui/icons-material';
@@ -235,9 +236,6 @@ const AuditWorkpaperPage: React.FC = () => {
                         <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                                 <Typography variant="h6">Evidence</Typography>
-                                <Button startIcon={<AttachFileIcon />} size="small" onClick={() => navigate(`/evidence?programId=${programId}`)}>
-                                    Manage
-                                </Button>
                             </Box>
                             <Divider sx={{ mb: 2 }} />
 
@@ -253,6 +251,24 @@ const AuditWorkpaperPage: React.FC = () => {
                                                 secondary={ev.uploadedBy?.name || 'Unknown User'}
                                                 primaryTypographyProps={{ sx: { overflow: 'hidden', textOverflow: 'ellipsis' } }}
                                             />
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                <Button
+                                                    size="small"
+                                                    startIcon={<VisibilityIcon />}
+                                                    onClick={() => window.open(`/api/evidence/${ev.id}/view`, '_blank')}
+                                                    title="View Evidence"
+                                                >
+                                                    View
+                                                </Button>
+                                                <Button
+                                                    size="small"
+                                                    startIcon={<DownloadIcon />}
+                                                    onClick={() => window.open(`/api/evidence/${ev.id}/download`, '_blank')}
+                                                    title="Download Evidence"
+                                                >
+                                                    Download
+                                                </Button>
+                                            </Box>
                                         </ListItem>
                                     ))}
                                 </List>

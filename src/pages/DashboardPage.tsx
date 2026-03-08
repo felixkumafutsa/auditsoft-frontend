@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Box,
   Card,
@@ -121,29 +121,46 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     auditStatusDistribution: any[];
     tasks: any[];
     notifications: any[];
+    auditPlansCount: number;
+    programsCount: number;
+    remediationCount: number;
   }>({
     auditTrend: [],
     auditStatusDistribution: [],
     tasks: [],
     notifications: [],
+    auditPlansCount: 0,
+    programsCount: 0,
+    remediationCount: 0,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const dashboardStats = await api.getDashboardStats();
-        const tasks = await api.getMyTasks();
-        const notifications = await (api as any).getNotifications?.();
+        const [dashboardStats, tasks, notifications] = await Promise.all([
+          api.getDashboardStats(),
+          api.getMyTasks(),
+          (api as any).getNotifications?.() || Promise.resolve([]),
+        ]);
+
+        // Get counts for cards
+        const audits = await api.getAudits();
+        const auditPlansCount = Array.isArray(audits) ? audits.filter(a => a.status === 'Planned' || a.status === 'Approved' || a.status === 'In Progress').length : 0;
+        const programsCount = dashboardStats.auditStatusDistribution?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
+        const remediationCount = 0; // TODO: Add actual remediation count when available
 
         setStats({
           auditTrend: dashboardStats.auditTrend || [],
           auditStatusDistribution: dashboardStats.auditStatusDistribution || [],
           tasks: Array.isArray(tasks) ? tasks : [],
           notifications: Array.isArray(notifications) ? notifications : [],
+          auditPlansCount,
+          programsCount,
+          remediationCount,
         });
       } catch (e) {
-        // Error handling without logging
+        console.error('Error fetching audit manager dashboard:', e);
       } finally {
         setLoading(false);
       }
@@ -162,10 +179,101 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         Audit Manager Dashboard
       </Typography>
 
-      {/* Top Section: Quick Links/Stats */}
+      {/* Top Cards Section */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card elevation={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Card 
+            elevation={3} 
+            sx={{ 
+              cursor: 'pointer', 
+              transition: 'all 0.3s ease',
+              '&:hover': { 
+                transform: 'translateY(-4px)', 
+                boxShadow: 6 
+              } 
+            }}
+            onClick={() => onNavigate("audit-plans")}
+          >
+            <CardContent sx={{ textAlign: 'center', py: 3 }}>
+              <AssignmentIcon sx={{ fontSize: 48, color: '#1976d2', mb: 2 }} />
+              <Typography variant="h4" fontWeight="bold" color="primary">
+                {stats.auditPlansCount}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Audit Plans
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Card 
+            elevation={3} 
+            sx={{ 
+              cursor: 'pointer', 
+              transition: 'all 0.3s ease',
+              '&:hover': { 
+                transform: 'translateY(-4px)', 
+                boxShadow: 6 
+              } 
+            }}
+            onClick={() => onNavigate("audit-programs")}
+          >
+            <CardContent sx={{ textAlign: 'center', py: 3 }}>
+              <DescriptionIcon sx={{ fontSize: 48, color: '#2e7d32', mb: 2 }} />
+              <Typography variant="h4" fontWeight="bold" color="primary">
+                {stats.programsCount}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Programs
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Card 
+            elevation={3} 
+            sx={{ 
+              cursor: 'pointer', 
+              transition: 'all 0.3s ease',
+              '&:hover': { 
+                transform: 'translateY(-4px)', 
+                boxShadow: 6 
+              } 
+            }}
+            onClick={() => onNavigate("remediation")}
+          >
+            <CardContent sx={{ textAlign: 'center', py: 3 }}>
+              <GavelIcon sx={{ fontSize: 48, color: '#ed6c02', mb: 2 }} />
+              <Typography variant="h4" fontWeight="bold" color="primary">
+                {stats.remediationCount}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Remediation
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Card elevation={3}>
+            <CardContent sx={{ textAlign: 'center', py: 3 }}>
+              <BarChartIcon sx={{ fontSize: 48, color: '#388e3c', mb: 2 }} />
+              <Typography variant="h4" fontWeight="bold" color="primary">
+                {stats.auditTrend.reduce((sum: number, item: any) => sum + (item.audits || 0), 0)}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Total Audits
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Main Content Area - Charts stacked on left, tasks/notifications on right */}
+      <Grid container spacing={3}>
+        {/* Charts Section - 8 columns wide */}
+        <Grid size={{ xs: 12, md: 8 }}>
+          {/* Audit Planning Snapshot */}
+          <Card elevation={2} sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Audit Planning Snapshot
@@ -187,10 +295,9 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-        </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card elevation={2} sx={{ height: "100%" }}>
+          {/* Audit Status Distribution */}
+          <Card elevation={2}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Audit Status Distribution
@@ -199,7 +306,7 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 {stats.auditStatusDistribution.length > 0 ? (
                   <Grid container spacing={2} justifyContent="center" alignItems="center">
                     {stats.auditStatusDistribution.map((status) => {
-                      const totalAudits = stats.auditStatusDistribution.reduce((sum, item) => sum + (item.value as number), 0);
+                      const totalAudits = stats.auditStatusDistribution.reduce((sum: number, item: any) => sum + (item.value as number), 0);
                       return (
                         <Grid size={{ xs: 6, sm: 4, md: 4 }} key={status.name}>
                           <GaugeChart
@@ -221,64 +328,20 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </CardContent>
           </Card>
         </Grid>
-      </Grid>
 
-      {/* Middle Section: Quick Actions */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* Right Side Section - 4 columns wide */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<AssignmentIcon />}
-            fullWidth
-            onClick={() => onNavigate("audit-plans")}
-            sx={{ py: 2, bgcolor: "#1976d2" }}
-          >
-            Audit Plans
-          </Button>
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<DescriptionIcon />}
-            fullWidth
-            onClick={() => onNavigate("audit-programs")}
-            sx={{ py: 2, bgcolor: "#2e7d32" }}
-          >
-            Programs
-          </Button>
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<GavelIcon />}
-            fullWidth
-            onClick={() => onNavigate("remediation")}
-            sx={{ py: 2, bgcolor: "#ed6c02" }}
-          >
-            Remediation
-          </Button>
-        </Grid>
-      </Grid>
-
-      {/* Resource Management */}
-      <Box sx={{ mb: 4 }}>
-        {/* Time logging removed - access via navigation */}
-      </Box>
-
-      {/* Bottom Section: Tasks & Notifications */}
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card elevation={2}>
+          {/* My Tasks */}
+          <Card elevation={2} sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 My Tasks
               </Typography>
               <List>
-                {stats.tasks.length > 0 ? (
-                  stats.tasks.map((task: any, index) => (
+                {loading ? (
+                  <CircularProgress />
+                ) : stats.tasks.length > 0 ? (
+                  stats.tasks.slice(0, 5).map((task: any, index: number) => (
                     <ListItem key={index}>
                       <ListItemIcon>
                         <CheckCircleIcon color="primary" />
@@ -297,22 +360,22 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </List>
             </CardContent>
           </Card>
-        </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
+          {/* Recent Notifications */}
           <Card elevation={2}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Recent Notifications
               </Typography>
               <List>
-                {stats.notifications.length > 0 ? (
+                {loading ? (
+                  <CircularProgress />
+                ) : stats.notifications.length > 0 ? (
                   stats.notifications.slice(0, 5).map((n: any) => {
                     const isAuditReport =
                       typeof n.title === "string" &&
                       (n.title.toLowerCase().includes("audit closed") ||
                         n.title.toLowerCase().includes("report"));
-
                     const Icon =
                       n.type === "action_required"
                         ? WarningIcon
@@ -323,7 +386,6 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                             : n.type === "warning"
                               ? WarningIcon
                               : DescriptionIcon;
-
                     return (
                       <ListItem key={n.id}>
                         <ListItemIcon>
@@ -805,17 +867,78 @@ const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           api.getNotifications?.() || Promise.resolve([]),
           api.getMyTasks?.() || Promise.resolve([]),
         ]);
+        
+        // Debug: Log the received data
+        console.log('Auditor Dashboard - Received audits:', auditsData);
+        console.log('Auditor Dashboard - Current user:', JSON.parse(localStorage.getItem('user') || '{}'));
+        
         setMyAudits(Array.isArray(auditsData) ? auditsData : []);
         setNotifications(Array.isArray(notificationsData) ? notificationsData : []);
         setTasks(Array.isArray(tasksData) ? tasksData : []);
       } catch (e) {
-        // Error handling without logging
+        console.error('Error fetching auditor dashboard data:', e);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
   }, []);
+
+  // Process weekly audit data for the line chart
+  const weeklyAuditData = useMemo(() => {
+    const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+    const weeklyCounts = [0, 0, 0, 0];
+    
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    myAudits.forEach(audit => {
+      if (audit.createdAt) {
+        const auditDate = new Date(audit.createdAt);
+        // Only include audits from current month
+        if (auditDate.getMonth() === currentMonth && auditDate.getFullYear() === currentYear) {
+          const dayOfMonth = auditDate.getDate();
+          const weekOfMonth = Math.ceil(dayOfMonth / 7);
+          if (weekOfMonth >= 1 && weekOfMonth <= 4) {
+            weeklyCounts[weekOfMonth - 1]++;
+          }
+        }
+      }
+    });
+
+    return weeks.map((week, index) => ({
+      week,
+      audits: weeklyCounts[index]
+    }));
+  }, [myAudits]);
+
+  // Process audit distribution data for pie chart
+  const auditDistributionData = useMemo(() => {
+    const distribution = {
+      'In Progress': 0,
+      'Completed': 0,
+      'Under Review': 0,
+      'Planned': 0
+    };
+
+    myAudits.forEach(audit => {
+      if (audit.status === 'Closed' || audit.status === 'Finalized') {
+        distribution['Completed']++;
+      } else if (distribution.hasOwnProperty(audit.status)) {
+        distribution[audit.status as keyof typeof distribution]++;
+      }
+    });
+
+    // Filter out categories with zero values for better pie chart display
+    return Object.entries(distribution)
+      .filter(([_, value]) => value > 0)
+      .map(([name, value]) => ({
+        name,
+        value,
+        color: getStatusHexColor(name === 'Completed' ? 'Closed' : name)
+      }));
+  }, [myAudits]);
 
   const activeAudits = myAudits.filter(
     (a) => a.status === "In Progress",
@@ -824,15 +947,18 @@ const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     (a) => a.status === "Closed" || a.status === "Finalized",
   ).length;
 
+  const COLORS = ['#1976d2', '#388e3c', '#f57c00', '#d32f2f'];
+
   return (
     <Box>
       <Typography
         variant="h4"
         sx={{ color: "#0F1A2B", fontWeight: "bold", mb: 3 }}
       >
-        My Audits Dashboard
+        Auditor Dashboard
       </Typography>
 
+      {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
@@ -869,11 +995,76 @@ const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </Grid>
       </Grid>
 
-      {/* Recent Tasks & Notifications */}
+      {/* Main Content Area - Charts wider than right side */}
       <Grid container spacing={3}>
-        {/* My Tasks Card */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        {/* Charts Section - 8 columns wide */}
+        <Grid size={{ xs: 12, md: 8 }}>
+          {/* Weekly Audit Logs Chart */}
+          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+              {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} Audit Logs
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={weeklyAuditData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="audits" 
+                  stroke="#1976d2" 
+                  strokeWidth={2}
+                  name="Number of Audits"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </Paper>
+
+          {/* Audit Distribution Pie Chart */}
           <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+              Audit Distribution
+            </Typography>
+            {auditDistributionData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={auditDistributionData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={(props: any) => {
+                      const name = props.name || '';
+                      const percent = props.percent || 0;
+                      return `${name}: ${(percent * 100).toFixed(0)}%`;
+                    }}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {auditDistributionData.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="body1" color="textSecondary" textAlign="center">
+                  No audit data available for distribution chart
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Right Side Section - 4 columns wide */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          {/* Recent Tasks */}
+          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
             <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
               <AssignmentIcon color="primary" />
               <Typography variant="h6" fontWeight="bold">
@@ -909,10 +1100,8 @@ const AuditorDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </Alert>
             )}
           </Paper>
-        </Grid>
 
-        {/* Notifications Card */}
-        <Grid size={{ xs: 12, md: 6 }}>
+          {/* Notifications */}
           <Paper elevation={2} sx={{ p: 3 }}>
             <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
               <HistoryIcon color="primary" />

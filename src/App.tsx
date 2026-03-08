@@ -1,5 +1,11 @@
+/*
+ * Copyright (c) 2026 Auditsoft
+ * All rights reserved.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { Box } from '@mui/material';
 import LoginPage from './pages/LoginPage';
 import MainLayout from './components/MainLayout';
 import AuditWorkpaperPage from './pages/AuditWorkpaperPage';
@@ -30,16 +36,18 @@ const App: React.FC = () => {
     };
 
     return (
-        <ColorModeProvider>
-            {isAuthenticated ? (
-                <Routes>
-                    <Route path="/workpaper/:programId" element={<AuditWorkpaperPage />} />
-                    <Route path="/*" element={<MainLayout onLogout={handleLogout} />} />
-                </Routes>
-            ) : (
-                <LoginPage onLoginSuccess={handleLoginSuccess} />
-            )}
-        </ColorModeProvider>
+        <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <ColorModeProvider>
+                {isAuthenticated ? (
+                    <Routes>
+                        <Route path="/workpaper/:programId" element={<AuditWorkpaperPage />} />
+                        <Route path="/*" element={<MainLayout onLogout={handleLogout} />} />
+                    </Routes>
+                ) : (
+                    <LoginPage onLoginSuccess={handleLoginSuccess} />
+                )}
+            </ColorModeProvider>
+        </Box>
     );
 };
 

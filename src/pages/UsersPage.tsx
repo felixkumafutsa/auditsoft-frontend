@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Auditsoft
+ * All rights reserved.
+ */
+
 import React, { useEffect, useState } from 'react';
 import { 
   Box, 
@@ -21,6 +26,7 @@ import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import Swal from 'sweetalert2';
 import api from '../services/api';
 
 interface User {
@@ -150,14 +156,37 @@ const UsersPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
+  const handleDelete = async (id: number, userName: string) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `You are about to delete the user "${userName}". This action cannot be undone!`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete user!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
       try {
         await api.deleteUser(id);
+        await Swal.fire({
+          title: 'Deleted!',
+          text: `User "${userName}" has been deleted successfully.`,
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
         fetchData();
       } catch (err) {
         console.error('Delete failed', err);
-        alert('Failed to delete user.');
+        await Swal.fire({
+          title: 'Error!',
+          text: 'Failed to delete user. Please try again.',
+          icon: 'error',
+          confirmButtonColor: '#3085d6'
+        });
       }
     }
   };
@@ -196,7 +225,7 @@ const UsersPage: React.FC = () => {
           <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
             <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton size="small" color="error" onClick={() => handleDelete(params.row.id)}>
+          <IconButton size="small" color="error" onClick={() => handleDelete(params.row.id, params.row.name)}>
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>

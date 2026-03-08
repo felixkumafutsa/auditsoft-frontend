@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -21,9 +21,13 @@ import {
   LinearProgress,
   Alert,
   Tabs,
-  Tab
+  Tab,
+  Tooltip
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { 
+  ArrowBack as ArrowBackIcon,
+  Email as EmailIcon
+} from '@mui/icons-material';
 import api from '../services/api';
 
 interface AnnualPlan {
@@ -56,12 +60,7 @@ const StrategicAuditPlanPage: React.FC = () => {
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i);
 
-  useEffect(() => {
-    fetchAnnualPlan();
-    fetchRecommendations();
-  }, [selectedYear]);
-
-  const fetchAnnualPlan = async () => {
+  const fetchAnnualPlan = useCallback(async () => {
     setLoading(true);
     try {
       const data = await api.getAnnualPlan(selectedYear);
@@ -71,16 +70,22 @@ const StrategicAuditPlanPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedYear]);
 
-  const fetchRecommendations = async () => {
+  const fetchRecommendations = useCallback(async () => {
     try {
       const data = await api.getRiskBasedRecommendations(10);
       setRecommendations(data);
     } catch (error) {
       console.error('Failed to fetch recommendations:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAnnualPlan();
+    fetchRecommendations();
+  }, [selectedYear, fetchAnnualPlan, fetchRecommendations]);
+
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -423,6 +428,7 @@ const StrategicAuditPlanPage: React.FC = () => {
           </Grid>
         </Grid>
       )}
+
     </Box>
   );
 };

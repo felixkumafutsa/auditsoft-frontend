@@ -354,6 +354,10 @@ class ApiClient {
   saveCustomReport = (data: any) => this.post('/reports/custom/save', data);
   getSavedReports = () => this.get('/reports/saved');
 
+  // --- Report Sharing ---
+  shareAuditReport = (auditId: number, email: string, message?: string) =>
+    this.post(`/reports/audit/${auditId}/share`, { email, message });
+
   // --- Tasks & Alerts ---
   getMyTasks = () => this.get('/users/me/tasks');
 

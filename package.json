@@ -1,6 +1,8 @@
 {
   "name": "auditsoft-frontend",
   "version": "0.1.0",
+  "description": "Auditsoft Frontend Application - Enterprise Audit Management System",
+  "author": "Auditsoft",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.14.0",

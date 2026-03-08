@@ -77,6 +77,7 @@ interface AuditExecutionModuleProps {
   onDelete?: (id: number) => void;
   onAssign?: (audit: Audit) => void;
   onApprove?: (id: number) => void;
+  onReject?: (id: number) => void;
   onManagePrograms?: (audit: Audit) => void;
   onFinalize?: (audit: Audit) => void;
   onClose?: (audit: Audit) => void;
@@ -91,6 +92,7 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
   onDelete,
   onAssign,
   onApprove,
+  onReject,
   onManagePrograms,
   onFinalize,
   onClose,
@@ -539,6 +541,18 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
               onClick={() => onApprove(selectedAudit.id)}
             >
               Approve Plan
+            </Button>
+          )}
+
+          {isCAE && selectedAudit.status === 'Planned' && onReject && (
+            <Button
+              variant="contained"
+              size="small"
+              color="error"
+              startIcon={<CancelIcon />}
+              onClick={() => onReject(selectedAudit.id)}
+            >
+              Reject Plan
             </Button>
           )}
 

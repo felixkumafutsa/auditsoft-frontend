@@ -307,6 +307,8 @@ class ApiClient {
   getOperationalReports = () => this.get('/reports/operational');
   getReportsList = () => this.get('/reports/list');
   getRiskHeatmap = () => this.get('/reports/risk-heatmap');
+  shareAuditReport = (auditId: number, email: string, message?: string) =>
+    this.post(`/reports/audit/${auditId}/share`, { email, message });
 
   downloadAuditReportPDF = (auditId: number) => {
     return fetch(`${BASE_URL}/reports/audit/${auditId}/pdf`, {
@@ -353,10 +355,6 @@ class ApiClient {
   saveReport = (auditId: number) => this.post(`/reports/audit/${auditId}/save`, {});
   saveCustomReport = (data: any) => this.post('/reports/custom/save', data);
   getSavedReports = () => this.get('/reports/saved');
-
-  // --- Report Sharing ---
-  shareAuditReport = (auditId: number, email: string, message?: string) =>
-    this.post(`/reports/audit/${auditId}/share`, { email, message });
 
   // --- Tasks & Alerts ---
   getMyTasks = () => this.get('/users/me/tasks');

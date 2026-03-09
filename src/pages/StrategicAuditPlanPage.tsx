@@ -63,10 +63,34 @@ const StrategicAuditPlanPage: React.FC = () => {
   const fetchAnnualPlan = useCallback(async () => {
     setLoading(true);
     try {
+      console.log('Fetching annual plan for year:', selectedYear);
+      console.log('API URL:', process.env.REACT_APP_API_URL || 'http://localhost:4000');
       const data = await api.getAnnualPlan(selectedYear);
+      console.log('Annual plan data received:', data);
       setAnnualPlan(data);
     } catch (error) {
       console.error('Failed to fetch annual plan:', error);
+      // Set a fallback empty plan so the UI doesn't break
+      setAnnualPlan({
+        year: selectedYear,
+        summary: {
+          totalAudits: 0,
+          totalBudget: 0,
+          totalResourceHours: 0,
+          highRiskAudits: 0,
+          approvedAudits: 0,
+          riskDistribution: {},
+          quarterlyDistribution: {}
+        },
+        quarterlyPlan: {
+          Q1: [],
+          Q2: [],
+          Q3: [],
+          Q4: [],
+          Unassigned: []
+        },
+        audits: []
+      });
     } finally {
       setLoading(false);
     }
@@ -74,10 +98,14 @@ const StrategicAuditPlanPage: React.FC = () => {
 
   const fetchRecommendations = useCallback(async () => {
     try {
+      console.log('Fetching risk-based recommendations...');
       const data = await api.getRiskBasedRecommendations(10);
+      console.log('Recommendations data received:', data);
       setRecommendations(data);
     } catch (error) {
       console.error('Failed to fetch recommendations:', error);
+      // Set empty recommendations so the UI doesn't break
+      setRecommendations([]);
     }
   }, []);
 

@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { Download as DownloadIcon, Description as FileIcon, Visibility as PreviewIcon, Share as ShareIcon } from '@mui/icons-material';
 import api from '../services/api';
+import ShareReportDialog from '../components/ShareReportDialog';
 
 interface ReportFile {
     id: number;
@@ -34,6 +35,8 @@ const ReportsFilesPage: React.FC = () => {
     const [reports, setReports] = useState<ReportFile[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
+    const [reportForSharing, setReportForSharing] = useState<any>(null);
 
     const userRole = localStorage.getItem('userRole') || '';
     const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)' || userRole === 'Chief Auditor';
@@ -121,16 +124,32 @@ const ReportsFilesPage: React.FC = () => {
     };
 
     const handleShare = (report: ReportFile) => {
-        // Displaying a simple alert simulation for sharing behavior.
-        // In a real application, you might use the navigator.share API or open a modal wrapper
-        if (navigator.share) {
-            navigator.share({
-                title: `${report.title || report.auditName} Report`,
-                text: `Please review the attached audit report for ${report.auditName}.`,
-                url: window.location.href, // Or secure file link if generated
-            }).catch(console.error);
-        } else {
-            alert(`Share dialogue initiated for: ${report.title || report.auditName} Report.\nIn a production environment, this would open an email draft or copy a secure link.`);
+        setReportForSharing(report);
+        setShareDialogOpen(true);
+    };
+
+    const handleCloseShareDialog = () => {
+        setShareDialogOpen(false);
+        setReportForSharing(null);
+    };
+
+    const handleShareReport = async (email: string, message: string) => {
+        try {
+            if (!reportForSharing) {
+                throw new Error('No report selected for sharing');
+            }
+
+            console.log('Sharing report:', reportForSharing, 'to:', email, 'message:', message);
+            
+            // Call the actual API to share the report
+            const result = await api.shareAuditReport(reportForSharing.auditId, email, message);
+            
+            console.log('Share result:', result);
+            alert(`Report shared successfully to ${email}`);
+            handleCloseShareDialog();
+        } catch (error) {
+            console.error('Failed to share report:', error);
+            alert('Failed to share report. Please try again.');
         }
     };
 
@@ -244,6 +263,14 @@ const ReportsFilesPage: React.FC = () => {
                     </Table>
                 </TableContainer>
             </Paper>
+            
+            {/* Share Report Dialog */}
+            <ShareReportDialog
+                open={shareDialogOpen}
+                onClose={handleCloseShareDialog}
+                report={reportForSharing}
+                onShare={handleShareReport}
+            />
         </Container>
     );
 };

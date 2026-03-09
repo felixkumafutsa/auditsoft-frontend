@@ -28,11 +28,16 @@ const ShareReportDialog: React.FC<ShareReportDialogProps> = ({
   onShare
 }) => {
   const [email, setEmail] = useState('');
-  const [message, setMessage] = useState(
-    `Please find the attached audit report: ${report.title || report.auditName}. This report contains important audit findings and recommendations that require your attention.`
-  );
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Initialize message when report is available
+  React.useEffect(() => {
+    if (report) {
+      setMessage(`Please find the attached audit report: ${report.title || report.auditName || 'Untitled Report'}. This report contains important audit findings and recommendations that require your attention.`);
+    }
+  }, [report]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +59,9 @@ const ShareReportDialog: React.FC<ShareReportDialogProps> = ({
     try {
       await onShare(email.trim(), message);
       setEmail('');
-      setMessage(`Please find the attached audit report: ${report.title || report.auditName}. This report contains important audit findings and recommendations that require your attention.`);
+      if (report) {
+        setMessage(`Please find the attached audit report: ${report.title || report.auditName || 'Untitled Report'}. This report contains important audit findings and recommendations that require your attention.`);
+      }
       onClose();
     } catch (err: any) {
       setError(err.message || 'Failed to share report. Please try again.');
@@ -69,6 +76,11 @@ const ShareReportDialog: React.FC<ShareReportDialogProps> = ({
       onClose();
     }
   };
+
+  // Don't render if report is null
+  if (!report) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
@@ -99,7 +111,7 @@ const ShareReportDialog: React.FC<ShareReportDialogProps> = ({
                   color="primary" 
                 />
                 <Chip 
-                  label={`Audit: ${report.auditName}`} 
+                  label={`Audit: ${report.auditName || 'Unknown Audit'}`} 
                   size="small" 
                   variant="outlined" 
                 />

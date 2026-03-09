@@ -121,17 +121,19 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     auditStatusDistribution: any[];
     tasks: any[];
     notifications: any[];
-    auditPlansCount: number;
+    totalAudits: number;
     programsCount: number;
-    remediationCount: number;
+    openFindings: number;
+    totalReports: number;
   }>({
     auditTrend: [],
     auditStatusDistribution: [],
     tasks: [],
     notifications: [],
-    auditPlansCount: 0,
+    totalAudits: 0,
     programsCount: 0,
-    remediationCount: 0,
+    openFindings: 0,
+    totalReports: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -145,19 +147,17 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         ]);
 
         // Get counts for cards
-        const audits = await api.getAudits();
-        const auditPlansCount = Array.isArray(audits) ? audits.filter(a => a.status === 'Planned' || a.status === 'Approved' || a.status === 'In Progress').length : 0;
         const programsCount = dashboardStats.auditStatusDistribution?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
-        const remediationCount = 0; // TODO: Add actual remediation count when available
 
         setStats({
           auditTrend: dashboardStats.auditTrend || [],
           auditStatusDistribution: dashboardStats.auditStatusDistribution || [],
           tasks: Array.isArray(tasks) ? tasks : [],
           notifications: Array.isArray(notifications) ? notifications : [],
-          auditPlansCount,
+          totalAudits: dashboardStats.totalAudits || 0,
           programsCount,
-          remediationCount,
+          openFindings: dashboardStats.openFindings || 0,
+          totalReports: dashboardStats.totalReports || 0,
         });
       } catch (e) {
         console.error('Error fetching audit manager dashboard:', e);
@@ -192,15 +192,15 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 boxShadow: 6 
               } 
             }}
-            onClick={() => onNavigate("audit-plans")}
+            onClick={() => onNavigate("audits")}
           >
             <CardContent sx={{ textAlign: 'center', py: 3 }}>
-              <AssignmentIcon sx={{ fontSize: 48, color: '#1976d2', mb: 2 }} />
+              <BarChartIcon sx={{ fontSize: 48, color: '#1976d2', mb: 2 }} />
               <Typography variant="h4" fontWeight="bold" color="primary">
-                {stats.auditPlansCount}
+                {stats.totalAudits}
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                Audit Plans
+                Total Audits
               </Typography>
             </CardContent>
           </Card>
@@ -240,28 +240,39 @@ const AuditManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 boxShadow: 6 
               } 
             }}
-            onClick={() => onNavigate("remediation")}
+            onClick={() => onNavigate("findings")}
           >
             <CardContent sx={{ textAlign: 'center', py: 3 }}>
               <GavelIcon sx={{ fontSize: 48, color: '#ed6c02', mb: 2 }} />
               <Typography variant="h4" fontWeight="bold" color="primary">
-                {stats.remediationCount}
+                {stats.openFindings}
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                Remediation
+                Findings
               </Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card elevation={3}>
+          <Card 
+            elevation={3} 
+            sx={{ 
+              cursor: 'pointer', 
+              transition: 'all 0.3s ease',
+              '&:hover': { 
+                transform: 'translateY(-4px)', 
+                boxShadow: 6 
+              } 
+            }}
+            onClick={() => onNavigate("reports-executive")}
+          >
             <CardContent sx={{ textAlign: 'center', py: 3 }}>
-              <BarChartIcon sx={{ fontSize: 48, color: '#388e3c', mb: 2 }} />
+              <AssessmentIcon sx={{ fontSize: 48, color: '#388e3c', mb: 2 }} />
               <Typography variant="h4" fontWeight="bold" color="primary">
-                {stats.auditTrend.reduce((sum: number, item: any) => sum + (item.audits || 0), 0)}
+                {stats.totalReports}
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                Total Audits
+                Reports
               </Typography>
             </CardContent>
           </Card>
@@ -709,7 +720,7 @@ const ManagerDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Open Findings"
-            value={findings.filter((f) => f.status !== "Closed").length}
+            value={findings.filter((f) => f.status !== "Closed" && f.status !== "Remediated").length}
             icon={<WarningIcon fontSize="large" />}
             color="#d32f2f"
             onClick={() => onNavigate("findings")}

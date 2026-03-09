@@ -25,8 +25,6 @@ export const getStatusColor = (status: string): "default" | "primary" | "seconda
             return 'secondary';
         case 'Remediation In Progress':
             return 'warning';
-        case 'Verified':
-            return 'info';
         // Finding Close matches Audit Close
 
         // Evidence Lifecycle

@@ -20,6 +20,7 @@ export type Page =
   | 'workflow-config'
   | 'audit-logs'
   | 'system-settings'
+  | 'reports'
   | 'reports-executive'
   | 'reports-operational'
   | 'reports-custom'

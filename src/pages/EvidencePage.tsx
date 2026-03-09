@@ -245,7 +245,10 @@ const EvidencePage: React.FC = () => {
 
   // Upload Handlers
   const handleUpload = async () => {
-    if (!selectedProgramId || !file) return;
+    if (!selectedProgramId || !file) {
+      MySwal.fire('Error', 'Please select a program and choose a file to upload.', 'error');
+      return;
+    }
 
     setUploading(true);
     try {
@@ -259,9 +262,10 @@ const EvidencePage: React.FC = () => {
       // Refresh list
       const data = await api.getEvidenceList(Number(selectedProgramId));
       setEvidenceList(Array.isArray(data) ? data : []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to upload evidence", error);
-      MySwal.fire('Error', 'Failed to upload evidence', 'error');
+      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to upload evidence';
+      MySwal.fire('Error', errorMessage, 'error');
     } finally {
       setUploading(false);
     }
@@ -309,7 +313,40 @@ const EvidencePage: React.FC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      
+      // Validate file type
+      const allowedTypes = [
+        // Images
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/svg+xml',
+        // PDF
+        'application/pdf',
+        // Word documents
+        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+      
+      // Check MIME type first, then fallback to extension check for browsers that don't provide proper MIME types
+      const isValidMimeType = allowedTypes.includes(selectedFile.type);
+      const fileName = selectedFile.name.toLowerCase();
+      const isValidExtension = 
+        fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || 
+        fileName.endsWith('.gif') || fileName.endsWith('.bmp') || fileName.endsWith('.webp') || 
+        fileName.endsWith('.svg') || fileName.endsWith('.pdf') || fileName.endsWith('.doc') || 
+        fileName.endsWith('.docx');
+      
+      if (!isValidMimeType && !isValidExtension) {
+        MySwal.fire('Error', 'Invalid file type. Please upload images, PDF files, or Word documents only.', 'error');
+        return;
+      }
+      
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (selectedFile.size > maxSize) {
+        MySwal.fire('Error', 'File size too large. Please upload files smaller than 10MB.', 'error');
+        return;
+      }
+      
+      setFile(selectedFile);
     }
   };
 
@@ -368,10 +405,13 @@ const EvidencePage: React.FC = () => {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (e) {
+      // Clean up the URL after a short delay
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (e: any) {
       console.error('Failed to download evidence', e);
-      MySwal.fire('Error', 'Failed to download evidence', 'error');
+      MySwal.fire('Error', `Failed to download evidence: ${e.message || 'Unknown error'}`, 'error');
     }
   };
 
@@ -382,9 +422,9 @@ const EvidencePage: React.FC = () => {
       setPreviewUrl(url);
       setPreviewType(row.fileType);
       setPreviewOpen(true);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to preview evidence', e);
-      MySwal.fire('Error', 'Failed to preview evidence', 'error');
+      MySwal.fire('Error', `Failed to preview evidence: ${e.message || 'Unknown error'}`, 'error');
     }
   };
 
@@ -631,6 +671,7 @@ const EvidencePage: React.FC = () => {
               <input
                 type="file"
                 hidden
+                accept="image/*,.pdf,.doc,.docx"
                 onChange={handleFileChange}
               />
             </Button>
@@ -667,28 +708,42 @@ const EvidencePage: React.FC = () => {
         <DialogTitle>Preview Evidence</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 1 }}>
-            {previewUrl && previewType?.startsWith('image/') && (
-              <img src={previewUrl} alt="Evidence preview" style={{ maxWidth: '100%' }} />
-            )}
-            {previewUrl && previewType === 'application/pdf' && (
-              <iframe src={previewUrl} title="Evidence PDF" width="100%" height={600} />
+            {previewUrl && (previewType?.startsWith('image/') || previewType === 'application/pdf') && (
+              <>
+                {previewUrl && previewType?.startsWith('image/') && (
+                  <img src={previewUrl} alt="Evidence preview" style={{ maxWidth: '100%' }} />
+                )}
+                {previewUrl && previewType === 'application/pdf' && (
+                  <iframe src={previewUrl} title="Evidence PDF" width="100%" height={600} />
+                )}
+              </>
             )}
             {previewUrl && !previewType?.startsWith('image/') && previewType !== 'application/pdf' && (
-              <Typography variant="body2" color="text.secondary">
-                Preview not available for this file type. Please use Download.
-              </Typography>
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <DescriptionIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="body1" color="text.secondary" gutterBottom>
+                  Word Document Preview
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Preview not available for Word documents. Please download the file to view its contents.
+                </Typography>
+              </Box>
             )}
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => {
-            if (previewUrl) {
+            if (previewUrl && selectedEvidence) {
               const a = document.createElement('a');
               a.href = previewUrl;
-              a.download = 'evidence';
+              a.download = selectedEvidence.fileName || 'evidence';
               document.body.appendChild(a);
               a.click();
               a.remove();
+              // Clean up the URL after a short delay
+              setTimeout(() => {
+                URL.revokeObjectURL(previewUrl);
+              }, 100);
             }
           }} startIcon={<DownloadIcon />}>Download</Button>
           <Button onClick={() => {
@@ -813,7 +868,49 @@ const EvidencePage: React.FC = () => {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                 <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />}>
                   {versionFile ? versionFile.name : "Select New Version File"}
-                  <input type="file" hidden onChange={(e) => e.target.files && setVersionFile(e.target.files[0])} />
+                  <input 
+                    type="file" 
+                    hidden 
+                    accept="image/*,.pdf,.doc,.docx" 
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const selectedFile = e.target.files[0];
+                        
+                        // Validate file type
+                        const allowedTypes = [
+                          // Images
+                          'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/svg+xml',
+                          // PDF
+                          'application/pdf',
+                          // Word documents
+                          'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                        ];
+                        
+                        // Check MIME type first, then fallback to extension check for browsers that don't provide proper MIME types
+                        const isValidMimeType = allowedTypes.includes(selectedFile.type);
+                        const fileName = selectedFile.name.toLowerCase();
+                        const isValidExtension = 
+                          fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || 
+                          fileName.endsWith('.gif') || fileName.endsWith('.bmp') || fileName.endsWith('.webp') || 
+                          fileName.endsWith('.svg') || fileName.endsWith('.pdf') || fileName.endsWith('.doc') || 
+                          fileName.endsWith('.docx');
+                        
+                        if (!isValidMimeType && !isValidExtension) {
+                          MySwal.fire('Error', 'Invalid file type. Please upload images, PDF files, or Word documents only.', 'error');
+                          return;
+                        }
+                        
+                        // Validate file size (max 10MB)
+                        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+                        if (selectedFile.size > maxSize) {
+                          MySwal.fire('Error', 'File size too large. Please upload files smaller than 10MB.', 'error');
+                          return;
+                        }
+                        
+                        setVersionFile(selectedFile);
+                      }
+                    }} 
+                  />
                 </Button>
                 <TextField
                   label="What changed in this version?"

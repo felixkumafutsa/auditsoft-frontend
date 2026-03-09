@@ -35,6 +35,7 @@ import NotificationsPage from '../pages/NotificationsPage';
 import RiskRegisterPage from '../pages/RiskRegisterPage';
 import RiskKRIsPage from '../pages/RiskKRIsPage';
 import RiskHeatmapPage from '../pages/RiskHeatmapPage';
+import ReportsPage from '../pages/ReportsPage';
 import ExecutiveReportsPage from '../pages/ExecutiveReportsPage';
 import AuditUniversePage from '../pages/AuditUniversePage';
 import ContinuousAuditsPage from '../pages/ContinuousAuditsPage';
@@ -184,8 +185,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
 
 
             // Reports
+            case 'reports':
+                return <ReportsPage />;
             case 'reports-executive':
-                return <ExecutiveReportsPage />;
+                return <ReportsPage />;
             case 'reports-operational':
                 return <OperationalReportsPage />;
             case 'reports-custom':

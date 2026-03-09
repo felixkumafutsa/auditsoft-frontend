@@ -13,7 +13,7 @@ interface Finding {
   description: string;
   severity: 'Critical' | 'High' | 'Medium' | 'Low';
   root_cause: string;
-  status: 'Identified' | 'Validated' | 'Action Assigned' | 'Remediation In Progress' | 'Verified' | 'Closed';
+  status: 'Identified' | 'Validated' | 'Action Assigned' | 'Remediation In Progress' | 'Closed';
   created_at: string;
 }
 

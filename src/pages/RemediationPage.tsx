@@ -53,7 +53,6 @@ const RemediationPage: React.FC = () => {
   const role = localStorage.getItem('userRole');
   const isCAE = role === 'CAE' || role === 'Chief Auditor' || role === 'Chief Audit Executive (CAE)';
   const isManager = role === 'Manager' || role === 'Audit Manager';
-  const isProcessOwner = role === 'ProcessOwner' || role === 'Process Owner';
 
   useEffect(() => {
     fetchAssignedFindings();
@@ -114,12 +113,12 @@ const RemediationPage: React.FC = () => {
         // Match by assigned ID
         if (f.assignedToId === currentUser?.id) return true;
 
-        // If Manager or ProcessOwner, show findings for their audits
+        // If Manager, show findings for their audits
         // (This assumes findings have audit relationship data we can check, 
         // usually we'd need to cross-ref with managed audits)
-        if (isManager || isProcessOwner) {
-          // For now, if they are a manager/owner, we show all findings for their entities
-          // In a deeper implementation, we'd check f.audit.ownerId or f.audit.assignedManagerId
+        if (isManager) {
+          // For now, if they are a manager, we show all findings for their entities
+          // In a deeper implementation, we'd check f.audit.assignedManagerId
           return true; // Allowing for now to ensure they can see items to remediate
         }
 
@@ -183,14 +182,14 @@ const RemediationPage: React.FC = () => {
   const selectedFinding = findings.find(f => f.id === selectedFindingId);
 
   return (
-    <Box sx={{ p: 3, height: '85vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ p: 3, minHeight: 'calc(100vh - 180px)', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="h4" gutterBottom sx={{ color: '#0F1A2B', fontWeight: 'bold' }}>
         Remediation & Evidence
       </Typography>
 
-      <Grid container spacing={3} sx={{ flexGrow: 1 }}>
+      <Grid container spacing={3} sx={{ flexGrow: 1, mb: 2 }}>
         <Grid size={{ xs: 12, md: 4 }} sx={{ width: '100%' }}>
-          <Paper sx={{ p: 2, height: '100%', overflowY: 'auto' }}>
+          <Paper sx={{ p: 2, height: '100%', maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
             <Typography variant="h6" gutterBottom>Assigned Findings</Typography>
             {loading ? (
               <CircularProgress />
@@ -221,7 +220,7 @@ const RemediationPage: React.FC = () => {
         </Grid>
 
         <Grid size={{ xs: 12, md: 8 }} sx={{ width: '100%' }}>
-          <Paper sx={{ p: 3, height: '100%', overflowY: 'auto' }}>
+          <Paper sx={{ p: 3, height: '100%', maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
             {selectedFinding ? (
               <Box component="form" onSubmit={handleSubmit}>
                 <Typography variant="h6" gutterBottom>

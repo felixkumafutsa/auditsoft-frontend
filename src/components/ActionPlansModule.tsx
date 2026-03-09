@@ -362,7 +362,6 @@ const ActionPlansModule: React.FC<ActionPlansModuleProps> = ({ findingId, open, 
                 >
                   <MenuItem value="Open">Open</MenuItem>
                   <MenuItem value="In Progress">In Progress</MenuItem>
-                  {isCAE && <MenuItem value="Verified">Verified</MenuItem>}
                   {isCAE && <MenuItem value="Closed">Closed</MenuItem>}
                 </Select>
               </FormControl>

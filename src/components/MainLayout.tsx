@@ -81,17 +81,73 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
         }
     }, [handleLogout]);
 
+    // Handle URL changes and sync with page state
+    useEffect(() => {
+        const handlePopState = () => {
+            const path = window.location.pathname;
+            const pathToPage: Record<string, Page> = {
+                '/': 'dashboard',
+                '/audits': 'audits',
+                '/audits/new': 'audits-new',
+                '/audits/executed': 'audits-executed',
+                '/audits/my': 'my-audits',
+                '/audit-plans': 'audit-plans',
+                '/strategic-audit-plan': 'strategic-audit-plan',
+                '/audit-programs': 'audit-programs',
+                '/audit-universe': 'audit-universe',
+                '/continuous-audits': 'continuous-audits',
+                '/findings': 'findings',
+                '/findings/draft': 'findings-draft',
+                '/findings/my': 'my-findings',
+                '/remediation': 'remediation',
+                '/evidence': 'evidence',
+                '/workpapers': 'workpapers',
+                '/timesheets': 'timesheets',
+                '/users': 'users',
+                '/roles': 'roles',
+                '/audit-logs': 'audit-logs',
+                '/workflow-config': 'workflow-config',
+                '/system-settings': 'system-settings',
+                '/reports': 'reports',
+                '/reports/executive': 'reports-executive',
+                '/reports/operational': 'reports-operational',
+                '/reports/custom': 'reports-custom',
+                '/reports/files': 'reports-files',
+                '/risk-register': 'risk-register',
+                '/risk/kri': 'risk-kri',
+                '/risk/heatmaps': 'risk-heatmaps',
+                '/compliance/standards': 'compliance-standards',
+                '/compliance/policies': 'compliance-policies',
+                '/policy-management': 'policy-management',
+                '/compliance/controls': 'compliance-controls',
+                '/compliance/coverage': 'compliance-coverage',
+                '/profile': 'profile',
+                '/execution': 'execution',
+                '/notifications': 'notifications',
+                '/messaging': 'messaging',
+                '/board-viewer': 'board-viewer'
+            };
+            
+            const page = pathToPage[path];
+            if (page && page !== currentPage) {
+                setCurrentPage(page);
+            }
+        };
+
+        // Handle initial URL on mount
+        handlePopState();
+        
+        // Listen for browser back/forward
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [currentPage]);
+
     // Handle deep links (SPA paths that land directly on a page)
     useEffect(() => {
         try {
             const path = window.location.pathname || '/';
             if (path === '/' || !path) return;
             const trimmed = path.replace(/^\/+|\/+$/g, '');
-
-            if (trimmed === 'strategic-audit-plan') {
-                setCurrentPage('strategic-audit-plan');
-                return;
-            }
 
             // Support deep link to create audit (e.g. /audits/create?entityId=12&riskLevel=High)
             if (trimmed.startsWith('audits/create')) {
@@ -102,7 +158,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 if (Object.keys(prefill).length > 0) {
                     try { localStorage.setItem('createAuditPrefill', JSON.stringify(prefill)); } catch (e) { /* ignore */ }
                 }
-                setCurrentPage('audits');
+                // Let React Router handle the navigation
                 return;
             }
         } catch (e) {
@@ -118,6 +174,55 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
     const handleNavigate = (page: Page) => {
         setCurrentPage(page);
         setMobileOpen(false); // Close mobile drawer on navigation
+        
+        // Update browser URL to match the current page
+        const pageToPath: Record<Page, string> = {
+            'dashboard': '/',
+            'audits': '/audits',
+            'audits-new': '/audits/new',
+            'audits-executed': '/audits/executed',
+            'my-audits': '/audits/my',
+            'audit-plans': '/audit-plans',
+            'strategic-audit-plan': '/strategic-audit-plan',
+            'audit-programs': '/audit-programs',
+            'audit-universe': '/audit-universe',
+            'continuous-audits': '/continuous-audits',
+            'findings': '/findings',
+            'findings-draft': '/findings/draft',
+            'my-findings': '/findings/my',
+            'remediation': '/remediation',
+            'evidence': '/evidence',
+            'workpapers': '/workpapers',
+            'timesheets': '/timesheets',
+            'users': '/users',
+            'roles': '/roles',
+            'audit-logs': '/audit-logs',
+            'workflow-config': '/workflow-config',
+            'system-settings': '/system-settings',
+            'reports': '/reports',
+            'reports-executive': '/reports/executive',
+            'reports-operational': '/reports/operational',
+            'reports-custom': '/reports/custom',
+            'reports-files': '/reports/files',
+            'risk-register': '/risk-register',
+            'risk-kri': '/risk/kri',
+            'risk-heatmaps': '/risk/heatmaps',
+            'compliance-standards': '/compliance/standards',
+            'compliance-policies': '/compliance/policies',
+            'policy-management': '/policy-management',
+            'compliance-controls': '/compliance/controls',
+            'compliance-coverage': '/compliance/coverage',
+            'profile': '/profile',
+            'execution': '/execution',
+            'notifications': '/notifications',
+            'messaging': '/messaging',
+            'board-viewer': '/board-viewer'
+        };
+        
+        const newPath = pageToPath[page];
+        if (newPath && window.location.pathname !== newPath) {
+            window.history.pushState({}, '', newPath);
+        }
     };
 
     useEffect(() => {

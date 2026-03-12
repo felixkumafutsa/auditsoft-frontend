@@ -197,7 +197,7 @@ const StrategicAuditPlanPage: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>Total Budget</Typography>
-                <Typography variant="h4">${annualPlan.summary.totalBudget.toLocaleString()}</Typography>
+                <Typography variant="h4">MWK {annualPlan.summary.totalBudget.toLocaleString()}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -292,7 +292,7 @@ const StrategicAuditPlanPage: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell>{audit.resourceHours || '-'}</TableCell>
-                          <TableCell>${audit.budgetAllocation?.toLocaleString() || '-'}</TableCell>
+                          <TableCell>MWK {audit.budgetAllocation?.toLocaleString() || '-'}</TableCell>
                         </TableRow>
                       ))}
                       {audits.length === 0 && (
@@ -354,11 +354,23 @@ const StrategicAuditPlanPage: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell>
-                            <Chip 
-                              label={audit.executiveApproval ? 'Approved' : 'Pending'} 
+                            <Button
                               size="small"
-                              color={audit.executiveApproval ? 'success' : 'warning'}
-                            />
+                              variant="outlined"
+                              onClick={async () => {
+                                try {
+                                  const newStatus = !audit.executiveApproval;
+                                  await api.updateAudit(audit.id, { executiveApproval: newStatus });
+                                  // Refresh the data
+                                  fetchAnnualPlan();
+                                } catch (error) {
+                                  console.error('Failed to update approval status:', error);
+                                }
+                              }}
+                              sx={{ minWidth: '100px' }}
+                            >
+                              {audit.executiveApproval ? 'Approved' : 'Pending'}
+                            </Button>
                           </TableCell>
                           <TableCell sx={{ maxWidth: 300 }}>
                             {audit.justification ? (

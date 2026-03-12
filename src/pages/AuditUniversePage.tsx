@@ -53,7 +53,6 @@ const AuditUniversePage: React.FC = () => {
 
   const userRole = localStorage.getItem('userRole');
   const isCAE = userRole === 'Chief Audit Executive' || userRole === 'CAE' || userRole === 'Chief Audit Executive (CAE)';
-  const isManager = userRole === 'Manager' || userRole === 'Audit Manager';
   const canModify = isCAE;
 
   const fetchUniverse = async () => {
@@ -173,12 +172,6 @@ const AuditUniversePage: React.FC = () => {
           variant="outlined"
         />
       )
-    },
-    {
-      field: 'owner',
-      headerName: 'Owner',
-      width: 150,
-      valueGetter: (value, row) => row.owner?.name || 'N/A'
     },
     {
       field: 'actions',

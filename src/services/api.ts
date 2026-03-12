@@ -301,6 +301,15 @@ class ApiClient {
   updateKri = (id: number, data: any) => this.patch(`/risks/kri/${id}`, data);
   deleteKri = (id: number) => this.delete(`/risks/kri/${id}`);
 
+  // --- Risk Assessments ---
+  getRiskAssessments = () => this.get('/risk-assessments');
+  getRiskAssessmentsByAudit = (auditId: number) => this.get(`/risk-assessments/audit/${auditId}`);
+  createRiskAssessment = (data: any) => this.post('/risk-assessments', data);
+  updateRiskAssessment = (id: number, data: any) => this.patch(`/risk-assessments/${id}`, data);
+  deleteRiskAssessment = (id: number) => this.delete(`/risk-assessments/${id}`);
+  getOverallRisk = (auditId: number) => this.get(`/risk-assessments/audit/${auditId}/overall-risk`);
+  getRiskTrend = (auditId: number) => this.get(`/risk-assessments/audit/${auditId}/trend`);
+
   // --- Reports & Analytics ---
   getDashboardStats = () => this.get('/reports/dashboard');
   getExecutiveReport = () => this.get('/reports/executive');

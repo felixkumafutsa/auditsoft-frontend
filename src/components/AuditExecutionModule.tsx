@@ -569,6 +569,18 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
           )}
 
           {isCAE && selectedAudit?.status === 'Finalized' && (
+            <Button
+              variant="contained"
+              size="small"
+              color="warning"
+              startIcon={<CheckCircleOutlineIcon />}
+              onClick={() => onClose && onClose(selectedAudit)}
+            >
+              Close Audit
+            </Button>
+          )}
+
+          {isCAE && selectedAudit?.status === 'Closed' && (
             <>
               <Button
                 variant="outlined"
@@ -583,35 +595,49 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                   }
                 }}
               >
-                Review Report
+                Preview Report
+              </Button>
+
+              <Button
+                variant="contained"
+                size="small"
+                color="primary"
+                startIcon={<SaveIcon />}
+                onClick={async () => {
+                  try {
+                    await (api as any).saveReport(selectedAudit.id);
+                    MySwal.fire('Success', 'Report saved successfully!', 'success');
+                    // Update audit status to Report Generated
+                    setSelectedAudit({ ...selectedAudit, status: 'Report Generated' });
+                    // Dispatch custom event to notify other components to refresh reports
+                    window.dispatchEvent(new CustomEvent('reportSaved', { detail: { auditId: selectedAudit.id } }));
+                  } catch (e) {
+                    console.error(e);
+                    MySwal.fire('Error', 'Failed to save report.', 'error');
+                  }
+                }}
+              >
+                Save Report
               </Button>
 
               <Button
                 variant="contained"
                 size="small"
                 color="success"
-                startIcon={<CheckCircleIcon />}
+                startIcon={<CheckCircleOutlineIcon />}
                 onClick={async () => {
                   try {
-                    // Approve Report doesn't need to transition status - just confirm approval
-                    MySwal.fire('Approved', 'Report has been approved.', 'success');
+                    await api.updateAudit(selectedAudit.id, { status: 'Report Generated' });
+                    MySwal.fire('Success', 'Audit report has been finalized and saved!', 'success');
+                    setSelectedAudit({ ...selectedAudit, status: 'Report Generated' });
+                    fetchActiveAudits();
                   } catch (e) {
                     console.error(e);
-                    MySwal.fire('Error', 'Failed to approve report.', 'error');
+                    MySwal.fire('Error', 'Failed to finalize audit report.', 'error');
                   }
                 }}
               >
-                Approve Report
-              </Button>
-
-              <Button
-                variant="contained"
-                size="small"
-                color="warning"
-                startIcon={<CheckCircleOutlineIcon />}
-                onClick={() => onClose && onClose(selectedAudit)}
-              >
-                Close Audit
+                Close Report
               </Button>
             </>
           )}
@@ -625,28 +651,6 @@ const AuditExecutionModule: React.FC<AuditExecutionModuleProps> = ({
                 onClick={() => onPreview && onPreview(selectedAudit.id)}
               >
                 Preview Report
-              </Button>
-            </Tooltip>
-          )}
-
-          {isManager && selectedAudit?.status === 'Finalized' && (
-            <Tooltip title="Save Report">
-              <Button
-                variant="contained"
-                size="small"
-                color="primary"
-                startIcon={<DescriptionIcon />}
-                onClick={async () => {
-                  try {
-                    await (api as any).saveReport(selectedAudit.id);
-                    MySwal.fire('Success', 'Report saved successfully!', 'success');
-                  } catch (e) {
-                    console.error(e);
-                    MySwal.fire('Error', 'Failed to save report.', 'error');
-                  }
-                }}
-              >
-                Save Report
               </Button>
             </Tooltip>
           )}

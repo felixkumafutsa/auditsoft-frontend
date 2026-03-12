@@ -37,7 +37,9 @@ import {
   Work as WorkIcon,
   Chat as ChatIcon,
   AccessTime as AccessTimeIcon,
-  Article as ArticleIcon
+  Article as ArticleIcon,
+  HelpOutline as HelpIcon,
+  Assessment as AssessmentIcon
 } from '@mui/icons-material';
 import { Page } from '../types/navigation';
 import logo from '../assets/logo.png';
@@ -239,6 +241,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
                   <ListItemIcon><ListIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="Register Risk" />
                 </ListItemButton>
+                <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'risk-assessments'} onClick={() => onNavigate('risk-assessments')}>
+                  <ListItemIcon><AssessmentIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
+                  <ListItemText primary="Risk Assessments" />
+                </ListItemButton>
                 <ListItemButton sx={{ pl: 4 }} selected={currentPage === 'risk-kri'} onClick={() => onNavigate('risk-kri')}>
                   <ListItemIcon><TimelineIcon sx={{ color: 'rgba(255,255,255,0.7)' }} /></ListItemIcon>
                   <ListItemText primary="KRIs" />
@@ -422,6 +428,11 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, currentPage, onNavigate, mo
         )}
 
         <Divider sx={{ my: 1, bgcolor: 'rgba(255,255,255,0.1)' }} />
+
+        <ListItemButton selected={currentPage === 'help'} onClick={() => onNavigate('help')}>
+          <ListItemIcon><HelpIcon sx={{ color: 'white' }} /></ListItemIcon>
+          <ListItemText primary="Help Center" />
+        </ListItemButton>
 
         <ListItemButton selected={currentPage === 'profile'} onClick={() => onNavigate('profile')}>
           <ListItemIcon><PersonIcon sx={{ color: 'white' }} /></ListItemIcon>

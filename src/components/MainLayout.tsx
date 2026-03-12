@@ -35,8 +35,8 @@ import NotificationsPage from '../pages/NotificationsPage';
 import RiskRegisterPage from '../pages/RiskRegisterPage';
 import RiskKRIsPage from '../pages/RiskKRIsPage';
 import RiskHeatmapPage from '../pages/RiskHeatmapPage';
+import RiskAssessmentPage from '../pages/RiskAssessmentPage';
 import ReportsPage from '../pages/ReportsPage';
-import ExecutiveReportsPage from '../pages/ExecutiveReportsPage';
 import AuditUniversePage from '../pages/AuditUniversePage';
 import ContinuousAuditsPage from '../pages/ContinuousAuditsPage';
 import IntegrationsPage from '../pages/IntegrationsPage';
@@ -45,9 +45,9 @@ import BoardViewerPage from '../pages/BoardViewerPage';
 import OperationalReportsPage from '../pages/OperationalReportsPage';
 import CustomReportsPage from '../pages/CustomReportsPage';
 import ReportsFilesPage from '../pages/ReportsFilesPage';
-import AuditWorkpaperPage from '../pages/AuditWorkpaperPage';
 import WorkpapersPage from '../pages/WorkpapersPage';
 import TimesheetsPage from '../pages/TimesheetsPage';
+import HelpPage from '../pages/HelpPage';
 import GlobalTopBar from './GlobalTopBar';
 import ContextualTopBar from './ContextualTopBar';
 
@@ -116,6 +116,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 '/risk-register': 'risk-register',
                 '/risk/kri': 'risk-kri',
                 '/risk/heatmaps': 'risk-heatmaps',
+                '/risk-assessments': 'risk-assessments',
                 '/compliance/standards': 'compliance-standards',
                 '/compliance/policies': 'compliance-policies',
                 '/policy-management': 'policy-management',
@@ -125,7 +126,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 '/execution': 'execution',
                 '/notifications': 'notifications',
                 '/messaging': 'messaging',
-                '/board-viewer': 'board-viewer'
+                '/board-viewer': 'board-viewer',
+                '/help': 'help'
             };
             
             const page = pathToPage[path];
@@ -207,6 +209,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             'risk-register': '/risk-register',
             'risk-kri': '/risk/kri',
             'risk-heatmaps': '/risk/heatmaps',
+            'risk-assessments': '/risk-assessments',
             'compliance-standards': '/compliance/standards',
             'compliance-policies': '/compliance/policies',
             'policy-management': '/policy-management',
@@ -216,7 +219,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             'execution': '/execution',
             'notifications': '/notifications',
             'messaging': '/messaging',
-            'board-viewer': '/board-viewer'
+            'board-viewer': '/board-viewer',
+            'help': '/help'
         };
         
         const newPath = pageToPath[page];
@@ -304,6 +308,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             // Risk Management
             case 'risk-register':
                 return <RiskRegisterPage />;
+            case 'risk-assessments':
+                return <RiskAssessmentPage />;
             case 'risk-kri':
                 return <RiskKRIsPage />;
             case 'risk-heatmaps':
@@ -330,6 +336,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 return <MessagingPage />;
             case 'board-viewer':
                 return <BoardViewerPage />;
+            case 'help':
+                return <HelpPage />;
             default:
                 return <DashboardPage onNavigate={handleNavigate} />;
         }

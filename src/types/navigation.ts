@@ -28,6 +28,7 @@ export type Page =
   | 'risk-register'
   | 'risk-kri'
   | 'risk-heatmaps'
+  | 'risk-assessments'
   | 'compliance-standards'
   | 'compliance-policies'
   | 'policy-management'
@@ -38,4 +39,5 @@ export type Page =
   | 'execution'
   | 'notifications'
   | 'messaging'
-  | 'board-viewer';
+  | 'board-viewer'
+  | 'help';

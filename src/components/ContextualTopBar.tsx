@@ -33,7 +33,8 @@ import {
   Shield as ShieldIcon,
   PieChart as PieChartIcon,
   Hub as HubIcon,
-  Work as WorkIcon
+  Work as WorkIcon,
+  Assessment as AssessmentIcon
 } from '@mui/icons-material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { Page } from '../types/navigation';
@@ -277,7 +278,7 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             <Button
               startIcon={<WarningIcon />}
               endIcon={<KeyboardArrowDownIcon />}
-              color={['risk-register', 'risk-kri', 'risk-heatmaps'].includes(currentPage) ? 'primary' : 'inherit'}
+              color={['risk-register', 'risk-assessments', 'risk-kri', 'risk-heatmaps'].includes(currentPage) ? 'primary' : 'inherit'}
               onClick={(e) => setRiskAnchor(e.currentTarget)}
             >
               Risk Management
@@ -290,6 +291,10 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
               <MenuItem onClick={() => { onNavigate('risk-register'); setRiskAnchor(null); }}>
                 <ListItemIcon><ListIcon fontSize="small" /></ListItemIcon>
                 <ListItemText>Register Risk</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={() => { onNavigate('risk-assessments'); setRiskAnchor(null); }}>
+                <ListItemIcon><AssessmentIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>Risk Assessments</ListItemText>
               </MenuItem>
               <MenuItem onClick={() => { onNavigate('risk-kri'); setRiskAnchor(null); }}>
                 <ListItemIcon><TimelineIcon fontSize="small" /></ListItemIcon>
@@ -457,7 +462,39 @@ const ContextualTopBar: React.FC<ContextualTopBarProps> = ({ userRole, currentPa
             </MenuItem>
           </Menu>
 
-          {/* 4. Field Work */}
+          {/* 4. Risk Management */}
+          <Button
+            startIcon={<WarningIcon />}
+            endIcon={<KeyboardArrowDownIcon />}
+            color={['risk-register', 'risk-assessments', 'risk-kri', 'risk-heatmaps'].includes(currentPage) ? 'primary' : 'inherit'}
+            onClick={(e) => setRiskAnchor(e.currentTarget)}
+          >
+            Risk Management
+          </Button>
+          <Menu
+            anchorEl={riskAnchor}
+            open={Boolean(riskAnchor)}
+            onClose={() => setRiskAnchor(null)}
+          >
+            <MenuItem onClick={() => { onNavigate('risk-register'); setRiskAnchor(null); }}>
+              <ListItemIcon><ListIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Register Risk</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { onNavigate('risk-assessments'); setRiskAnchor(null); }}>
+              <ListItemIcon><AssessmentIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Risk Assessments</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { onNavigate('risk-kri'); setRiskAnchor(null); }}>
+              <ListItemIcon><TimelineIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>KRIs</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { onNavigate('risk-heatmaps'); setRiskAnchor(null); }}>
+              <ListItemIcon><MapIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Risk Heatmaps</ListItemText>
+            </MenuItem>
+          </Menu>
+
+          {/* 5. Field Work */}
           <Button
             startIcon={<WorkIcon />}
             endIcon={<KeyboardArrowDownIcon />}

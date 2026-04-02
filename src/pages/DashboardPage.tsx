@@ -458,18 +458,22 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     audits: 0,
     findings: 0,
     systemHealth: "Checking...",
+    weeklyActivity: [] as any[],
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const audits = await api.getAudits();
+        const [dashboardStats] = await Promise.all([
+          api.getDashboardStats(),
+        ]);
         setStats({
-          users: 0,
-          audits: audits?.length || 0,
-          findings: 0,
+          users: dashboardStats.activeUsers || 0,
+          audits: dashboardStats.totalAudits || 0,
+          findings: dashboardStats.openFindings || 0,
           systemHealth: "Operational",
+          weeklyActivity: dashboardStats.weeklyActivity || [],
         });
       } catch (e) {
         setStats((prev) => ({ ...prev, systemHealth: "Error" }));
@@ -480,15 +484,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     fetchData();
   }, []);
 
-  const activityData = [
-    { name: "Mon", audits: 4, findings: 2 },
-    { name: "Tue", audits: 3, findings: 5 },
-    { name: "Wed", audits: 7, findings: 3 },
-    { name: "Thu", audits: 5, findings: 4 },
-    { name: "Fri", audits: 8, findings: 6 },
-    { name: "Sat", audits: 2, findings: 1 },
-    { name: "Sun", audits: 3, findings: 2 },
-  ];
 
   return (
     <Box>
@@ -595,13 +590,16 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               Weekly Activity
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={activityData}>
+              <LineChart data={stats.weeklyActivity}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="audits" stroke="#1976d2" name="Audits Created" strokeWidth={2} />
+                <Line type="monotone" dataKey="Planned" stroke="#1976d2" name="Planned" strokeWidth={2} />
+                <Line type="monotone" dataKey="InProgress" stroke="#ed6c02" name="In Progress" strokeWidth={2} />
+                <Line type="monotone" dataKey="UnderReview" stroke="#9c27b0" name="Under Review" strokeWidth={2} />
+                <Line type="monotone" dataKey="Finalized" stroke="#2e7d32" name="Finalized" strokeWidth={2} />
                 <Line type="monotone" dataKey="findings" stroke="#d32f2f" name="Findings Logged" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>

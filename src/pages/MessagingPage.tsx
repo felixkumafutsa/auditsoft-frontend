@@ -88,8 +88,13 @@ const MessagingPage: React.FC = () => {
 
   useEffect(() => {
     if (currentUserId) {
-      const socket = io('http://localhost:4000', {
+      // Determine socket URL based on API environment (strip /api if present)
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+      const socketUrl = apiUrl.replace(/\/$/, '');
+      
+      const socket = io(socketUrl, {
         query: { userId: currentUserId },
+        transports: ['websocket', 'polling'],
       });
       socketRef.current = socket;
 

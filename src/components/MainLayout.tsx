@@ -355,26 +355,29 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
             <CssBaseline />
 
-            {/* Global Top Bar */}
-            <GlobalTopBar
-                user={currentUser}
-                onDrawerToggle={handleDrawerToggle}
-                onLogout={handleLogout}
-                onNavigate={handleNavigate}
-            />
+            {/* Top Navigation Bar Area */}
+            <Box component="header" role="banner">
+                {/* Global Top Bar */}
+                <GlobalTopBar
+                    user={currentUser}
+                    onDrawerToggle={handleDrawerToggle}
+                    onLogout={handleLogout}
+                    onNavigate={handleNavigate}
+                />
 
-            {/* Spacer for fixed GlobalTopBar */}
-            <Box sx={{ height: 64 }} />
+                {/* Spacer for fixed GlobalTopBar */}
+                <Box sx={{ height: 64 }} />
 
-            {/* Contextual Top Bar (Hidden on Mobile) */}
-            <ContextualTopBar
-                userRole={currentUser.role}
-                currentPage={currentPage}
-                onNavigate={handleNavigate}
-            />
+                {/* Contextual Top Bar (Hidden on Mobile) */}
+                <ContextualTopBar
+                    userRole={currentUser.role}
+                    currentPage={currentPage}
+                    onNavigate={handleNavigate}
+                />
+            </Box>
 
             {/* Sidebar (Drawer) */}
-            <Box component="nav">
+            <Box component="nav" role="navigation" aria-label="Main Sidebar Navigation">
                 <Drawer
                     variant="temporary"
                     open={mobileOpen}
@@ -398,7 +401,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             </Box>
 
             {/* Main Content Area */}
-            <Box component="main" sx={{ flexGrow: 1, p: 3, width: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box component="main" role="main" sx={{ flexGrow: 1, p: 3, width: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ flexGrow: 1 }}>
                     {renderPage()}
                 </Box>
@@ -406,6 +409,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 {/* Footer */}
                 <Box
                     component="footer"
+                    role="contentinfo"
                     sx={{
                         mt: 'auto',
                         py: 2,

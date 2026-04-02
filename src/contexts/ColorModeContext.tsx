@@ -138,17 +138,40 @@ export const ColorModeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                             : {},
                     },
                 },
-                // ── Cards & Papers ─────────────────────────────────────────────────
+                // ── Global Body Reset ──────────────────────────────────────────────
+                MuiCssBaseline: {
+                    styleOverrides: {
+                        body: {
+                            background: isDark 
+                                ? 'linear-gradient(135deg, #0d1117 0%, #161b22 100%)' 
+                                : 'linear-gradient(135deg, #f5f7fa 0%, #eef2f7 100%)',
+                            backgroundAttachment: 'fixed',
+                            minHeight: '100vh',
+                        },
+                    },
+                },
+                // ── Cards & Papers (Glassmorphism) ─────────────────────────────────
                 MuiCard: {
                     styleOverrides: {
-                        root: isDark
-                            ? { backgroundImage: 'none', border: '1px solid rgba(255,255,255,0.08)' }
-                            : {},
+                        root: {
+                            backgroundImage: 'none',
+                            backdropFilter: 'blur(12px)',
+                            backgroundColor: isDark ? 'rgba(22, 27, 34, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+                            border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+                            boxShadow: isDark ? '0 8px 32px 0 rgba(0, 0, 0, 0.37)' : '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+                            borderRadius: '16px',
+                        },
                     },
                 },
                 MuiPaper: {
                     styleOverrides: {
-                        root: isDark ? { backgroundImage: 'none' } : {},
+                        root: {
+                            backgroundImage: 'none',
+                            backdropFilter: 'blur(12px)',
+                            backgroundColor: isDark ? 'rgba(22, 27, 34, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+                            border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+                            borderRadius: '16px',
+                        },
                     },
                 },
                 // ── Table ──────────────────────────────────────────────────────────

@@ -1,13 +1,17 @@
 // src/pages/LoginPage.tsx
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, IconButton, Tooltip } from '@mui/material';
+import { Brightness4 as Brightness4Icon, Brightness7 as Brightness7Icon } from '@mui/icons-material';
 import { LoginForm } from '../components/LoginForm';
+import { useColorMode } from '../contexts/ColorModeContext';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+  const { mode, toggleColorMode } = useColorMode();
+
   return (
     <Box
       sx={{
@@ -16,10 +20,21 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        backgroundColor: '#ffffff',
-        position: 'relative'
+        position: 'relative',
+        transition: 'background 0.3s ease'
       }}
     >
+      <Box sx={{ position: 'absolute', top: 20, right: 20 }}>
+        <Tooltip title={`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`}>
+          <IconButton onClick={toggleColorMode} color="inherit" sx={{ 
+            bgcolor: 'background.paper', 
+            boxShadow: 2,
+            '&:hover': { bgcolor: 'action.hover' }
+          }}>
+            {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+          </IconButton>
+        </Tooltip>
+      </Box>
       <LoginForm onLoginSuccess={onLoginSuccess} />
       
       {/* Footer */}

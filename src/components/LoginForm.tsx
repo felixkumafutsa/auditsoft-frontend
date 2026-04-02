@@ -6,7 +6,9 @@ import {
   Typography,
   Container,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Paper,
+  useTheme
 } from '@mui/material';
 import api from '../services/api';
 import logo from '../assets/logo.png';
@@ -21,6 +23,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const theme = useTheme();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,9 +76,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          animation: 'fadeIn 0.6s ease-out'
         }}
       >
-        <Box sx={{ p: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            p: 5, 
+            width: '100%', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center',
+          }}
+        >
           <Box
             component="img"
             src={logo}
@@ -88,8 +101,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
               borderRadius: '50%',
             }}
           />
-          <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 'bold', color: '#0F1A2B' }}>
-            AuditSoft Login
+          <Typography 
+            component="h1" 
+            variant="h4" 
+            sx={{ 
+              mb: 3, 
+              fontWeight: 'bold', 
+              color: 'primary.main',
+              letterSpacing: '-0.5px'
+            }}
+          >
+            AuditSoft
           </Typography>
 
           {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
@@ -121,12 +143,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
               fullWidth
               variant="contained"
               disabled={loading}
-              sx={{ mt: 3, mb: 2, py: 1.5, bgcolor: '#0F1A2B' }}
+              sx={{ 
+                mt: 3, 
+                mb: 2, 
+                py: 1.5, 
+                borderRadius: '12px',
+                fontWeight: 'bold',
+                textTransform: 'none',
+                fontSize: '1rem',
+                boxShadow: theme.palette.mode === 'dark' ? '0 4px 14px 0 rgba(144, 202, 249, 0.39)' : '0 4px 14px 0 rgba(15, 26, 43, 0.39)'
+              }}
             >
               {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
             </Button>
           </Box>
-        </Box>
+        </Paper>
       </Box>
     </Container>
   );

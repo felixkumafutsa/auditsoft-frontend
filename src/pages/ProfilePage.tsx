@@ -12,8 +12,11 @@ import {
   Grid,
   Card,
   CardContent,
+  InputAdornment
 } from '@mui/material';
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
@@ -30,6 +33,8 @@ const ProfilePage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [tasks, setTasks] = useState<any[]>([]);
@@ -186,20 +191,48 @@ const ProfilePage: React.FC = () => {
         />
         <TextField
           label="New Password"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           fullWidth
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           sx={{ mb: 2 }}
           helperText="Leave blank to keep your current password."
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle password visibility"
+                  onClick={() => setShowPassword(!showPassword)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  edge="end"
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
         />
         <TextField
           label="Confirm New Password"
-          type="password"
+          type={showConfirmPassword ? 'text' : 'password'}
           fullWidth
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           sx={{ mb: 3 }}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle password visibility"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  edge="end"
+                >
+                  {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
         />
         <Button variant="contained" onClick={handleUpdateProfile} sx={{ bgcolor: '#0F1A2B' }}>
           Save Changes

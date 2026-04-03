@@ -20,12 +20,15 @@ import {
   Chip,
   FormControl,
   InputLabel,
-  Select
+  Select,
+  InputAdornment
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import Swal from 'sweetalert2';
 import api from '../services/api';
 
@@ -61,6 +64,7 @@ const UsersPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState<number | string>('');
   const [selectedAuditUniverseEntities, setSelectedAuditUniverseEntities] = useState<number[]>([]);
 
@@ -278,10 +282,24 @@ const UsersPage: React.FC = () => {
           <TextField
             margin="dense"
             label={currentUser ? "Password (leave blank to keep current)" : "Password"}
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowPassword(!showPassword)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           <TextField
             select

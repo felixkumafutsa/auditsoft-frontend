@@ -8,8 +8,12 @@ import {
   Alert,
   CircularProgress,
   Paper,
-  useTheme
+  useTheme,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import api from '../services/api';
 import logo from '../assets/logo.png';
 
@@ -20,6 +24,7 @@ interface LoginFormProps {
 export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -133,10 +138,24 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
               required
               fullWidth
               label="Password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setShowPassword(!showPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
             <Button
               type="submit"
